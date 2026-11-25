@@ -25,7 +25,7 @@ BigDev's scope — *"let's give X1 and X2 an owner"*, then *"New story 3.15c, bo
 
 # Story 3.15c: An Unchanged Standing Line Said Again Is Spoken Again, and a Language Switch Speaks Its Line Once
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -300,59 +300,59 @@ the ESLint fence now naming the PROPERTY only (`announceForAccessibility*` on AN
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight**
-  - [ ] 0.1 `git fetch origin`; `ListAgents`. The branch was rebased onto `origin/main` `8d0c1ae9` on 2026-11-25 (3.15b LANDED) and
+- [x] **Task 0 — Preflight**
+  - [x] 0.1 `git fetch origin`; `ListAgents`. The branch was rebased onto `origin/main` `8d0c1ae9` on 2026-11-25 (3.15b LANDED) and
         pinned there. If `origin/main` has moved since: rebase again (expect a `sprint-status.yaml` ledger conflict —
         [[project_rebase_ledger_conflict_separator]]; keep both, verify the YAML parses), then RE-PIN `baseline_commit` (front matter +
         the PINNED comment) to the new `git merge-base origin/main HEAD`. Either way: `git merge-base --is-ancestor <pin> HEAD`, and run
         AC 1's `git diff <pin>..HEAD -- …` now — it must be EMPTY before any code. `pnpm install`.
-  - [ ] 0.2 Re-derive F1, F2, F4, F6, F7, F8 at HEAD by function; differences → the Debug Log (the grep / the code wins).
-- [ ] **Task 1 — The inventory (AC 1; DL4) — before any code**
-  - [ ] 1.1 Re-derive F5 at HEAD; record the table (file:line, words, kind, class, the state trace) in the Debug Log.
-- [ ] **Task 2 — The device baseline (DL2) — before the `WaCodeEntry` change**
-  - [ ] 2.1 Throwaway `postgres:16-alpine`, migrated; an env-guarded UNCOMMITTED seed spec (an approved T&C; one `pariwar_wa_config`
+  - [x] 0.2 Re-derive F1, F2, F4, F6, F7, F8 at HEAD by function; differences → the Debug Log (the grep / the code wins).
+- [x] **Task 1 — The inventory (AC 1; DL4) — before any code**
+  - [x] 1.1 Re-derive F5 at HEAD; record the table (file:line, words, kind, class, the state trace) in the Debug Log.
+- [x] **Task 2 — The device baseline (DL2) — before the `WaCodeEntry` change**
+  - [x] 2.1 Throwaway `postgres:16-alpine`, migrated; an env-guarded UNCOMMITTED seed spec (an approved T&C; one `pariwar_wa_config`
         row per F4 — `enabled`, a display number, `phone_number_id`, `access_token_secret_name`). The worktree has ⛔
         `apps/api/.env` / `apps/mobile/.env`: copy main's git-ignored ones (the 3.15a / 3.15b recipe; deleted at 6.4). The API with
         `DATABASE_URL=` and F4's three env vars prefixed (⛔ written into any `.env`), `NODE_ENV` ⛔ `production`, ⛔
         `GOOGLE_APPLICATION_CREDENTIALS` (F4). Fresh member → the WhatsApp step (`twtp05://whatsapp`) → "WhatsApp on another phone?".
         `codeAvailable` false → read the API log's `code_unavailable` detail, fix the seed / env once; still false → X1 NOT REACHED (DL5).
-  - [ ] 2.2 Reached: TalkBack ON, TTS OFF (`pm disable-user --user 0 com.google.android.tts`), `logcat` captured; F4's `verify_failed`
+  - [x] 2.2 Reached: TalkBack ON, TTS OFF (`pm disable-user --user 0 com.google.android.tts`), `logcat` captured; F4's `verify_failed`
         sequence on the UNCHANGED code; record the press and answer log lines of BOTH Confirms. `kill -9` the API at the end (⛔ `-CONT`).
         Apply DL2's rule.
-- [ ] **Task 3 — X1 (AC 2; DL1) — RED first**
-  - [ ] 3.1 Write AC 2's legs in `wa-code-entry-render.test.ts` (both platforms — `mock.os` set per leg, the file defaults to `ios`;
+- [x] **Task 3 — X1 (AC 2; DL1) — RED first**
+  - [x] 3.1 Write AC 2's legs in `wa-code-entry-render.test.ts` (both platforms — `mock.os` set per leg, the file defaults to `ios`;
         reuse `tests/unit/announce-text.ts` `bare` / `NBSP` / `sentAs`); watch (a), (b), (f) fail; (e) passes on today's code.
-  - [ ] 3.2 `use-wa-code.ts`: `lineCount` (type, `initialWaCodeState`), the `setLine` helper for the 9 `patch({ line })` calls and the
+  - [x] 3.2 `use-wa-code.ts`: `lineCount` (type, `initialWaCodeState`), the `setLine` helper for the 9 `patch({ line })` calls and the
         explicit bump in the 5 `setState` arms (DL1 — F5's 15 writes; `grep -n 'line:' use-wa-code.ts` afterwards, every hit accounted
         for). `WaCodeEntry.tsx`: plain
         `Text` line + the one effect (DL1), declared before the wait effect; header comment rewritten (the `AnnouncedText kind="error"`
         sentence → DL1's why, X1, the order rule F8). `AnnouncedText` import removed if unused.
-  - [ ] 3.3 Mutations (AC 2): `patch` for `setLine` in `reread()`'s PENDING arm ⇒ (a) RED; move the error effect below the `waitCount` effect ⇒ (e) RED;
+  - [x] 3.3 Mutations (AC 2): `patch` for `setLine` in `reread()`'s PENDING arm ⇒ (a) RED; move the error effect below the `waitCount` effect ⇒ (e) RED;
         restore each byte-for-byte (`diff` against a saved copy).
-- [ ] **Task 4 — X2 (AC 3; DL3) — RED first**
-  - [ ] 4.1 Rewrite the F7 announce-rule leg and add AC 3's legs in `language-screen-render.test.ts` (running totals — AC 3); watch
+- [x] **Task 4 — X2 (AC 3; DL3) — RED first**
+  - [x] 4.1 Rewrite the F7 announce-rule leg and add AC 3's legs in `language-screen-render.test.ts` (running totals — AC 3); watch
         (a)-android, (b)-android, (e) fail.
-  - [ ] 4.2 `language.tsx`: DL3; header comment lines on the announcement rewritten (why plain text: F6, X2; the 3.3c / `contact.tsx`
+  - [x] 4.2 `language.tsx`: DL3; header comment lines on the announcement rewritten (why plain text: F6, X2; the 3.3c / `contact.tsx`
         sentence replaced). ⛔ `[t]` dependency (the file's own rule).
-- [ ] **Task 5 — Gates in the package**
-  - [ ] 5.1 `pnpm --filter @twt/mobile test` (whole suite), `tsc --noEmit`, `eslint .` green; added lines scanned for raw U+00A0 /
+- [x] **Task 5 — Gates in the package**
+  - [x] 5.1 `pnpm --filter @twt/mobile test` (whole suite), `tsc --noEmit`, `eslint .` green; added lines scanned for raw U+00A0 /
         zero-width characters ([[project_unicode_escapes_written_raw]]).
-- [ ] **Task 6 — The device pass (AC 4, 5; DL5, DL6)**
-  - [ ] 6.1 Metro `-c` from this worktree; prove the served bundle carries this branch (e.g. `grep -c lineCount` on the bundle URL).
+- [x] **Task 6 — The device pass (AC 4, 5; DL5, DL6)**
+  - [x] 6.1 Metro `-c` from this worktree; prove the served bundle carries this branch (e.g. `grep -c lineCount` on the bundle URL).
         Reuse the installed dev client only if `git diff <its built sha> HEAD -- apps/ packages/ pnpm-lock.yaml` touches no native dep.
-  - [ ] 6.2 X2 legs (a)–(d) (API `kill -STOP` / `-CONT`; the account holding the other language for (d) — fail a switch first); X1's
+  - [x] 6.2 X2 legs (a)–(d) (API `kill -STOP` / `-CONT`; the account holding the other language for (d) — fail a switch first); X1's
         `verify_failed` leg on the new code (F4; `kill -9` at the end). Record each with log lines and outcome.
-  - [ ] 6.3 Speech ON: BigDev's listen of X2 (b) (DL6).
-  - [ ] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes; `adb reverse --remove-all`; API / Metro
+  - [x] 6.3 Speech ON: BigDev's listen of X2 (b) (DL6).
+  - [x] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes; `adb reverse --remove-all`; API / Metro
         stopped; container removed; seed spec and env copies deleted; `git status` clean except this story's files.
-- [ ] **Task 7 — Records (AC 6)**
-  - [ ] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 lines — `language.tsx` AND `WaCodeEntry`);
+- [x] **Task 7 — Records (AC 6)**
+  - [x] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 lines — `language.tsx` AND `WaCodeEntry`);
         `friction-budget.md` disposition appended at the END of the file, with the X2 cost's status (AC 6).
-  - [ ] 7.2 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
+  - [x] 7.2 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
         comment, a prepended `# last_updated:` entry + the `last_updated:` block line (read the head LIVE across every branch AND
         worktree for the next free letter — [[project_sprint_status_ledger]]; [[project_sprint_status_safe_prepend]]; YAML parses).
-- [ ] **Task 8 — Gates**
-  - [ ] 8.1 Commit on `story/3-15c-…` only, branch checked before each commit ([[feedback_commit_on_story_branch]]); `friction:check`
+- [ ] **Task 8 — Gates** (8.1 done; 8.2 waits for BigDev's word — push / PR / land come after review)
+  - [x] 8.1 Commit on `story/3-15c-…` only, branch checked before each commit ([[feedback_commit_on_story_branch]]); `friction:check`
         after the commit.
   - [ ] 8.2 The gate is GitHub `ci.yml` (ADR-0047, ratified 2026-11-24): the push and the PR are BigDev's word; the story lands only
         when the PR's `ci.yml` run AT THE EXACT TIP SHA concluded `success` on every job (cl.1) — `scripts/land.sh --dry-run <pr>` first,
@@ -430,15 +430,82 @@ restored. The device pass (AC 4) is a required part of done; the listen (AC 5) i
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15c`, 2026-11-25.
+
 ### Debug Log References
+
+- **Task 0 (2026-11-25).** `git fetch origin`: `origin/main` = `8d0c1ae9` = the pin = `git merge-base origin/main HEAD` — ⛔ rebase, ⛔ re-pin. `ListAgents`: no other session. AC 1's `git diff 8d0c1ae9..HEAD -- announce.tsx lib/announce.ts lib/announce-repeat.ts lib/death-certificate-announce.ts` EMPTY before code (and after — checked again at Task 6.1). `pnpm install --frozen-lockfile`. **0.2:** F1 (AnnouncedText: Android live region, iOS effect on `[text, kind]`), F2 (`send()` / `confirm()` patch only `busy`; the 15 `line` writes), F4 (`resolveSecretValue` — Secret Manager only with `NODE_ENV=production` / GAC / `DRIZZLE_FORCE_SECRET_MANAGER`; `deps.ts` `resolveChannelSecret` env name = `[^A-Za-z0-9]`→`_`, upper-cased; `code-delivery.ts` `readCodeSecrets` / `availability`), F6 (`choose`'s `alreadyShowing || Platform.OS === 'ios'`), F7 (the pinning legs) and F8 (the send / wait effect order) re-derived by function — ⛔ difference. `78971e1f..HEAD` under `apps/mobile/{app,components,lib}`: only `assisted.tsx` (1 line), `lib/announce-repeat.ts`, `lib/session-context.tsx` — as the story's re-check says.
+- **Task 1 — the inventory (AC 1; DL4).** `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components` = 50 usages in 17 files. Re-derived by one read-only pass (an Explore agent, given the class definitions and ⛔ F5's results), then the two disagreements with F5 checked by hand. **At HEAD: K 16 / S 9 / U 14 / O 11** (F5 at `78971e1f`: 13 / 11 / 21 / 5). **Differences from F5:** `components/life-events/MedicalForm.tsx` `ack_required` is ⛔ S — Submit is `disabled={props.busy || !acknowledged}` (line 228), so the inline line cannot be set by a press (U; S only if that changed); `(life-events)/known-people-find.tsx` `find.no_search_results` is O — one continuing state while typing, ⛔ a re-set (F5 called it "arguably correct to stay quiet"); the K / U / O split differs by classification (F5 listed those usages only in part, so a line-by-line diff is ⛔ possible). The table (paths under `apps/mobile/`; PQ = `components/peer-request/PeerQuestionnaire.tsx`, WP = `components/workplace/WorkplacePicker.tsx`):
+
+  | file:line | words | class | trace |
+  | --- | --- | --- | --- |
+  | `app/(signup)/assisted.tsx:293` | `signup.assisted.saved` | O | set once by a successful Continue; a timer moves on |
+  | `app/(signup)/whatsapp.tsx:315` | `waSignup.request_failed` | O | set only in `onContinue`; `attempted` makes later Continues move on |
+  | `app/(signup)/whatsapp.tsx:316` | `waSignup.link_failed` | U | `onReopen` calls `setError(null)` before awaiting `openURL` |
+  | `known-people.tsx:156` | `error.not_available` | U | Retry → `resetQueries` clears data + error ⇒ unmount |
+  | `known-people.tsx:164` | `notice.text` | K | `key={notice.seq}` (a ref counter per `setNotice`) |
+  | `known-people.tsx:178 / 219 / 251 / 330 / 338` | `error.load` ×5 | K | `key={…errorUpdatedAt}` — moves on every failure (338 stays mounted through `fetchNextPage` but remounts by key) |
+  | `known-people-find.tsx:408 / 517` | `message.text` | K | `key={message.seq}` (counter in `say()`) |
+  | `known-people-find.tsx:436` | `find.too_many` / `list.full` | O | a repeat needs mount → failed reload → retry with the same count; ⛔ trigger reaches it today (focus/reconnect refetch off) |
+  | `known-people-find.tsx:451` | `find.no_search_results` | O | static empty state; a continuing state, ⛔ a re-set (F5: S) |
+  | `address.tsx:78` | `lifeEvents.address_required` / refusal | **S** | Submit empty → required; Submit again → same string, ⛔ clear between (server path clears first) |
+  | `nominee-link-find.tsx:364` | `message.text` | K | `key={message.seq}` |
+  | `posting.tsx:87` | `saved` | U | "I have been transferred" sets false + unmounts the tree |
+  | `posting.tsx:103` | `history_loading` | O | `isPending` state line |
+  | `posting.tsx:106 / 119` | `history_error` | U | no-data refetch resets to pending / hidden while `isFetching` |
+  | `posting.tsx:161` | `history_error` ("Show more") | **S** | `isFetchNextPageError` stays true through the `fetchNextPage` retry when data exists |
+  | `nominees.tsx:511` | `marksError.text` | K | `key={marksError.seq}` (`Date.now()`; null set before each await) |
+  | `nominees.tsx:569` | `error.load` | K | `key={links.errorUpdatedAt}` |
+  | `nominees.tsx:607` | `form.marked*` | K | `key={pickNotice.seq}` (`Date.now()` per pick return) |
+  | `nominee-link-requests.tsx:99 / 105` | `message.text` / `error.load` | K | `Date.now()` key (null first) / `q.errorUpdatedAt` |
+  | `(withdrawal)/index.tsx:185` | withdrawal error | U | `setError(null)` before the network await |
+  | PQ:178 | `peer_request.unsaved` (load-error view) | **S** | Back with unsent answers, Back again — only "Leave anyway" clears it |
+  | PQ:454 | `failureNotice` | U | re-answering deletes the failure synchronously (edge: two generic `invalid` failures stay identical) |
+  | PQ:455 | `t(actionNotice)` (`required` / `date_unsaved`) | **S** | Next unanswered, Next again (Back twice for `date_unsaved`) |
+  | PQ:456 | `peer_request.unsaved` | **S** | Back while a save is pending / failed, Back again |
+  | PQ:484 | `peer_request.submit_error` | U | Submit sets false before `mutateAsync` |
+  | PQ:602 | the save line | U | every `save()` publishes `saving` first |
+  | PQ:654 | `peer_request.unavailable` | O | static per mount |
+  | PQ:665 | `peer_request.date_invalid` | **S** | Save an unparseable date, Save again — cleared only by an edit / Clear |
+  | `WorkplaceSuggestionQuestion.tsx:82` | `outcome.text` | U | `onOutcome(null)` before the POST |
+  | WP:135 | refusal copy | U | `setError(null)` before the await |
+  | WP:143 / 320 | `districts_loading` / `search_loading` | O | state lines |
+  | WP:150 | `districts_error` | **S** (U with no data) | ⛔ `!data` guard: cached districts + failed refetch, Retry fails again — `status` stays `error` |
+  | WP:326 / 333 | `search_error` / `search_empty` | U | reset to pending / hidden while fetching; every new `q` passes "Searching…" |
+  | WP:374 | `search_error` ("Show more") | **S** | as `posting.tsx:161` |
+  | WP:434 / 478 | `typed_name_invalid` / `date_invalid` | O | derived validation, ⛔ repeat set event |
+  | `MedicalForm.tsx:223` | `inlineError ?? props.error` | U | parents clear before the await; `ack_required` unreachable (Submit disabled) — F5: S |
+  | `NomineeForm.tsx:343` | `form.removed` / `form.kept` | K | `key={notice.seq}` (`Date.now()`; ⛔ cleared between taps — a same-millisecond collision) |
+  | `NomineeForm.tsx:348` | `shownError` | K | `` key={`${errorSeq}:${shownError}`} ``; the parent clears before each submit |
+  | `WaCodeEntry.tsx:106` | `errorText` | **S** → fixed here | `confirm()` / `send()` never clear `line` (X1) |
+  | `NomineeMarkControl.tsx:76` | `edit.question*` | O | stays while the question is open; reopen remounts |
+
+- **Task 2 — the device baseline (DL2), 2026-11-25 09:05–09:14 IST.** Throwaway `postgres:16-alpine` `twt-3-15c-pg` on :5461, migrated (188 tables); main's git-ignored `apps/api/.env` / `apps/mobile/.env` copied; an UNCOMMITTED env-guarded seed spec (`SEED_3_15C=1`: an admin through the passkey fake, `pariwar_admin` on `aaaaaaaa-…`, a clause version, a T&C created + approved, one `pariwar_wa_config` row — enabled, `+91 98765 43210`, `phone_number_id` `100000000000001`, `access_token_secret_name` `twt-dev-wa-token-3-15c`). API from the worktree with `WA_TEMPLATE_WA_OPT_IN_CODE_HI_AAAAAAAA_AAAA_4AAA_8AAA_AAAAAAAAAAAA=twt_code_hi`, the `_EN_` twin, `TWT_DEV_WA_TOKEN_3_15C=<non-blank>` on the command line (⛔ `NODE_ENV`, ⛔ GAC). `Pixel_9` booted; the INSTALLED dev client reused (`git diff 8b5f4c01 HEAD -- apps/mobile/package.json pnpm-lock.yaml app.json packages/*/package.json` empty); Metro `-c` from this worktree (bundle 21 MB, 577 worktree-path hits). Fresh member `9876500401` → T&C → `twtp05://whatsapp` → tick + Continue (the API log shows both template env fallbacks read) → back → "WhatsApp on another phone?" → **the code form with "मुझे व्हाट्सएप पर कोड भेजें" — F4's recipe WORKS (first reach in this repo).** TalkBack ON, `pm disable-user com.google.android.tts`, logcat captured, `kill -STOP` the API node process, Send → 15 s → `sent_uncertain` spoken + the field; `123456`; **Confirm 1** (09:11:53.298) → `अभी कोड की जाँच नहीं हो सकी।. Alert` at 09:12:23.500 (the answer), nothing at the press. **Confirm 2**: the first tap MISSED — `sent_uncertain` gave way to `verify_failed`, the status line went and Confirm moved up ~125 px (not counted); re-aimed (09:13:27.212) → **nothing logged** through 09:14:05. Five connections were held at the API (`netstat`, Recv-Q > 0) — Send + verify + re-read + at least one more, so a second Confirm ran. ⇒ X1 REPRODUCED (silent, F3 (i)); ⛔ press re-read seen ⇒ DL1 applies (DL2's rule — ⛔ the "not reproduced" stop). `kill -9` the API (⛔ `-CONT`).
+- **Task 3 (AC 2).** 11 new legs in `wa-code-entry-render.test.ts` (the tamagui `Text` mock now records `data-color` / `data-font-size`): per platform (a) verify_failed ×2, (b) released send_failed ×2, (c) a typed digit + the held next press's busy flip, (c) a countdown tick, (d) collapse → expand, (f) the element; plus [ios] (e) the order. **RED on today's code:** 10 failed — (a), (b), (f) on both platforms (Android 0 sent / iOS 1 of 2; `wa-code-error` absent), (c) on both (its positive counts), (d) and (c)-tick on Android (0 sent); (e) and iOS (d) / (c)-tick GREEN (the child `AnnouncedText`'s effect ran first / on mount). Built DL1 (`lineCount`, `setLine` for the 9 `patch({ line })` writes, explicit bumps in the 5 `setState` arms — `grep -n 'line:\|setLine(\|lineCount'` accounts for all 15; plain `Text` + one effect `[form.lineCount]` declared before the wait effect; header rewritten; `AnnouncedText` import removed) → 90/90 (with `wa-signup-copy-keys`). **Mutations:** `patch({ line: 'verify_failed' })` in `reread()`'s PENDING arm ⇒ (a) RED on both platforms (also (c), (d) — same path); the error effect moved below the wait effect ⇒ [ios] (e) RED (`expected 2 to be less than 1`); each restored from a saved copy, `diff` empty.
+- **Task 4 (AC 3).** The F7 leg rewritten as AC 3 (a) + (b) + (e) per platform; (c) and (d) added per platform. **RED:** (e) on both (`aria-live` present), (c)-android and (d)-android (0 sent at the first failure). Because (e) is asserted first in the combined leg, (a) / (b) were shown RED on their own in a throwaway copy (the two `aria-live` asserts removed, then (a)'s too): (a)-android `called 0 times` (expected 1), (b)-android `called 1 times` (expected 2); iOS green; the copy restored (`diff` empty). Built DL3 (`notRecordedRef` and `Platform` removed; `announce(translate(…, { locale: next }))` on every `not_recorded`; ⛔ live region; header rewritten) → 18/18 (with `language-copy-keys`).
+- **Task 5.** `pnpm --filter`-equivalent in `apps/mobile`: vitest 121 files / 2385 tests green; `tsc --noEmit` clean; `eslint .` clean; added lines scanned for U+00A0 / U+200B-D / U+FEFF / U+2060 — 0.
+- **Task 6 — the device pass (AC 4, 5).** Metro restarted `-c`; served bundle: `lineCount` ×24, `wa-code-error` ×1. **X1 on the new code** (fresh member `9876500402`, a new API process, same env): Send held → `sent_uncertain`; Confirm 1 (09:22:41.941) → `अभी कोड की जाँच नहीं हो सकी।` at 09:23:12.063 (0 trailing U+00A0 — and ⛔ "Alert": a plain announcement now); screen re-shot, Confirm at its new place; Confirm 2 (09:23:28.616) → the same words at 09:23:58.773, **1 trailing U+00A0**; nothing at either press; 5 connections held (Send, verify + re-read ×2). `kill -9`. **X2** (`twtp05://language`): first with the API dead — (a) English line once at the failure (09:24:30.017), (b) the switch to हिन्दी while it showed → the Hindi line ONCE (09:25:10.386); the tap on the shown English in between did nothing (the account's language was never read in that session — `-388` item 1 needs a read; by design). A restarted API answered the old session 401 (not pursued — a fresh sign-in, same member). With ONE API process (`kill -STOP` / `-CONT`; no WhatsApp Send held in it): (a) 09:28:18.946 once, 15 s after the tap; a switch to हिन्दी answered **503 `member_language.passport_missing`** (the seed lacked a `pariwar_passport` row — the line spoken once, at that failure, 09:28:27.226; ⛔ counted as (c)); a passport row inserted into the throwaway DB; `-CONT` + a foreground cycle (the pending PUT → 200, the GET → 200); **(c)** a switch to हिन्दी while the line showed, PUT 200 → only "भाषा" logged, the line removed, ⛔ "not recorded"; **(d)** `-STOP`, a switch to English → the line at its failure (09:30:55.693, 2 U+00A0), a tap on the SHOWN English (the account held हिन्दी) → retried, failed → the same words at 09:31:16.004 (3 U+00A0). **Listen (DL6):** TTS re-enabled, volume 12; BigDev answered "Ready"; (b) run 09:39:16–09:39:57 (English switch held → line; हिन्दी switch held → the Hindi line); **BigDev: *"Once, clean"***. **Also seen:** on each switch the signup assisted step under the language screen logged its title in the new language (Y2 in deferred-work). **Restore (6.4):** API `kill -9`, logcat stopped, TalkBack off, Google TTS enabled + `tts_default_synth = com.google.android.tts` (it was `com.example.nonexistent.tts` on arrival — left by an earlier pass), font 1.0, `adb reverse --remove-all`, Metro stopped, emulator shut down (it was off on arrival), container removed, seed spec and both env copies deleted; `git status` = this story's files only. Volumes were set to 12 for the listen (their values on arrival were ⛔ read).
 
 ### Completion Notes List
 
+- **Dev complete (`bmad-dev-story 3.15c`, 2026-11-25) — Status `review`.** Code `a47e35c3`. DL1 and DL3 built as written; ⛔ deviation from the decisions. ACs: **AC 1** — inventory re-derived (K 16 / S 9 / U 14 / O 11; the two S → non-S moves stated), AC 1's diff EMPTY, every other caller untouched. **AC 2** — legs (a)–(f) under both platforms, RED first (as the AC predicted, plus (c)/(d) on Android); both mutations RED then restored. **AC 3** — (a)–(e) under both platforms, running totals, settled negatives; RED for (a)-android, (b)-android, (e) (and (c)/(d)-android). **AC 4** — X2 (a), (b), (c), (d) **fixed** on the device; X1 baseline silent (reproduced) → new code **fixed** for `verify_failed`; `send_failed` **NOT REACHED** (needs Meta — DL5); the `whatsapp.tsx` lines did not show. **AC 5** — BigDev: *"Once, clean"*. **AC 6** — deferred-work: X1 (`verify_failed` CLOSED, `send_failed` addressed in code ⛔ device-shown), X2 CLOSED, V4 dated line (`language.tsx` same-language-twice RUN + fixed; `WaCodeEntry` REACHED, `sendCount` / `waitCount` unchanged), new Y1 (the DL4 inventory, owner NONE YET) and Y2 (new observation, owner NONE YET); friction disposition appended at the file's end with the X2 cost FIXED. Gates green.
+- **Open for BigDev:** Task 8.2 — the push, PR and landing (ADR-0047: `ci.yml` at the tip SHA; `scripts/land.sh --dry-run` first). Y1 / Y2 need an owner when you choose. The DL1 departure on iOS (a re-set error is now announced on iOS too) rests on code evidence; VoiceOver un-attested.
+- **Found on the way (recorded, ⛔ changed):** F4's recipe reaches `WaCodeEntry` locally — the first time; a fresh local DB also needs a `pariwar_passport` row for the language endpoint (503 `passport_missing` otherwise); with the API held, the app's sixth concurrent request to the host did ⛔ reach the network (5 connections held — consistent with OkHttp's default per-host limit; an inference, ⛔ checked).
 - Story created (`bmad-create-story 3.15c`, 2026-11-23; BigDev asked to validate it, none existed — *"Create in new worktree"*): own
   worktree stacked on `story/3-15b-…` at `78971e1f`; facts F1–F10 traced by hand and one read-only inventory pass (F5); DL1–DL7 the
   author's. Ultimate context engine analysis completed - comprehensive developer guide created.
 
 ### File List
+
+- `apps/mobile/components/notifications/use-wa-code.ts` — `lineCount`, `setLine` (DL1)
+- `apps/mobile/components/notifications/WaCodeEntry.tsx` — plain error line + one effect; header (DL1)
+- `apps/mobile/app/(settings)/language.tsx` — plain line, every failure announced once; header (DL3)
+- `apps/mobile/tests/unit/wa-code-entry-render.test.ts` — AC 2 legs; `Text` mock records its look
+- `apps/mobile/tests/unit/language-screen-render.test.ts` — AC 3 legs (the F7 leg rewritten)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — X1, X2, V4 dated lines; new section (Y1, Y2)
+- `friction-budget.md` — `**Story 3.15c disposition (…)**`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row → `review`, ledger `2026-11-25b`
+- `_bmad-output/implementation-artifacts/3-15c-standing-line-spoken-again-and-language-switch-spoken-once.md` — this file
 
 ## Change Log
 
@@ -446,4 +513,5 @@ restored. The device pass (AC 4) is a required part of done; the listen (AC 5) i
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15c`) in its own worktree stacked on the 3.15b branch (`78971e1f`). §0: ⛔ Panel question. F1: X1 sends nothing on iOS either. F4: `WaCodeEntry` very probably reachable locally (the secrets' env fallback; ⛔ Secret Manager) — the `verify_failed` leg with ⛔ outbound call, the `send_failed` leg ⛔ (it needs Meta). DL1 plain text + one `announce()` per set (`lineCount`); DL3 the same for the language line; DL4 the inventory recorded, only `WaCodeEntry` changed. Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.2 | 2026-11-25 | Re-validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*) after rebasing onto `origin/main` `8d0c1ae9` (3.15b LANDED; backup `backup/3-15c-pre-rebase-2026-11-25`). `baseline_commit` re-pinned `78971e1f` → `8d0c1ae9` (AC 1's empty diff was RED at `78971e1f` — `0a56ec0f` changed `lib/announce-repeat.ts`), with a re-pin rule for later rebases. Task 8.2 / Trap 10 follow ADR-0047 (GitHub `ci.yml` at the tip SHA is the gate; `land.sh`; `ci:local` advisory). AC 6: V4 lines for `WaCodeEntry` too (V4's trigger fires on this story); the friction disposition at the file's end, with the X2 cost's status. DL1 names the `setLine` helper (9 + 5 + initial = 15 writes); the AC 2 mutation re-worded. AC 2 (f) asserts the look (`$red10`, `$2`). AC 2 / AC 3: awaited counts, settled negatives. F1–F10 re-checked at `8d0c1ae9`. ⛔ Code. |
+| 1.3 | 2026-11-25 | Dev complete (`bmad-dev-story 3.15c`) → `review`. Code `a47e35c3` (DL1 `WaCodeEntry` + `use-wa-code.ts`; DL3 `language.tsx`), tests RED first, two mutations, mobile suite / tsc / eslint green. Device: `WaCodeEntry` reached locally (F4); X1 baseline silent → `verify_failed` fixed; `send_failed` NOT REACHED; X2 (a)–(d) fixed; BigDev's listen *"Once, clean"*. Records: deferred-work X1 / X2 / V4 lines, Y1 (inventory, K16/S9/U14/O11), Y2; friction disposition; ledger `2026-11-25b`. Task 8.2 waits for BigDev. |
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*). 3.15b's review is COMMITTED (`0a56ec0f` / `57f541b3`, ⛔ any file this story edits) — the PINNED caveat and X2's quote updated, Task 0.1 rebases onto `57f541b3`. AC 3 counts are RUNNING TOTALS (a delta "one more" is green on today's Android code); jsdom sees the live region only as `aria-live` — (e). AC 2 (c) holds the next call for the `busy` flip; (e) gains a mutation (it is green today). DL1 in `assisted.tsx`'s shape (`[form.lineCount]`, ⛔ ref); the `code_resend_too_soon` arm bumps only when `told`; the iOS change stated as a departure from the epics text. F4 adds the template key's source, the env rule, and why 3.15b's seeded row still read false; Task 2.1 copies main's `.env` files. F7: (f) RED on iOS too; the first Android `verify_failed` legs. ⛔ Code. |

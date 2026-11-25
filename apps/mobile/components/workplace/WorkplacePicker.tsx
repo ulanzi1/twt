@@ -19,6 +19,18 @@
 //   (`isError && !data`): a failed *"Show more"* keeps the loaded rows and reports beside the button
 //   (`isFetchNextPageError` — review 2026-10-15 R2-3); the previous query's rows stay, dimmed, while the next
 //   `q` loads (`isPlaceholderData` — R2-8).
+// ── Story 3.15d (S7, S8; 3.15c-dev Y1): two failure lines are spoken ONCE per time they are SET, on both platforms, keyed on the
+//   query's `errorUpdateCount` (+1 per FINAL failure — shown against the real hooks in `workplace-query-error-signal.test.ts`; ⛔
+//   `errorUpdatedAt`, a millisecond stamp that ties). As `AnnouncedText` a Retry that failed AGAIN (cached districts: `status` stays
+//   `error`; a Show-more retry: the flag stays true) kept the same line mounted with the same words and was sent nothing.
+//   · S7 `districts_error` — plain `Text`; its effect sits in THIS component's body, ABOVE the `isPending` early return (a hook
+//     after it would change the hook count when the query settles — mobile has ⛔ `react-hooks` lint, `workplace-picker-render.test.ts`
+//     holds the leg that takes one mounted picker from `isPending` to loaded) and re-checks `districts.isError`: the count never
+//     resets, so a remount after a SUCCESS holds a non-zero count and must stay silent.
+//   · S8 `search_error` beside "Show more" — `<SearchMoreError>`, a child rendered INSIDE the `hasNextPage && isFetchNextPageError`
+//     branch: a failed refetch of page 1 moves the same count but shows the OTHER `search_error` line and unmounts this child, so its
+//     effect cannot run — ⛔ a re-check in its body, ⛔ an effect in the picker body (it would fire for a line that is not rendered).
+//   Counter-only deps (⛔ `t`, ⛔ the words): a language switch must not re-speak a standing line.
 // ── ⛔ The workplace is ⛔ never shown to anyone else; this screen names ⛔ a death, a claim or the people asked about one.
 
 import { useEffect, useRef, useState } from 'react'
@@ -29,6 +41,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { WorkplaceSummaryWire } from '@twt/contracts'
 import { Button, H2, Input, Paragraph, Spinner, Text, View, XStack, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { newIdempotencyKey } from '../../lib/idempotency-key'
 import { memberAuth } from '../../lib/member-api'
 import { todayInIst } from '../../lib/peer-request'
@@ -94,6 +107,11 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
 
   useAnnounceOnChange(phase === 'district' ? null : t(phaseTitleKey(phase, answer.kind), { district: answer.district ?? '' }), { skipInitial: true })
 
+  // S7 — spoken once per FINAL failure of the districts query (counter-only deps). ABOVE every early return below; re-checks `isError`.
+  useEffect(() => {
+    if (districts.isError) announce(t('districts_error'))
+  }, [districts.errorUpdateCount])
+
   const today = todayInIst(new Date())
 
   async function save(body: NonNullable<ReturnType<typeof buildListedRequest>>): Promise<void> {
@@ -147,7 +165,9 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
   if (districts.isError) {
     return (
       <YStack flex={1} px="$6" py="$6" gap="$4" bg="$background">
-        <AnnouncedText text={t('districts_error')} kind="error" color={ERROR_COLOR} />
+        <Text fontSize="$2" color={ERROR_COLOR} accessibilityRole="alert" testID="workplace-districts-error">
+          {t('districts_error')}
+        </Text>
         <Button accessibilityRole="button" onPress={() => void districts.refetch()}>
           {t('retry')}
         </Button>
@@ -371,7 +391,7 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
               (R2-3). The button is held while the rows are the previous `q`'s (`hasNextPage` would be THEIRS). */}
           {search.hasNextPage && search.isFetchNextPageError ? (
             <YStack flex={1} gap="$2">
-              <AnnouncedText text={t('search_error')} kind="error" color={ERROR_COLOR} />
+              <SearchMoreError errorCount={search.errorUpdateCount} />
               <Button
                 accessibilityRole="button"
                 disabled={search.isFetchingNextPage}
@@ -492,6 +512,23 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
 }
 
 /** The phase's spoken title (announced on a phase change — ⛔ a navigation event fires). */
+/**
+ * The failed "Show more" line of the search (Story 3.15d, S8): plain `Text` (role alert, ⛔ a live region), spoken when it MOUNTS and
+ * again whenever the query's `errorUpdateCount` moves while it stays mounted (a Retry that failed again). Counter-only deps — ⛔ `t` /
+ * the words. ⛔ A body re-check: the caller renders it only while the Show-more failure is the one showing.
+ */
+function SearchMoreError({ errorCount }: { errorCount: number }) {
+  const t = useWorkplaceT()
+  useEffect(() => {
+    announce(t('search_error'))
+  }, [errorCount])
+  return (
+    <Text fontSize="$2" color={ERROR_COLOR} accessibilityRole="alert" testID="workplace-search-more-error">
+      {t('search_error')}
+    </Text>
+  )
+}
+
 function phaseTitleKey(phase: Phase, kind: WorkplaceAnswerKind | null): string {
   switch (phase) {
     case 'kind':

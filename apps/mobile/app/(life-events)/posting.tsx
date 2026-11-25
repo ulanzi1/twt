@@ -22,15 +22,24 @@
 //   sets the query's `status` to `'error'` while `data` keeps the loaded pages, so the error branch is for a failed FIRST
 //   load only (`isError && !data`); a page-2 failure is reported beside the button (`isFetchNextPageError`) with its own
 //   Retry, the rows staying on screen (review 2026-10-15 R2-3).
+// ── Story 3.15d (S2, DL1, 3.15c-dev Y1): the "Show more" failure line is spoken ONCE per time it is SET, on both platforms. As
+//   `AnnouncedText` a Retry that failed AGAIN (the flag stays true through the retry, the words are the same, the line stays
+//   mounted) was sent nothing. `<HistoryMoreError>` owns the line and its effect, keyed on the query's `errorUpdateCount` (+1 per
+//   FINAL failure — shown against the real hooks in `workplace-query-error-signal.test.ts`; ⛔ `errorUpdatedAt`, a millisecond
+//   stamp that ties). It is rendered INSIDE the `hasNextPage && isFetchNextPageError` branch, so a failed refetch of page 1 (which
+//   moves the same count, and shows the OTHER `history_error` line) unmounts it and its effect cannot run — ⛔ a re-check in its body.
+//   It is a CHILD (⛔ an effect in `WorkplaceScreen`): the screen outlives the picker, the child does not, so a return from the
+//   picker re-speaks a standing line once, as it did.
 // ── the loading state branches on `isPending` (⛔ `isLoading`): the query is DISABLED while the session hydrates, and a
 //   disabled v5 query is `isLoading: false` with ⛔ data — `isLoading` would flash *"Not added yet"* on a cold start.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
 
 import { Stack } from 'expo-router'
 import { Button, H2, H4, Spinner, Text, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { AnnouncedText } from '../../components/peer-request/announce'
 import { useKnownPeoplePromptsQuery } from '../../components/known-people/useKnownPeopleQueries'
 import { usePostingHistoryQuery } from '../../components/workplace/useWorkplaceQueries'
@@ -158,7 +167,7 @@ export default function WorkplaceScreen() {
                   Retry (R2-3) — ⛔ the whole screen flipping into the error branch. */}
               {history.hasNextPage && history.isFetchNextPageError ? (
                 <YStack gap="$2">
-                  <AnnouncedText text={t('history_error')} kind="error" color="#C0392B" />
+                  <HistoryMoreError errorCount={history.errorUpdateCount} />
                   <Button
                     accessibilityRole="button"
                     disabled={history.isFetchingNextPage}
@@ -183,6 +192,23 @@ export default function WorkplaceScreen() {
         </YStack>
       </ScrollView>
     </>
+  )
+}
+
+/**
+ * The failed "Show more" line (Story 3.15d, S2): plain `Text` (role alert, ⛔ a live region), spoken when it MOUNTS and again whenever
+ * the query's `errorUpdateCount` moves while it stays mounted (a Retry that failed again). Counter-only deps — ⛔ `t` / the words (a
+ * language switch must not re-speak it). ⛔ A body re-check: the caller renders it only while the Show-more failure is the one showing.
+ */
+function HistoryMoreError({ errorCount }: { errorCount: number }) {
+  const t = useWorkplaceT()
+  useEffect(() => {
+    announce(t('history_error'))
+  }, [errorCount])
+  return (
+    <Text fontSize="$2" color="#C0392B" accessibilityRole="alert" testID="posting-history-more-error">
+      {t('history_error')}
+    </Text>
   )
 }
 

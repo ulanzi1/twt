@@ -12,7 +12,7 @@ import { createElement, type ReactNode } from 'react'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ApiError } from '@twt/api-client'
 import { getCatalog } from '@twt/i18n'
-import { LocaleProvider } from '@twt/i18n/react'
+import { LocaleProvider, useLocale } from '@twt/i18n/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mock = vi.hoisted(() => ({
@@ -107,6 +107,7 @@ vi.mock('tamagui', async () => {
       role: props.accessibilityRole === 'alert' ? 'alert' : undefined,
       'aria-label': props.accessibilityLabel,
       'aria-live': props.accessibilityLiveRegion,
+      'data-selectable': props.selectable ? 'true' : undefined,
       'data-color': props.color,
       'data-font-size': props.fontSize,
     }, props.children)
@@ -149,12 +150,13 @@ const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)
 const q = (id: string) => screen.queryByTestId(id)
 const get = (id: string) => screen.getByTestId(id)
 
-/** Render the step, tick, Continue ⇒ the mint answers `minted` and WhatsApp opens (`link: false` ⇒ it does ⛔ open). */
-async function toSent(minted: Record<string, unknown>, opts: { link?: boolean } = {}) {
+/** Render the step, tick, Continue ⇒ the mint answers `minted` and WhatsApp opens (`link: false` ⇒ it does ⛔ open).
+ *  `extra` renders beside the step under the SAME `LocaleProvider` (a probe that switches the locale — Story 3.15c review P2). */
+async function toSent(minted: Record<string, unknown>, opts: { link?: boolean; extra?: ReactNode } = {}) {
   mock.getWaOptInStatus.mockResolvedValue(status(null))
   mock.requestWaOptIn.mockResolvedValue(minted)
   if (opts.link === false) mock.openURL.mockRejectedValue(new Error('no handler'))
-  render(createElement(LocaleProvider, { initialLocale: 'en' }, createElement(WhatsappStepScreen)))
+  render(createElement(LocaleProvider, { initialLocale: 'en' }, createElement(WhatsappStepScreen), opts.extra))
   fireEvent.click(await screen.findByTestId('wa-signup-box'))
   fireEvent.click(get('wa-signup-continue'))
   await settle()
@@ -987,6 +989,120 @@ describe('Story 3.15c AC 2 — an error line set again with the same words is SE
     expect(failedAt).toBeLessThan(waitAt)
     expect(mock.announce.mock.calls[waitAt]![1]).toEqual({ queue: true })
   })
+
+  // Story 3.15c code review P1 / R1 — every error-line write in `use-wa-code.ts`, BY ARM, is announced once per set: 11 sites today —
+  // the nine `setLine` calls (leg (a) above pins the re-read's PENDING arm; the rows below pin the other eight), plus the hand-bumped
+  // `code_send_failed` arm (legs (b) / (c) / (e)) and the hand-bumped `code_limit_reached` arm (the `no_more` row). The effect keys on
+  // `lineCount` alone, so a write that forgets its bump (a `patch({ line })`, or a hand-written `lineCount` left out) silences a line
+  // `AnnouncedText` used to speak whenever its WORDS changed — and no other leg would notice. A NEW write site needs its row here.
+  const atField = async () => {
+    await toSent(LIVE)
+    typeCode('123456')
+  }
+  const verifyRejects = (e: unknown) => mock.verifyWaOptInCode.mockRejectedValueOnce(e)
+  const sendRejects = async (e: unknown) => {
+    await toSent(OFFER)
+    expand()
+    mock.sendWaOptInCode.mockRejectedValueOnce(e)
+    await press('wa-code-send')
+  }
+  const SETS: { name: string; key: string; run: () => Promise<void> }[] = [
+    {
+      name: 'code_wrong with a try left', key: 'waCode.wrong_retry',
+      run: async () => { await atField(); verifyRejects(err(409, 'wa_opt_in.code_wrong', details({ attemptsRemaining: 1, liveCode: true }))); await press('wa-code-confirm') },
+    },
+    {
+      name: 'a final code_wrong', key: 'waCode.wrong_final',
+      run: async () => { await atField(); verifyRejects(err(409, 'wa_opt_in.code_wrong', details({ attemptsRemaining: 0, codesRemaining: 1, liveCode: false }))); await press('wa-code-confirm') },
+    },
+    {
+      name: 'code_no_longer_valid (Confirm)', key: 'waCode.no_longer_valid',
+      run: async () => { await atField(); verifyRejects(err(409, 'wa_opt_in.code_no_longer_valid', { codesRemaining: 1, liveCode: false })); await press('wa-code-confirm') },
+    },
+    {
+      name: 'not_pending (Confirm)', key: 'waCode.no_longer_valid',
+      run: async () => { await atField(); verifyRejects(err(409, 'wa_opt_in.not_pending', { codesRemaining: 0, liveCode: false })); await press('wa-code-confirm') },
+    },
+    {
+      name: 'a lapsed request found by the status re-read', key: 'waCode.no_longer_valid',
+      run: async () => { await atField(); verifyRejects(err(503, 'http.503')); mock.getWaOptInStatus.mockResolvedValueOnce(status('EXPIRED')); await press('wa-code-confirm') },
+    },
+    {
+      // The OFFLINE `verify_failed`: the verify fails, then the status re-read ALSO rejects (`reread()`'s catch arm).
+      name: 'the status re-read also rejects (offline)', key: 'waCode.verify_failed',
+      run: async () => { await atField(); verifyRejects(err(503, 'http.503')); mock.getWaOptInStatus.mockRejectedValueOnce(new TypeError('Network request failed')); await press('wa-code-confirm') },
+    },
+    {
+      name: 'not_pending (Send)', key: 'waCode.no_longer_valid',
+      run: () => sendRejects(err(409, 'wa_opt_in.not_pending', { codesRemaining: 0, liveCode: false })),
+    },
+    {
+      name: 'code_limit_reached (Send — the hand-bumped arm)', key: 'waCode.no_more',
+      run: () => sendRejects(err(409, 'wa_opt_in.code_limit_reached', details({ codesRemaining: 0 }))),
+    },
+    {
+      name: 'code_not_offered (Send — the default arm)', key: 'waCode.send_failed',
+      run: () => sendRejects(err(409, 'wa_opt_in.code_not_offered', details({ codesRemaining: 2 }))),
+    },
+  ]
+  for (const os of ['android', 'ios'] as const) {
+    for (const c of SETS) {
+      it(`[${os}] (g) ${c.name} ⇒ ${c.key} is announced ONCE`, async () => {
+        mock.os = os
+        await c.run()
+        await waitFor(() => expect(spoken(c.key)).toHaveLength(1))
+        expect(alertText()).toBe(words[c.key])
+        await settle()
+        expect(spoken(c.key)).toHaveLength(1)
+      })
+    }
+  }
+
+  // Story 3.15c code review P2 — the error effect keys on `lineCount` ONLY. A language switch changes the WORDS of a standing line
+  // without a new set, so it must stay silent (an `errorText` dependency would speak it again); and an error SET while the form is
+  // collapsed is spoken once, by the mount-time run, when it is expanded.
+  for (const os of ['android', 'ios'] as const) {
+    it(`[${os}] (h) a language switch while an error stands changes its words ⇒ ⛔ further announcement`, async () => {
+      mock.os = os
+      let setLocale!: ReturnType<typeof useLocale>['setLocale']
+      const Probe = () => {
+        setLocale = useLocale().setLocale
+        return null
+      }
+      await toSent(LIVE, { extra: createElement(Probe) })
+      typeCode('123456')
+      verifyFails()
+      await press('wa-code-confirm')
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(1))
+      const hindi = getCatalog('hi', 'common')!['waCode.verify_failed']!
+      expect(hindi).not.toBe(words['waCode.verify_failed'])
+      const before = mock.announce.mock.calls.length
+      await act(async () => { setLocale('hi') })
+      await settle()
+      expect(alertText()).toBe(hindi) // the words DID change — ⛔ a new set
+      expect(mock.announce.mock.calls).toHaveLength(before)
+    })
+
+    it(`[${os}] (i) an error SET while the form is collapsed ⇒ nothing then, spoken once when it is expanded`, async () => {
+      mock.os = os
+      await toSent(LIVE)
+      typeCode('123456')
+      let reject!: (e: unknown) => void
+      mock.verifyWaOptInCode.mockReturnValueOnce(new Promise((_r, j) => { reject = j }))
+      mock.getWaOptInStatus.mockResolvedValueOnce(status('PENDING'))
+      await act(async () => { fireEvent.click(get('wa-code-confirm')) })
+      expand() // collapse while the verify is in flight — the hook outlives the view
+      expect(q('wa-code-form')).toBeNull()
+      await act(async () => { reject(err(503, 'http.503')) })
+      await settle()
+      expect(spoken('waCode.verify_failed')).toHaveLength(0)
+      expand()
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(1))
+      expect(alertText()).toBe(words['waCode.verify_failed'])
+      await settle()
+      expect(spoken('waCode.verify_failed')).toHaveLength(1)
+    })
+  }
 })
 
 describe('AC13 — signup never waits on the code', () => {

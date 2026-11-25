@@ -343,7 +343,7 @@ the ESLint fence now naming the PROPERTY only (`announceForAccessibility*` on AN
   - [x] 6.2 X2 legs (a)–(d) (API `kill -STOP` / `-CONT`; the account holding the other language for (d) — fail a switch first); X1's
         `verify_failed` leg on the new code (F4; `kill -9` at the end). Record each with log lines and outcome.
   - [x] 6.3 Speech ON: BigDev's listen of X2 (b) (DL6).
-  - [x] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes; `adb reverse --remove-all`; API / Metro
+  - [x] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes (⛔ restored — their values on arrival were ⛔ read; left at 12: review P5); `adb reverse --remove-all`; API / Metro
         stopped; container removed; seed spec and env copies deleted; `git status` clean except this story's files.
 - [x] **Task 7 — Records (AC 6)**
   - [x] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 lines — `language.tsx` AND `WaCodeEntry`);
@@ -360,6 +360,218 @@ the ESLint fence now naming the PROPERTY only (`announceForAccessibility*` on AN
         passed / total for the PR run AND the push to `main` (cl.2); `code-escrow-mirror` is red on every push — not part of the gate.
         `ci:local` is advisory (cl.3 — not needed for a mobile-only change; if run, a FRESH container, `DATABASE_URL=…?sslmode=disable`);
         the pre-push hook runs it only with `RUN_CI_LOCAL=1` (cl.4 — [[project_prepush_hook_inherits_5432]]).
+
+### Review Findings
+
+Code review 2026-11-25 (`bmad-code-review 3.15c`), pinned range `8d0c1ae9..fb430b00` (= `baseline_commit` = `main`'s tip; code `a47e35c3`),
+full mode, worktree clean before and after the layers. All three layers returned findings (Blind Hunter 15, Edge Case Hunter 3, Acceptance
+Auditor 10); the reviewer verified each claim against the code and the records at `fb430b00` and deduplicated.
+**0 decision-needed, 6 patch, 1 defer, 16 dismissed.** No Panel question: nothing here changes what a person is told, owed or asked to
+consent to (§0 holds) — every item is test coverage, records wording or an implementation choice, decided below by the reviewer; BigDev
+may overrule any of them. Reviewer-run evidence: `wa-code-entry-render.test.ts` + `language-screen-render.test.ts` green at the tip
+(99 tests: 15 + 84); `pnpm friction:check` passes and names this story's disposition.
+AC 1, AC 2 and AC 3's CODE are delivered as written (AC 1's diff over the four `announce*` files is empty; all 15 `line` writes are
+accounted for; the error effect keys on `[form.lineCount]` only and is declared before the `waitCount` effect; both lines are role
+`alert` with no live region; `notRecordedRef` and `Platform` are gone); the patches below are what the layers found AROUND them.
+
+**Checklist (AI-6-5), touched families only** *(as found at round 1 — the REAL GAPs below are closed by the Disposition; round 2's R1 closes the one P1 left)*. 1 — covered-by-construction for the nine `setLine` writes; **REAL GAP** for the
+hand-written bumps (P1). 10 — **REAL GAP** in the records (P3, P4, P5); honestly done: `send_failed` NOT REACHED, Task 8.2 left open, the
+volumes disclosure, the stated iOS departure. 13 (a) (b) (c) — covered-by-construction (the two changed `Text` nodes carry no label, no
+value role and no interaction role). 13 (d) — covered-by-test for `verify_failed`, a released `send_failed` and `not_recorded`;
+**REAL GAP** for the other error lines (P1); `send_failed` on a device is UN-ATTESTED.
+
+**UN-ATTESTED by the diff (carried, ⛔ a finding — nothing to patch):** all device evidence (log lines, timestamps, counts, *"Once,
+clean"*, the restore). The code commit `a47e35c3` is dated 09:40:49 and every device leg (09:05–09:39) ran on the UNCOMMITTED tree, so
+"the 3.15c bundle (`a47e35c3`)" means byte-identical to the commit — which the diff cannot show (the served-bundle markers `lineCount` ×24 /
+`wa-code-error` ×1 are the only handle). The X1 baseline (ended 09:14:05) and the new-code Confirm 1 (09:22:41) have Tasks 3–5 between
+them. Mutation REDs, the 2385-test figure, `tsc` and `eslint` were not re-run by the reviewer (only the two files above were).
+
+**Disposition (2026-11-25):** BigDev selected option 1, "Apply every patch". P1–P6 applied, ⛔ committed (uncommitted on `story/3-15c-…`).
+Production code is ⛔ touched — the patches are one test file and records. Story status stays `review`: `done` is reserved for a story
+landed on `main` (the 3.15 round-2 / 3.15b precedent — all patches applied, the row stays `review`); `sprint-status.yaml` is unchanged.
+- **P1** — `wa-code-entry-render.test.ts` leg (g): eight sets × two platforms (`wrong_retry`; `wrong_final`; `no_longer_valid` by
+  Confirm's `code_no_longer_valid`, Confirm's `not_pending`, the status re-read and Send's `not_pending`; `no_more` by the hand-bumped
+  `code_limit_reached` arm; `send_failed` by the default arm), each asserting ONE announcement of its words, after a settle. Mutations,
+  each RED then restored with `git checkout --`: `wrong_retry`, `wrong_final`, the default-arm `send_failed` and `code_no_longer_valid`
+  reverted to `patch`; the `no_more` arm's `lineCount` bump dropped; the three `no_longer_valid` lapsed sites (Send, re-read, Confirm)
+  reverted to `patch` — each turned exactly its own two cases RED (one per platform) and nothing else.
+- **P2** — legs (h) (a language switch while an error stands: the words change, the count does not) and (i) (an error set while the
+  form is collapsed: nothing then, once on expand), per platform; `toSent` takes an optional `extra` child under the same
+  `LocaleProvider`. Mutations: `errorText` added to the effect's deps ⇒ ONLY (h) RED ×2 (no earlier leg caught it); the effect
+  skipping its mount run ⇒ (d) and (i) RED ×4.
+- **P3 / P4 / P5** — corrected in `deferred-work.md` (the X1, X2 and V4 dated lines; Y1), `friction-budget.md` (item 2) and this file
+  (Task 6.4; the Debug Log's F5 sentence). Counts that were never logged are stated as ⛔ recorded, ⛔ backfilled; the listen's count is
+  stated with its premise (2 if the counter was not reset by the 401, 1 if it was). The Android order of `send_failed` + `resend_wait` is
+  recorded as un-attested; the code remedy stays the author's call, ⛔ made. Change Log row 1.3 is left as written; row 1.4 supersedes
+  its "X2 (a)–(d) fixed".
+- **P6** — the `text` mock sets `data-selectable`.
+- **Verified after the patches:** `wa-code-entry-render.test.ts` 104 passed (84 before: +16 (g), +2 (h), +2 (i)) and
+  `language-screen-render.test.ts` 15 (unchanged); mobile `eslint` on the edited test and `tsc --noEmit` exit 0; `pnpm friction:check`
+  passes; every edited file valid UTF-8, ⛔ invisible character in an added line. ⛔ re-run: the whole mobile suite (the 2385 figure) —
+  the patches add cases to one file and touch no production code.
+
+- [x] [Review][Patch] **P1 — MEDIUM: five of the seven error lines have no announcement-count leg, and a write that forgets its
+  `lineCount` bump now drops even a CHANGED line.** [`apps/mobile/components/notifications/use-wa-code.ts` `setLine` sites and the hand-bumped
+  arms; `apps/mobile/tests/unit/wa-code-entry-render.test.ts` AC 2 describe] AC 2's legs (a) and (b) count only `verify_failed` and a
+  released `send_failed`. `grep` finds no announce-count assertion for `wrong_retry`, `wrong_final`, `no_longer_valid` (four sites),
+  `no_more` (the hand-bumped `code_limit_reached` arm) or the default-arm `send_failed`. Before this story `AnnouncedText` spoke every one
+  of them whenever its WORDS changed; now the effect keys on `lineCount` alone, so reverting any one site to `patch({ line })` (or
+  dropping a hand-written bump) silences a line that used to be spoken — and the whole suite stays green. The dev followed AC 2's list to
+  the letter; AC 2's headline sentence ("each time an error line is SET … `announce()` is called once") is wider than its list. Fix: one
+  table-driven leg per OS that sets each remaining line once and asserts exactly one announcement of its words (`wrong_retry`,
+  `wrong_final`, `no_longer_valid` via the confirm path, `no_more` via `code_limit_reached`, the default-arm `send_failed`); one
+  mutation per hand-bumped arm (drop its `lineCount` bump ⇒ RED, restored). *(Auditor #1; Blind #2.)*
+- [x] [Review][Patch] **P2 — LOW-MEDIUM: the `[form.lineCount]`-only dependency is not pinned against `errorText`, and "set while
+  collapsed" is untested.** [`apps/mobile/components/notifications/WaCodeEntry.tsx` the error effect; the AC 2 describe] The header says a
+  language switch changes the words without a new set, so a standing line must stay silent. A change to `[form.lineCount, errorText]`
+  passes every current leg (a repeated set bumps `lineCount` anyway; the digit and countdown legs keep the same text); only a `t` dependency
+  would be caught (`useT()` is a fresh closure each render). Separately, the mount-time run is what speaks an error set WHILE the form is
+  collapsed once it is expanded — leg (d) covers only collapse/expand after the error was set expanded. Fix: two legs — a standing
+  `verify_failed`, a locale switch through the test's `LocaleProvider`, count stays 1; an error resolved while collapsed (hold the
+  confirm, collapse, resolve, expand) ⇒ spoken once. Mutation: add `errorText` to the deps ⇒ RED, restored. *(Edge #3.)*
+- [x] [Review][Patch] **P3 — LOW-MEDIUM (records, Family 10): the Android order of `send_failed` then `resend_wait` from ONE answer is
+  un-attested and appears in no record.** [`_bmad-output/implementation-artifacts/deferred-work.md` the X1 dated line; `friction-budget.md`
+  disposition items 2–3] A `code_send_failed` answer carrying `retryAfterSeconds` bumps `lineCount` and `waitCount` together, so on Android
+  the two effects now send two direct announcements back to back and RN ignores `queue` there. The story's F8 says so at design time
+  ("neither is the order of two back-to-back direct announcements" — and the old live-region arrangement was ⛔ device-proven either), and
+  test (e) is iOS-only; but neither the X1 line nor the friction disposition carries it, and the `send_failed` leg is NOT REACHED on a
+  device. ⚠ NOT a regression the evidence can show — the old order was un-proven too; the risk class changed (live region beside a direct
+  call → two direct calls). Fix: one sentence in each record (the pairing, `queue` ignored, order un-attested, the leg NOT REACHED).
+  A code remedy (one combined Android string) is the author's call and ⛔ part of this patch. *(Auditor #5; Edge #2; Blind #1.)*
+- [x] [Review][Patch] **P4 — MEDIUM-LOW (records, Family 10): the listen's "1 trailing U+00A0" is computed, ⛔ logged, and disagrees with
+  the record's own counts; X2's per-leg counts and outcome labels are missing or overstated.** [`deferred-work.md` the X2 and V4 dated
+  lines; this file's Debug Log, Task 6] (i) The V4 line gives the listened Hindi line "1 trailing U+00A0 (by the per-text counter, ⛔
+  logged)". The same record puts the English lines at 2 (09:30:55.693) and 3 (09:31:16.004) and calls the first "the third send of those
+  words in the session" — so the counter was ⛔ reset by the 401 re-sign-in — and the Hindi sends before the listen are 09:25:10.386 and
+  09:28:27.226, which makes the listened line the THIRD Hindi send ⇒ 2, not 1. Either value was already heard in 3.15b (V4: "heard only at 1
+  and 2"), so V4's remainder is unchanged; the stated number is not. (ii) AC 4 asks each X2 leg for "log lines (timestamps, trailing U+00A0
+  count) and an outcome"; (a), (b), (c) carry timestamps but no counts. (iii) (c)'s "(the false announcement the live region made at the
+  switch)" is F6 (i), a code inference never shown on the old code — the story itself marks it ⛔ device-shown — yet it is worded as fact;
+  and (a) was spoken once by the live region's MOUNT before the fix (F6), so its outcome is "not reproduced / kept", ⛔ "fixed" (row 1.3
+  and the V4 line say "fixed" for (a)–(d)). Fix: the listen's count stated as not logged (speech ON logs no text) with its derivation and
+  premise, ⛔ a bare 1; the counts that were not logged stated "not recorded", ⛔ backfilled
+  ([[feedback_record_unattested_no_backfill]]); (c)'s parenthetical marked a code inference; (a)'s outcome relabelled
+  ([[feedback_closure_language_precision]]). *(Auditor #2, #3.)*
+- [x] [Review][Patch] **P5 — LOW (records): Y1 miscounts its own sites, and Task 6.4 is ticked with "volumes" not restored.**
+  [`deferred-work.md` Y1; this file Task 6.4] Y1 says "nine more `AnnouncedText` lines … (`WaCodeEntry` was the tenth)"; the inventory's S is
+  9 INCLUDING `WaCodeEntry` (F5's 11, less the two stated moves), and the sites Y1 lists are eight ⇒ "eight more … the ninth". Y1 says F5
+  "did not list those usages one by one" and the Debug Log "F5 listed those usages only in part": F5 names 16 K sites (3 + 6 + 3 + 2 + 2) against its headline of 13, so
+  K 13 → 16 is F5's own miscount, ⛔ a reclassification. Task 6.4 lists "volumes" among what is restored and is ticked; the Debug Log
+  (honestly) says they were set to 12 for the listen and their arrival values were ⛔ read. Fix: correct the count and the F5 remark;
+  annotate the tick ("volumes: ⛔ restored — arrival values not read, left at 12"). *(Auditor #4, #6.)*
+- [x] [Review][Patch] **P6 — LOW (test fidelity): the `tamagui` mock's `Text` was REPLACED, not extended — it drops `data-selectable`.**
+  [`apps/mobile/tests/unit/wa-code-entry-render.test.ts` the `text` mock beside `container`] AC 2 (f) says "extend this file's `tamagui`
+  mock"; `Text: text` maps only `testID`, `alert`, `aria-label`, `aria-live`, `data-color`, `data-font-size`, while `container` also set
+  `data-selectable`, and `OtherPhoneDetails.tsx:26,32` render `<Text selectable>`. Nothing in this file asserts it today (verified by
+  `grep`), so no leg is wrong — a future one would silently read `undefined`. Fix: add `'data-selectable': props.selectable ? 'true' :
+  undefined` to `text`. *(Auditor #9; Blind #6.)*
+- [x] [Review][Defer] **W1 — overlapping taps on the language screen announce once PER TAP, each in the language it captured.**
+  [`apps/mobile/app/(settings)/language.tsx` `choose`; `apps/mobile/lib/app-language.ts` `flush`] `flush()` hands every same-member,
+  same-storage caller the SAME `flushing.result` promise, so two taps inside one PUT window each run their own `.then`, each
+  `announce()`s, each in the `next` it closed over — the first in a language that is no longer on screen. Offline, where the PUT holds to
+  `CALL_TIMEOUT_MS`, a member trying both languages makes it likely. Verified in the code; the new legs never overlap taps. — deferred,
+  pre-existing in shape: the old code also announced for every overlapping `.then` after the first (iOS for all of them), and AC 3 reads
+  per outcome; the fix is a design choice (latest-choice-wins vs once per outcome), ⛔ unambiguous. Owner: NONE YET (BigDev assigns).
+  *(Edge #1; Blind #4.)*
+
+**Dismissed (16), with the reason:** Blind — the missing `exhaustive-deps` suppression (no `react-hooks` rule in `eslint.config.mjs`); fake
+timers "never restored" (`afterEach` calls `vi.useRealTimers()`); NBSP assertions "tautological / order-dependent" (the counter is reset
+per test by `setup-announce-repeat.ts`, and the helper's import pre-dates this diff); the "n-th send carries n" comment (0-based, matches
+the assertions); "stays" not settled after a positive count (legs (b) and (c) settle the same mechanism); language leg (d) "does not
+isolate -388 item 1" (the guard reads `accountChoiceDiffers`, ⛔ the pending record — without the `syncAppLanguage` setup the second tap
+returns at the guard, so the setup is load-bearing); the line "stays visible while the retry is in flight" (DL3 states it as the
+design, no AC asks otherwise, and the old code did the same); the look test's hard-coded literals (AC 2 (f) names exactly them and
+`AnnouncedText`'s defaults are `$2` / `$red10`); `lineCount`'s doc comment calling a thrown-error write "an answer"; re-announce on
+every mount (DL1, as `AnnouncedText` did; no StrictMode in `apps/mobile`); per-OS duplication of tests (guards a reintroduced platform
+branch); the `⛔` glyph's readability (the project's convention); "the platform claim lives only in comments" (the device pass and 3.15a's
+`assisted.tsx` precedent carry it). Auditor — "11 new legs" vs 13 cases (11 counts the two (c) cases as one leg; the 2385 total counts
+cases); the countdown leg's bare positive count (`waitFor` hangs under fake timers; the flush is awaited inside `act`); Task 8.1's
+missing `friction:check` result (the reviewer ran it: passes).
+
+### Review Findings — second round (review of the patches)
+
+**2026-11-25, BigDev: *"Re-run code review"* (option 2).** The round-1 patch set (then UNCOMMITTED on top of `fb430b00`: one test file and
+three records files, +254 / −11) went through the three layers again: Blind Hunter 20, Edge Case Hunter 3, Acceptance Auditor 8 findings.
+The reviewer verified each claim against the code and the records and merged them: **0 decision-needed, 4 patch (R1–R4), 0 new defer, 20
+dismissed.** No Panel question (the Auditor and the reviewer agree: test coverage and records wording). The worktree was clean before and
+after the layers (the same four files). The Auditor confirms **P1–P6 delivered as their stated fixes** and found no error in the counts or
+the arithmetic (84 + 16 + 2 + 2 = 104; Y1 eight / ninth; F5's K list = 16; the third-Hindi-send count); what the layers found is what the
+patches left AROUND them. **Un-attested by the diff** (carried, ⛔ a finding): every mutation run and its RED / restore (the reviewer ran
+them; a diff cannot show them), the 104 / 119 test counts, `tsc` / `eslint` / `friction:check` exits, and all device evidence.
+
+- [x] [Review][Patch] **R1 — MEDIUM-LOW (Families 1 and 13 (d), REAL GAP): leg (g) misses the offline `verify_failed` — `reread()`'s catch
+  arm — and its comment still says "EVERY line".** [`apps/mobile/components/notifications/use-wa-code.ts:284`
+  `if (current()) setLine('verify_failed')`; `apps/mobile/tests/unit/wa-code-entry-render.test.ts` the `SETS` table] When the verify fails and the
+  status re-read ALSO rejects or times out, the catch arm sets `verify_failed`. `grep` finds ⛔ test that rejects `getWaOptInStatus` (every
+  call is `mockResolvedValue*`), so reverting `:284` to `patch({ line })` silences the line on both platforms and the suite stays green.
+  It is the arm the device X1 leg used (Confirm → verify timeout → re-read timeout, F4), and probably the commonest real `verify_failed`.
+  Round 1 missed it too (all three layers). The new comment — "EVERY line the hook SETS is announced once per set" — overclaims: the 11
+  error-line write sites are the nine `setLine` calls plus the two hand-bumped error arms, and the table pinned ten. Fix: a row `the
+  status re-read rejects` (`atField`, `verifyRejects(err(503, 'http.503'))`, `mock.getWaOptInStatus.mockRejectedValueOnce(new
+  TypeError('Network request failed'))`, Confirm ⇒ `waCode.verify_failed` once); the comment reworded "by arm — the 11 sites today";
+  mutation `:284` → `patch({ line: 'verify_failed' })` ⇒ RED ×2, restored; and one mutation for the `code_send_failed` arm's own bump
+  (the other hand-bumped ERROR arm — P1 asked for one per hand-bumped arm and the Disposition claims only `no_more`'s; the `sent` /
+  `sent_uncertain` arms set no error text, so their bumps change nothing audible). *(Edge #1; Auditor #2, #7; Blind — the "EVERY" claim.)*
+- [x] [Review][Patch] **R2 — LOW-MEDIUM (records, Family 10): the "fixed" claims P4 superseded still stand where nothing supersedes them.**
+  [this file's Completion Notes, "Dev complete" entry; `sprint-status.yaml` ledger `2026-11-25b`; this file's File List] The Completion Notes
+  still read "AC 4 — X2 (a), (b), (c), (d) **fixed** on the device" and "V4 dated line (`language.tsx` same-language-twice RUN + fixed …)";
+  the ledger entry `2026-11-25b` says "X2 (a)-(d) fixed". The V4 line in `deferred-work.md` now says the opposite, and Change Log row 1.4 is
+  the only supersession. The File List's test-file line still reads "AC 2 legs; `Text` mock records its look". Fix: a pointer on the
+  Completion Notes entry ("superseded for (a), (c), (d) and V4's same-language leg by Change Log row 1.4"); the File List line updated
+  (legs (g) (h) (i), the `extra` child, `data-selectable`); the round-1 checklist paragraph marked "closed by the Disposition below". ⛔ The
+  ledger is edited now — a naive rewrite of `sprint-status.yaml` truncates it ([[project_sprint_status_safe_prepend]]), and `2026-11-25b`
+  is the dev's entry: this review's own ledger line (written at commit, the next free letter READ LIVE) restates the corrected X2 label;
+  say so in the Disposition. *(Auditor #1, #8.)*
+- [x] [Review][Patch] **R3 — LOW (records, Family 10): a stray `⛔` inverts the reading P4 (iii) asked for.** [`deferred-work.md`, the X2 (c)
+  parenthetical] "`(⛔ the false "not recorded" the live region was inferred to make at the switch — F6 (i), a code inference, ⛔
+  device-shown on the old code)`" — in this repo ⛔ means NOT, so the first one reads "not the false 'not recorded'". Fix: drop the first
+  ⛔ (keep the second, which is meant). *(Auditor #3.)*
+- [x] [Review][Patch] **R4 — LOW (records wording, three imprecisions the P3–P5 patches introduced).** (i) `deferred-work.md` X2: "⛔ recorded
+  for (a), (b), (c) … the lines and times are all this record holds for them" — (c) is a PUT 200 that sent nothing, so it has no line, time
+  or count; say so. (ii) Y1 and the Debug Log: "its U / O are named only as 'the rest'" — F5 names five of its 26 U / O sites
+  (`whatsapp.tsx` `request_failed` / `link_failed`, `assisted.tsx` `saved`, `(withdrawal)/index.tsx`, the workplace question outcome); say
+  "names five of its 26 U / O sites". (iii) the V4 listen derivation states "the third Hindi send of the session" with only the 401
+  re-sign-in as its premise; add the other premise — no further Hindi send or session boundary in the un-logged window between 09:31:16.004
+  and the listen (09:39:16). *(Auditor #4, #5, #6.)*
+
+**Disposition (2026-11-25, second round):** BigDev selected option 1, "Apply every patch". R1–R4 applied, ⛔ committed (uncommitted on
+`story/3-15c-…`, with round 1's). Production code is ⛔ touched; story status stays `review`; `sprint-status.yaml` is ⛔ edited.
+- **R1** — leg (g) gained the row `the status re-read also rejects (offline)` — `atField`, the verify rejects, `getWaOptInStatus`
+  rejects with a `TypeError` — so the table now pins nine rows (+ (a) for the re-read's PENDING arm and (b) / (c) / (e) for the
+  `code_send_failed` arm = the 11 error-line write sites); its comment reads "by arm — 11 sites today" and says a NEW site needs its row.
+  Mutations, each RED then restored with `git checkout --`: `reread()`'s catch arm reverted to `patch` ⇒ exactly the new row RED ×2 (one per
+  platform), nothing else; the `code_send_failed` arm's `lineCount` bump dropped ⇒ the PRE-EXISTING legs (b), (c) and (e) RED (5 cases) —
+  that arm was already pinned, and is now shown to be.
+- **R2** — a supersession pointer on the Completion Notes' "Dev complete" entry (X2 "fixed" holds only for (b); V4's "RUN + fixed" too);
+  the File List's test-file line; round 1's checklist paragraph marked. ⛔ The ledger `2026-11-25b` ("X2 (a)-(d) fixed") is edited — a naive
+  rewrite of `sprint-status.yaml` truncates it ([[project_sprint_status_safe_prepend]]) and `2026-11-25b` is the dev's entry. **This
+  review's own ledger line — written at commit, the next free letter READ LIVE across every branch and worktree — restates the corrected
+  X2 label (CLOSED on (b)'s before / after; (a) not reproduced as a defect; (c) and (d) without a baseline).**
+- **R3 / R4** — the stray ⛔ removed from the X2 (c) parenthetical; the X2 counts sentence says (c) sent nothing; Y1 and the Debug Log say F5
+  names five of its 26 U / O sites; the listen derivation states its second premise (no further Hindi send or session boundary between
+  09:31:16.004 and 09:39:16). The one dismissal worth BigDev's eye stays open: (g) has ⛔ completeness guard.
+- **Verified after the patches:** `wa-code-entry-render.test.ts` 106 passed (104 + the 2 new cases) and `language-screen-render.test.ts` 15;
+  mobile `eslint` on the edited test and `tsc --noEmit` exit 0; `pnpm friction:check` passes; every edited file valid UTF-8 and ⛔ invisible
+  character in an added line. ⛔ re-run: the whole mobile suite (the 2385 figure) — the patches add two cases to one test file and touch no
+  production code.
+
+**Dismissed (20), with the reason.** Edge #2 — (h) does not exercise the `sentLine` / `waitLine` guards (`WaCodeEntry.tsx:42`, `:70`):
+those guards are pre-existing code this story only moved, and the consequence is an inference; not caused by the patch. Edge #3 and Blind —
+`data-selectable` is read by no test here (P6 restored parity because AC 2 (f) says "extend"; it guards nothing yet, by design). Blind — (g)'s
+count is scoped to each row's own key (one `setState` per answer sets ONE line, so a second line from the same answer cannot occur; (h) uses
+the total where it matters); (g) has ⛔ completeness guard (a source scan or a `patch` type that rejects `line` would add one; ⛔ built — **the
+one dismissal worth BigDev's eye**: with R1 the table covers all 11 sites TODAY, and a future site is the Family 1 checklist's half, the
+un-mechanized one); row labels name arms the assertion cannot see (the mutation runs proved each row reaches its arm); raw vs `details()`
+payloads (the Edge Case Hunter confirmed every payload parses against the strict schema); one `settle()` as the quiet window and the
+`waitFor` / `settle` mix (the house shape — AC 2: "an `act` flush + one macrotask"); the `EXPIRED` once being consumed or leaking
+(`mockReset` runs in `beforeEach`; the `Once` is queued after `toSent`; `EXPIRED` and `null` share the `else`, and the row still reaches the
+labelled arm); (h) never shows a LATER set speaking the new words (the effect body reads the render that bumped `lineCount`, so a stale
+string is not constructible with this effect); `hindi` undefined hides a missing key (`hi/common.json` has distinct text, and `toBe(hindi)`
+would fail on `undefined`); the `Probe` / locale leakage (`setLocale` is the provider's `useState` dispatcher, stable, ⛔ persisted); (i)'s
+premise unproven before its negative (a verify that never ran leaves no line, so the final `alertText()` and the count would fail — ⛔ a
+vacuous pass); (i) not pinning "already spoken, then collapse and re-expand" (that is the pre-existing leg (d)); `expand()` read as a toggle;
+the unhandled-rejection risk of the held promise (the hook awaits it); the per-OS doubling "inert" (`announce()` reads `Platform.OS` per call,
+and AC 2 asks for both); `mock.os` leakage (reset per test); three helpers for one act; the `describe` title; `toSent`'s second child.
 
 ## Dev Notes
 
@@ -435,7 +647,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15c`, 2026-11-25.
 ### Debug Log References
 
 - **Task 0 (2026-11-25).** `git fetch origin`: `origin/main` = `8d0c1ae9` = the pin = `git merge-base origin/main HEAD` — ⛔ rebase, ⛔ re-pin. `ListAgents`: no other session. AC 1's `git diff 8d0c1ae9..HEAD -- announce.tsx lib/announce.ts lib/announce-repeat.ts lib/death-certificate-announce.ts` EMPTY before code (and after — checked again at Task 6.1). `pnpm install --frozen-lockfile`. **0.2:** F1 (AnnouncedText: Android live region, iOS effect on `[text, kind]`), F2 (`send()` / `confirm()` patch only `busy`; the 15 `line` writes), F4 (`resolveSecretValue` — Secret Manager only with `NODE_ENV=production` / GAC / `DRIZZLE_FORCE_SECRET_MANAGER`; `deps.ts` `resolveChannelSecret` env name = `[^A-Za-z0-9]`→`_`, upper-cased; `code-delivery.ts` `readCodeSecrets` / `availability`), F6 (`choose`'s `alreadyShowing || Platform.OS === 'ios'`), F7 (the pinning legs) and F8 (the send / wait effect order) re-derived by function — ⛔ difference. `78971e1f..HEAD` under `apps/mobile/{app,components,lib}`: only `assisted.tsx` (1 line), `lib/announce-repeat.ts`, `lib/session-context.tsx` — as the story's re-check says.
-- **Task 1 — the inventory (AC 1; DL4).** `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components` = 50 usages in 17 files. Re-derived by one read-only pass (an Explore agent, given the class definitions and ⛔ F5's results), then the two disagreements with F5 checked by hand. **At HEAD: K 16 / S 9 / U 14 / O 11** (F5 at `78971e1f`: 13 / 11 / 21 / 5). **Differences from F5:** `components/life-events/MedicalForm.tsx` `ack_required` is ⛔ S — Submit is `disabled={props.busy || !acknowledged}` (line 228), so the inline line cannot be set by a press (U; S only if that changed); `(life-events)/known-people-find.tsx` `find.no_search_results` is O — one continuing state while typing, ⛔ a re-set (F5 called it "arguably correct to stay quiet"); the K / U / O split differs by classification (F5 listed those usages only in part, so a line-by-line diff is ⛔ possible). The table (paths under `apps/mobile/`; PQ = `components/peer-request/PeerQuestionnaire.tsx`, WP = `components/workplace/WorkplacePicker.tsx`):
+- **Task 1 — the inventory (AC 1; DL4).** `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components` = 50 usages in 17 files. Re-derived by one read-only pass (an Explore agent, given the class definitions and ⛔ F5's results), then the two disagreements with F5 checked by hand. **At HEAD: K 16 / S 9 / U 14 / O 11** (F5 at `78971e1f`: 13 / 11 / 21 / 5). **Differences from F5:** `components/life-events/MedicalForm.tsx` `ack_required` is ⛔ S — Submit is `disabled={props.busy || !acknowledged}` (line 228), so the inline line cannot be set by a press (U; S only if that changed); `(life-events)/known-people-find.tsx` `find.no_search_results` is O — one continuing state while typing, ⛔ a re-set (F5 called it "arguably correct to stay quiet"); the K / U / O split differs by classification (F5 named its 16 K sites against a headline of 13 — F5's own miscount — and five of its 26 U / O sites by name, the rest only as "the rest", so a line-by-line diff of the other 21 is ⛔ possible). The table (paths under `apps/mobile/`; PQ = `components/peer-request/PeerQuestionnaire.tsx`, WP = `components/workplace/WorkplacePicker.tsx`):
 
   | file:line | words | class | trace |
   | --- | --- | --- | --- |
@@ -488,7 +700,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15c`, 2026-11-25.
 
 ### Completion Notes List
 
-- **Dev complete (`bmad-dev-story 3.15c`, 2026-11-25) — Status `review`.** Code `a47e35c3`. DL1 and DL3 built as written; ⛔ deviation from the decisions. ACs: **AC 1** — inventory re-derived (K 16 / S 9 / U 14 / O 11; the two S → non-S moves stated), AC 1's diff EMPTY, every other caller untouched. **AC 2** — legs (a)–(f) under both platforms, RED first (as the AC predicted, plus (c)/(d) on Android); both mutations RED then restored. **AC 3** — (a)–(e) under both platforms, running totals, settled negatives; RED for (a)-android, (b)-android, (e) (and (c)/(d)-android). **AC 4** — X2 (a), (b), (c), (d) **fixed** on the device; X1 baseline silent (reproduced) → new code **fixed** for `verify_failed`; `send_failed` **NOT REACHED** (needs Meta — DL5); the `whatsapp.tsx` lines did not show. **AC 5** — BigDev: *"Once, clean"*. **AC 6** — deferred-work: X1 (`verify_failed` CLOSED, `send_failed` addressed in code ⛔ device-shown), X2 CLOSED, V4 dated line (`language.tsx` same-language-twice RUN + fixed; `WaCodeEntry` REACHED, `sendCount` / `waitCount` unchanged), new Y1 (the DL4 inventory, owner NONE YET) and Y2 (new observation, owner NONE YET); friction disposition appended at the file's end with the X2 cost FIXED. Gates green.
+- **Dev complete (`bmad-dev-story 3.15c`, 2026-11-25) — Status `review`.** Code `a47e35c3`. DL1 and DL3 built as written; ⛔ deviation from the decisions. ACs: **AC 1** — inventory re-derived (K 16 / S 9 / U 14 / O 11; the two S → non-S moves stated), AC 1's diff EMPTY, every other caller untouched. **AC 2** — legs (a)–(f) under both platforms, RED first (as the AC predicted, plus (c)/(d) on Android); both mutations RED then restored. **AC 3** — (a)–(e) under both platforms, running totals, settled negatives; RED for (a)-android, (b)-android, (e) (and (c)/(d)-android). **AC 4** — X2 (a), (b), (c), (d) **fixed** on the device; X1 baseline silent (reproduced) → new code **fixed** for `verify_failed`; `send_failed` **NOT REACHED** (needs Meta — DL5); the `whatsapp.tsx` lines did not show. **AC 5** — BigDev: *"Once, clean"*. **AC 6** — deferred-work: X1 (`verify_failed` CLOSED, `send_failed` addressed in code ⛔ device-shown), X2 CLOSED, V4 dated line (`language.tsx` same-language-twice RUN + fixed; `WaCodeEntry` REACHED, `sendCount` / `waitCount` unchanged), new Y1 (the DL4 inventory, owner NONE YET) and Y2 (new observation, owner NONE YET); friction disposition appended at the file's end with the X2 cost FIXED. Gates green. **[Superseded by the code review, Change Log row 1.4 (round-2 R2): "X2 (a), (b), (c), (d) fixed" and V4's "RUN + fixed" hold only for (b), whose before / after the device showed; (a) is not reproduced as a defect, (c) and (d) have no baseline on the old code.]**
 - **Open for BigDev:** Task 8.2 — the push, PR and landing (ADR-0047: `ci.yml` at the tip SHA; `scripts/land.sh --dry-run` first). Y1 / Y2 need an owner when you choose. The DL1 departure on iOS (a re-set error is now announced on iOS too) rests on code evidence; VoiceOver un-attested.
 - **Found on the way (recorded, ⛔ changed):** F4's recipe reaches `WaCodeEntry` locally — the first time; a fresh local DB also needs a `pariwar_passport` row for the language endpoint (503 `passport_missing` otherwise); with the API held, the app's sixth concurrent request to the host did ⛔ reach the network (5 connections held — consistent with OkHttp's default per-host limit; an inference, ⛔ checked).
 - Story created (`bmad-create-story 3.15c`, 2026-11-23; BigDev asked to validate it, none existed — *"Create in new worktree"*): own
@@ -500,7 +712,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15c`, 2026-11-25.
 - `apps/mobile/components/notifications/use-wa-code.ts` — `lineCount`, `setLine` (DL1)
 - `apps/mobile/components/notifications/WaCodeEntry.tsx` — plain error line + one effect; header (DL1)
 - `apps/mobile/app/(settings)/language.tsx` — plain line, every failure announced once; header (DL3)
-- `apps/mobile/tests/unit/wa-code-entry-render.test.ts` — AC 2 legs; `Text` mock records its look
+- `apps/mobile/tests/unit/wa-code-entry-render.test.ts` — AC 2 legs; `Text` mock records its look and `data-selectable`; review legs (g) (h) (i) and `toSent`'s optional `extra` child
 - `apps/mobile/tests/unit/language-screen-render.test.ts` — AC 3 legs (the F7 leg rewritten)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — X1, X2, V4 dated lines; new section (Y1, Y2)
 - `friction-budget.md` — `**Story 3.15c disposition (…)**`
@@ -514,4 +726,6 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15c`, 2026-11-25.
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15c`) in its own worktree stacked on the 3.15b branch (`78971e1f`). §0: ⛔ Panel question. F1: X1 sends nothing on iOS either. F4: `WaCodeEntry` very probably reachable locally (the secrets' env fallback; ⛔ Secret Manager) — the `verify_failed` leg with ⛔ outbound call, the `send_failed` leg ⛔ (it needs Meta). DL1 plain text + one `announce()` per set (`lineCount`); DL3 the same for the language line; DL4 the inventory recorded, only `WaCodeEntry` changed. Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.2 | 2026-11-25 | Re-validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*) after rebasing onto `origin/main` `8d0c1ae9` (3.15b LANDED; backup `backup/3-15c-pre-rebase-2026-11-25`). `baseline_commit` re-pinned `78971e1f` → `8d0c1ae9` (AC 1's empty diff was RED at `78971e1f` — `0a56ec0f` changed `lib/announce-repeat.ts`), with a re-pin rule for later rebases. Task 8.2 / Trap 10 follow ADR-0047 (GitHub `ci.yml` at the tip SHA is the gate; `land.sh`; `ci:local` advisory). AC 6: V4 lines for `WaCodeEntry` too (V4's trigger fires on this story); the friction disposition at the file's end, with the X2 cost's status. DL1 names the `setLine` helper (9 + 5 + initial = 15 writes); the AC 2 mutation re-worded. AC 2 (f) asserts the look (`$red10`, `$2`). AC 2 / AC 3: awaited counts, settled negatives. F1–F10 re-checked at `8d0c1ae9`. ⛔ Code. |
 | 1.3 | 2026-11-25 | Dev complete (`bmad-dev-story 3.15c`) → `review`. Code `a47e35c3` (DL1 `WaCodeEntry` + `use-wa-code.ts`; DL3 `language.tsx`), tests RED first, two mutations, mobile suite / tsc / eslint green. Device: `WaCodeEntry` reached locally (F4); X1 baseline silent → `verify_failed` fixed; `send_failed` NOT REACHED; X2 (a)–(d) fixed; BigDev's listen *"Once, clean"*. Records: deferred-work X1 / X2 / V4 lines, Y1 (inventory, K16/S9/U14/O11), Y2; friction disposition; ledger `2026-11-25b`. Task 8.2 waits for BigDev. |
+| 1.4 | 2026-11-25 | Code review (`bmad-code-review 3.15c`; BigDev: option 1, "Apply every patch") — 0 decision-needed, 6 patch (all applied), 1 defer (W1 → `deferred-work.md`), 16 dismissed. Code: ⛔ production file touched; `wa-code-entry-render.test.ts` +20 cases (P1 leg (g), P2 legs (h) (i)) and the `Text` mock keeps `data-selectable` (P6). Records (P3–P5): the X1, X2 and V4 dated lines and Y1 in `deferred-work.md`, `friction-budget.md` item 2, Task 6.4, the Debug Log's F5 sentence. **Supersedes row 1.3's "X2 (a)–(d) fixed":** X2 is closed on (b)'s before / after; (a) is not reproduced as a defect (the live region's mount spoke it once before), (c) and (d) have no baseline on the old code. Status stays `review`. |
+| 1.5 | 2026-11-25 | Code review, second round (`bmad-code-review 3.15c` re-run on the patch set; BigDev: option 1, "Apply every patch") — 0 decision-needed, 4 patch (R1–R4, all applied), 0 new defer, 20 dismissed. Code: ⛔ production file touched; `wa-code-entry-render.test.ts` +2 cases (leg (g) row `the status re-read also rejects (offline)`, ×2 platforms) and the (g) comment now "by arm — 11 sites today". Records: Completion Notes pointer, File List line, the stray ⛔ in X2 (c), the X2 counts sentence, Y1 / Debug Log F5 wording, the listen premise. Sets the ledger note: this review's own ledger line (written at commit) restates the corrected X2 label. Status stays `review`. |
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*). 3.15b's review is COMMITTED (`0a56ec0f` / `57f541b3`, ⛔ any file this story edits) — the PINNED caveat and X2's quote updated, Task 0.1 rebases onto `57f541b3`. AC 3 counts are RUNNING TOTALS (a delta "one more" is green on today's Android code); jsdom sees the live region only as `aria-live` — (e). AC 2 (c) holds the next call for the `busy` flip; (e) gains a mutation (it is green today). DL1 in `assisted.tsx`'s shape (`[form.lineCount]`, ⛔ ref); the `code_resend_too_soon` arm bumps only when `told`; the iOS change stated as a departure from the epics text. F4 adds the template key's source, the env rule, and why 3.15b's seeded row still read false; Task 2.1 copies main's `.env` files. F7: (f) RED on iOS too; the first Android `verify_failed` legs. ⛔ Code. |

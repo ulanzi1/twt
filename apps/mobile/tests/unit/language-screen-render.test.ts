@@ -128,8 +128,14 @@ beforeEach(() => {
   seq += 1
   mock.session = { memberId: `m-${String(seq)}` }
 })
-afterEach(() => {
+// Story 3.15d AC 4: every PUT a leg HOLDS (`heldPut`) is settled here too, so a leg that fails before its own settle step cannot leave
+// the module-level `flushing` slot taken — every later test (another member) would queue behind it and hang (F9).
+const heldPuts: Array<{ reject: (e: unknown) => void }> = []
+afterEach(async () => {
   cleanup()
+  vi.useRealTimers() // AC 4 (g) runs under fake timers
+  for (const held of heldPuts.splice(0)) held.reject(new Error('held PUT settled by afterEach'))
+  await new Promise((r) => setTimeout(r, 0))
 })
 
 describe('AC7 — the language screen', () => {
@@ -232,7 +238,9 @@ describe('AC7 — the language screen', () => {
 
   // Story 3.15c AC 3 (DL3, X2): the line is PLAIN text (⛔ live region — it spoke the new words at the SWITCH, before the outcome,
   // and so doubled the announcement and spoke a false "not recorded" when the PUT then succeeded), and EVERY `not_recorded`
-  // outcome is announced ONCE, on both platforms, in the chosen language. Counts are RUNNING TOTALS of `mock.announce` calls
+  // outcome of a SEQUENTIAL tap is announced ONCE, on both platforms, in the chosen language. ⚠ Story 3.15d (DL2) AMENDS this for
+  // OVERLAPPING taps (a tap made before an earlier tap's outcome arrived): only the LATEST tap's outcome is announced — see the
+  // describe "AC 4" below; every leg of THIS block is sequential and unchanged. Counts are RUNNING TOTALS of `mock.announce` calls
   // (⛔ deltas); a "stays" is asserted after a settle. jsdom cannot hear a live region — only (e) (⛔ `aria-live`) catches it.
   for (const os of ['android', 'ios'] as const) {
     it(`⭐ a failed PUT keeps the new language, leaves pending, shows ONE alert line (⛔ live region); announced once per failure (${os}) — AC 3 (a), (b), (e)`, async () => {
@@ -313,6 +321,186 @@ describe('AC7 — the language screen', () => {
     await waitFor(() => expect(screen.queryByTestId('language-not-recorded')).toBeNull())
     expect(pending()).toBeNull()
   })
+})
+
+// ── Story 3.15d AC 4 (DL2, 3.15c-review W1) — overlapping taps: the LATEST tap's outcome is the only one announced ──
+// `chooseLanguage` returns a fresh promise per tap over ONE shared single-flight `flush`, so two taps inside one PUT window
+// used to settle together — each `.then` closed over ITS language and announced it: a sentence in a language no longer shown,
+// then the one on screen. A held PUT (`deferred`) makes the window; each held promise is SETTLED inside `act` before the test
+// ends (the module-level `flushing` slot would otherwise queue every later test behind it). Counts are RUNNING TOTALS.
+function deferred<T = never>() {
+  let resolve!: (v: T) => void
+  let reject!: (e: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+const click = (lang: 'hi' | 'en') => fireEvent.click(screen.getByTestId(`language-option-${lang}`))
+const heldPut = () => {
+  const held = deferred<{ chosenLocale: string; pariwarDefaultLocale: string }>()
+  held.promise.catch(() => undefined) // a leg that fails before the PUT starts must not leave an unhandled rejection
+  heldPuts.push(held)
+  mock.memberLanguageSet.mockReturnValueOnce(held.promise)
+  return held
+}
+const firstPutStarted = () => waitFor(() => expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1))
+
+describe('AC 4 — overlapping taps (Story 3.15d, DL2)', () => {
+  for (const os of ['android', 'ios'] as const) {
+    const hindi = () => tr('language.error_not_recorded', 'hi')
+    const english = () => tr('language.error_not_recorded', 'en')
+
+    it(`(a) en then hi inside one window, the PUT FAILS ⇒ total 1, the HINDI sentence, ONE alert line, in Hindi (${os})`, async () => {
+      mock.os = os
+      const held = heldPut()
+      renderIn(LanguageScreen, 'hi')
+      click('en')
+      await firstPutStarted()
+      click('hi')
+      await act(async () => {
+        held.reject(new Error('offline'))
+        await settle()
+      })
+      await screen.findByTestId('language-not-recorded')
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(mock.announce).toHaveBeenLastCalledWith(hindi())
+      expect(sentAs(mock.announce.mock.calls, english())).toHaveLength(0)
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+      expect(screen.getByTestId('language-not-recorded')).toHaveTextContent(hindi())
+      expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1) // hi's PUT was never sent: the flush stops at the first failure
+      expect(pending()).toMatchObject({ locale: 'hi' })
+    })
+
+    it(`(b) the SHOWN language tapped twice (the -388 item 1 setup), the PUT fails ⇒ total 1, a plain first send — ⛔ NBSP (${os})`, async () => {
+      mock.os = os
+      mock.store.set('app-language.v1', 'en')
+      renderIn(LanguageScreen, 'en')
+      mock.memberLanguage.mockResolvedValue({ chosenLocale: null, pariwarDefaultLocale: 'hi' })
+      await syncAppLanguage(mock.session!.memberId, { setLocale: vi.fn() }) // the account holds NO choice ⇒ a tap on the shown language records it
+      const held = heldPut()
+      click('en')
+      await firstPutStarted()
+      click('en') // passes the guard again (the account still differs) — a second tap over the SAME flush
+      await act(async () => {
+        held.reject(new Error('offline'))
+        await settle()
+      })
+      await screen.findByTestId('language-not-recorded')
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(String(mock.announce.mock.calls[0]![0])).toBe(english()) // the words exactly — ⛔ a trailing U+00A0
+      expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1)
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+    })
+
+    it(`(c) en then hi, the shared flush RECORDS ⇒ total 0, the line absent, ⛔ a false failure (${os})`, async () => {
+      mock.os = os
+      const held = heldPut()
+      renderIn(LanguageScreen, 'hi')
+      click('en')
+      await firstPutStarted()
+      click('hi')
+      await act(async () => {
+        held.resolve({ chosenLocale: 'en', pariwarDefaultLocale: 'hi' }) // the loop then PUTs hi (the default mock resolves)
+        await settle()
+      })
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).not.toHaveBeenCalled()
+      expect(screen.queryByTestId('language-not-recorded')).toBeNull()
+      expect(mock.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
+      expect(pending()).toBeNull()
+    })
+
+    it(`(d) a NO-OP tap (the shown language, nothing to record) between a failing tap and its outcome ⇒ the failing tap is STILL spoken (${os})`, async () => {
+      mock.os = os
+      renderIn(LanguageScreen, 'hi')
+      mock.memberLanguage.mockResolvedValue({ chosenLocale: 'en', pariwarDefaultLocale: 'hi' })
+      await syncAppLanguage(mock.session!.memberId, { setLocale: vi.fn() }) // the account holds en; the screen still shows hi
+      const held = heldPut()
+      click('en') // a real switch (hi → en) whose PUT is held
+      await firstPutStarted()
+      click('en') // the SHOWN language, the account already holds it ⇒ the guard returns: a no-op, ⛔ a new tap
+      await act(async () => {
+        held.reject(new Error('offline'))
+        await settle()
+      })
+      await screen.findByTestId('language-not-recorded')
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(mock.announce).toHaveBeenLastCalledWith(english())
+      expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1)
+    })
+
+    it(`(f) en then hi, en's held PUT RESOLVES and hi's PUT REJECTS ⇒ total 1, the HINDI sentence (${os})`, async () => {
+      mock.os = os
+      const held = heldPut()
+      mock.memberLanguageSet.mockRejectedValueOnce(new Error('offline')) // the loop's next PUT — hi's
+      renderIn(LanguageScreen, 'hi')
+      click('en')
+      await firstPutStarted()
+      click('hi')
+      await act(async () => {
+        held.resolve({ chosenLocale: 'en', pariwarDefaultLocale: 'hi' })
+        await settle()
+      })
+      await screen.findByTestId('language-not-recorded')
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(mock.announce).toHaveBeenLastCalledWith(hindi()) // en WAS recorded — a sentence about it would be false
+      expect(sentAs(mock.announce.mock.calls, english())).toHaveLength(0)
+      expect(screen.getByTestId('language-not-recorded')).toHaveTextContent(hindi())
+    })
+
+    it(`(g) the real offline path, FAKE timers — PUT held, tap en, +5 s, tap hi, +10 s ⇒ nothing; +5 s more ⇒ the HINDI sentence once (${os})`, async () => {
+      mock.os = os
+      const held = heldPut()
+      renderIn(LanguageScreen, 'hi')
+      vi.useFakeTimers() // after the render (the precedent: wa-code-entry-render "a client timeout (15 s)")
+      await act(async () => {
+        click('en')
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0) // ⛔ waitFor / settle — they run on the faked timers and hang
+      })
+      expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+      await act(async () => {
+        click('hi')
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000) // en's OWN 15 s timer fires — the stale tap
+      })
+      expect(mock.announce).not.toHaveBeenCalled()
+      expect(screen.queryByTestId('language-not-recorded')).toBeNull()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000) // hi's timer — the latest tap
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(mock.announce).toHaveBeenLastCalledWith(hindi())
+      expect(screen.getByTestId('language-not-recorded')).toHaveTextContent(hindi())
+      // settle the held PUT inside act so the module-level `flushing` slot is free for the next test
+      await act(async () => {
+        held.reject(new Error('offline'))
+        await vi.advanceTimersByTimeAsync(0)
+      })
+    })
+  }
 })
 
 describe('AC7 — the login screen switch (LS6 (a); T5)', () => {

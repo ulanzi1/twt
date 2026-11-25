@@ -7,8 +7,13 @@
 // unless the account, as last read, holds no choice or another one: then the tap records it (Decision 2026-10-23-388,
 // item 1 — e.g. a login-screen choice dropped by an app restart before sign-in).
 // A failed PUT keeps the new language on screen and the pending record (retried at the next start / foreground), and
-// shows ONE inline alert line — PLAIN text (role `alert`; ⛔ a live region), and EVERY failure is announced ONCE, on both
-// platforms, in the language just chosen (Story 3.15c DL3, X2). As a live region the line spoke its NEW words at the
+// shows ONE inline alert line — PLAIN text (role `alert`; ⛔ a live region), and the failure of a tap is announced ONCE, on
+// both platforms, in the language just chosen (Story 3.15c DL3, X2). ⚠ AMENDED for OVERLAPPING taps (Story 3.15d DL2, W1): a tap
+// made while an earlier tap's outcome is still pending makes the earlier one STALE — `chooseLanguage` hands every tap its own
+// promise over ONE shared write, so two taps in one window used to settle together and each spoke ITS language (a sentence in
+// a language no longer shown, then the one on screen). A stale outcome sets nothing and says nothing; only the LATEST tap's
+// outcome is announced, in the language now on screen. Sequential taps are unchanged (no tap is stale when its outcome
+// arrives). As a live region the line spoke its NEW words at the
 // switch itself (`setLocale` re-renders it before the PUT's outcome): a failure while it showed was then heard twice (the
 // region + the direct announcement), and a switch that SUCCEEDED was heard as "not recorded" first. While a PUT is pending
 // the line keeps showing, in the new language — silent now. A repeat of the same words is sent as different text by
@@ -74,6 +79,8 @@ export default function LanguageScreen(): React.ReactElement {
   const [notRecorded, setNotRecorded] = useState(false)
 
   const mountedRef = useRef(true)
+  // The id of the LATEST tap that reached `chooseLanguage` (Story 3.15d DL2): a tap whose outcome arrives after a later tap is stale.
+  const tapSeq = useRef(0)
   useEffect(() => {
     mountedRef.current = true
     return () => {
@@ -84,9 +91,11 @@ export default function LanguageScreen(): React.ReactElement {
   const choose = useCallback(
     (next: AppLanguage) => {
       if (next === locale && (memberId === null || !accountChoiceDiffers(memberId, next))) return
+      // Minted AFTER the guard: a no-op tap (the shown language, nothing to record) must not make an earlier REAL failure stale and silent.
+      const mine = ++tapSeq.current
       if (next !== locale) setLocale(next)
       void chooseLanguage(next, memberId, { currentMemberId }).then((outcome) => {
-        if (!mountedRef.current) return
+        if (!mountedRef.current || tapSeq.current !== mine) return
         if (outcome !== 'not_recorded') {
           setNotRecorded(false)
           return

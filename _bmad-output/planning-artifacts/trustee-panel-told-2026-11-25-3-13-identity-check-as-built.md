@@ -1,8 +1,9 @@
 # For the Trustee Panel — told, not asked: how your rulings on checking a typed-in identity will be built (Story 3.13, 2026-11-25)
 
 **For:** Dhiraj Rahul · Kalpana Bharti
-**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-11-25 — ⛔ NOT YET SENT** (BigDev sends). Kept as sent once sent;
-⛔ a ruling is asked.
+**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-11-25 — TOLD 2026-11-25** (sent to the Panel by BigDev: *"told note sent to
+panel"*). Kept as sent; ⛔ a ruling was asked. ⚠ Not recorded: the channel, the send time, and whether the text sent is identical to
+this file as committed at `72fd4561`.
 **What this is:** for your information. Nothing here asks you to decide anything. It follows your ruling of 25 November (Decision
 `2026-11-25-502`): *"by DR and KB / follow up - Q1 E, Q4 B / identity - Q1 A, Q2 C, Q3 Staff will see the number for this purpose in
 addition to option B."* — with the staff you named for Q3: field workers, verifiers, helpline operators and Block Admins.

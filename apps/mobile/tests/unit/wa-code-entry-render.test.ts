@@ -9,7 +9,7 @@ import '@testing-library/jest-dom/vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement, type ReactNode } from 'react'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ApiError } from '@twt/api-client'
 import { getCatalog } from '@twt/i18n'
 import { LocaleProvider } from '@twt/i18n/react'
@@ -99,8 +99,19 @@ vi.mock('tamagui', async () => {
       'aria-live': props.accessibilityLiveRegion,
       'data-selectable': props.selectable ? 'true' : undefined,
     }, props.children)
+  // Story 3.15c AC 2 (f): `Text` also records its look (the `assisted-step-render.test.ts` shape), so the error line keeps what
+  // `AnnouncedText kind="error"` gave it.
+  const text = (props: Props & { color?: string; fontSize?: string }) =>
+    createElement('div', {
+      'data-testid': props.testID,
+      role: props.accessibilityRole === 'alert' ? 'alert' : undefined,
+      'aria-label': props.accessibilityLabel,
+      'aria-live': props.accessibilityLiveRegion,
+      'data-color': props.color,
+      'data-font-size': props.fontSize,
+    }, props.children)
   return {
-    YStack: container, Paragraph: container, Text: container, H2: container, View: container,
+    YStack: container, Paragraph: container, Text: text, H2: container, View: container,
     Spinner: ({ testID }: { testID?: string }) => createElement('div', { 'data-testid': testID ?? 'spinner' }),
     Input: (props: Record<string, unknown> & { value?: string; onChangeText?: (v: string) => void; testID?: string; accessibilityLabel?: string; maxLength?: number }) => {
       if (props.testID) mock.inputs[props.testID] = props
@@ -123,7 +134,7 @@ vi.mock('tamagui', async () => {
 })
 
 import WhatsappStepScreen from '../../app/(signup)/whatsapp'
-import { bare, NBSP } from './announce-text'
+import { bare, NBSP, sentAs } from './announce-text'
 
 const NEXT = '/(signup)/payment'
 const words = getCatalog('en', 'common')!
@@ -839,6 +850,142 @@ describe('code review round 2 (2026-10-21) — gaps beside the round-1 patches',
     }
     expect(mock.announce.mock.calls.filter(([t]) => t === words['waCode.sent_uncertain'])).toHaveLength(1)
     expect(mock.announce.mock.calls.filter(([t]) => t === words['waCode.resend_wait'])).toHaveLength(0)
+  })
+})
+
+describe('Story 3.15c AC 2 — an error line set again with the same words is SENT again (X1; DL1)', () => {
+  const LIVE = { ...OFFER, liveCode: true, codesRemaining: 1, liveCodeDelivery: 'sent' }
+  // A 503 is an unlisted ApiError ⇒ the status re-read decides; PENDING ⇒ verify_failed (F2 (a)).
+  const verifyFails = () => {
+    mock.verifyWaOptInCode.mockRejectedValueOnce(err(503, 'http.503'))
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('PENDING'))
+  }
+  const RELEASED = () => err(502, 'wa_opt_in.code_send_failed', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: null }))
+  const spoken = (key: string) => sentAs(mock.announce.mock.calls, words[key]!)
+  /** Android: the n-th send of the same words carries n trailing U+00A0 (Story 3.15b); iOS: identical. */
+  const expectRepeatShape = (os: string, key: string) => {
+    const [first, second] = spoken(key)
+    expect(first).toBe(words[key])
+    expect(second).toBe(os === 'android' ? `${words[key]!}${NBSP}` : words[key])
+  }
+
+  for (const os of ['android', 'ios'] as const) {
+    it(`[${os}] (a) verify_failed twice ⇒ announced twice`, async () => {
+      mock.os = os
+      await toSent(LIVE)
+      typeCode('123456')
+      verifyFails()
+      await press('wa-code-confirm')
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(1))
+      expect(alertText()).toBe(words['waCode.verify_failed'])
+      expect(get('wa-code-confirm')).toBeEnabled()
+      verifyFails()
+      await press('wa-code-confirm')
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(2))
+      expectRepeatShape(os, 'waCode.verify_failed')
+    })
+
+    it(`[${os}] (b) a released send_failed twice (502, 2 left) ⇒ announced twice`, async () => {
+      mock.os = os
+      await toSent(OFFER)
+      expand()
+      mock.sendWaOptInCode.mockRejectedValueOnce(RELEASED())
+      await press('wa-code-send')
+      await waitFor(() => expect(spoken('waCode.send_failed')).toHaveLength(1))
+      expect(get('wa-code-send')).toBeEnabled()
+      mock.sendWaOptInCode.mockRejectedValueOnce(RELEASED())
+      await press('wa-code-send')
+      await waitFor(() => expect(spoken('waCode.send_failed')).toHaveLength(2))
+      expectRepeatShape(os, 'waCode.send_failed')
+    })
+
+    it(`[${os}] (c) a digit typed and the busy flip of the next press re-render beside the line ⇒ ⛔ further announcement; the answer is (a)`, async () => {
+      mock.os = os
+      await toSent(LIVE)
+      typeCode('123456')
+      verifyFails()
+      await press('wa-code-confirm')
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(1))
+      typeCode('12345')
+      typeCode('123457')
+      await settle()
+      expect(spoken('waCode.verify_failed')).toHaveLength(1)
+      // HOLD the next verify: the press flips `busy` while the line stands.
+      let reject!: (e: unknown) => void
+      mock.verifyWaOptInCode.mockReturnValueOnce(new Promise((_r, j) => { reject = j }))
+      mock.getWaOptInStatus.mockResolvedValueOnce(status('PENDING'))
+      await act(async () => { fireEvent.click(get('wa-code-confirm')) })
+      await settle()
+      expect(get('wa-code-confirm')).toBeDisabled()
+      expect(alertText()).toBe(words['waCode.verify_failed'])
+      expect(spoken('waCode.verify_failed')).toHaveLength(1)
+      await act(async () => { reject(err(503, 'http.503')) })
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(2))
+    })
+
+    it(`[${os}] (c) a countdown tick beside a send_failed line ⇒ ⛔ further announcement`, async () => {
+      mock.os = os
+      await toSent(OFFER)
+      expand()
+      mock.sendWaOptInCode.mockRejectedValueOnce(err(502, 'wa_opt_in.code_send_failed', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: 3 })))
+      vi.useFakeTimers()
+      await act(async () => { fireEvent.click(get('wa-code-send')) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+      expect(spoken('waCode.send_failed')).toHaveLength(1)
+      expect(get('wa-code-wait')).toBeInTheDocument()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+      expect(get('wa-code-send')).toBeDisabled()
+      expect(alertText()).toBe(words['waCode.send_failed'])
+      expect(spoken('waCode.send_failed')).toHaveLength(1)
+    })
+
+    it(`[${os}] (d) collapse → expand with an error showing ⇒ spoken once on the mount (kept behaviour)`, async () => {
+      mock.os = os
+      await toSent(LIVE)
+      typeCode('123456')
+      verifyFails()
+      await press('wa-code-confirm')
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(1))
+      expand() // collapse
+      expect(q('wa-code-form')).toBeNull()
+      await settle()
+      expect(spoken('waCode.verify_failed')).toHaveLength(1)
+      expand()
+      await waitFor(() => expect(spoken('waCode.verify_failed')).toHaveLength(2))
+      await settle()
+      expect(spoken('waCode.verify_failed')).toHaveLength(2)
+    })
+
+    it(`[${os}] (f) the line is role alert, ⛔ a live region, with its testID and AnnouncedText kind="error"'s look`, async () => {
+      mock.os = os
+      await toSent(OFFER)
+      expand()
+      mock.sendWaOptInCode.mockRejectedValueOnce(RELEASED())
+      await press('wa-code-send')
+      const line = get('wa-code-error')
+      expect(line).toHaveTextContent(words['waCode.send_failed']!)
+      expect(line).toHaveAttribute('role', 'alert')
+      expect(line).not.toHaveAttribute('aria-live')
+      expect(line).toHaveAttribute('data-color', '$red10')
+      expect(line).toHaveAttribute('data-font-size', '$2')
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
+    })
+  }
+
+  it('[ios] (e) send_failed + a wait in ONE answer ⇒ send_failed is announced BEFORE the queued resend_wait (F8)', async () => {
+    mock.os = 'ios'
+    await toSent(OFFER)
+    expand()
+    mock.sendWaOptInCode.mockRejectedValueOnce(err(502, 'wa_opt_in.code_send_failed', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: 60 })))
+    await press('wa-code-send')
+    await waitFor(() => expect(spoken('waCode.resend_wait')).toHaveLength(1))
+    const texts = mock.announce.mock.calls.map(([t]) => String(t))
+    const failedAt = texts.indexOf(words['waCode.send_failed']!)
+    const waitAt = texts.indexOf(words['waCode.resend_wait']!)
+    expect(failedAt).toBeGreaterThanOrEqual(0)
+    expect(failedAt).toBeLessThan(waitAt)
+    expect(mock.announce.mock.calls[waitAt]![1]).toEqual({ queue: true })
   })
 })
 

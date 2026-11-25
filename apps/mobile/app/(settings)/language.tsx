@@ -7,13 +7,16 @@
 // unless the account, as last read, holds no choice or another one: then the tap records it (Decision 2026-10-23-388,
 // item 1 — e.g. a login-screen choice dropped by an app restart before sign-in).
 // A failed PUT keeps the new language on screen and the pending record (retried at the next start / foreground), and
-// shows ONE inline alert line. Its announcement: iOS only when the line MOUNTS on the failure (TalkBack already speaks a
-// newly shown live region — `(claim)/contact.tsx`); on BOTH platforms when it was already showing and a second PUT fails
-// (the live region does ⛔ re-fire — 3.3c `kyc.tsx`).
+// shows ONE inline alert line — PLAIN text (role `alert`; ⛔ a live region), and EVERY failure is announced ONCE, on both
+// platforms, in the language just chosen (Story 3.15c DL3, X2). As a live region the line spoke its NEW words at the
+// switch itself (`setLocale` re-renders it before the PUT's outcome): a failure while it showed was then heard twice (the
+// region + the direct announcement), and a switch that SUCCEEDED was heard as "not recorded" first. While a PUT is pending
+// the line keeps showing, in the new language — silent now. A repeat of the same words is sent as different text by
+// `announce()` (Story 3.15b).
 // ⛔ `[t]` dependency anywhere here (`useT()` is a fresh closure every render — depend on `locale`).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Platform, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
 import { t as translate } from '@twt/i18n'
 import { useLocale, useT } from '@twt/i18n/react'
 import { Stack } from 'expo-router'
@@ -69,7 +72,6 @@ export default function LanguageScreen(): React.ReactElement {
   const { session, currentMemberId } = useSession()
   const memberId = session?.memberId ?? null
   const [notRecorded, setNotRecorded] = useState(false)
-  const notRecordedRef = useRef(false)
 
   const mountedRef = useRef(true)
   useEffect(() => {
@@ -86,16 +88,12 @@ export default function LanguageScreen(): React.ReactElement {
       void chooseLanguage(next, memberId, { currentMemberId }).then((outcome) => {
         if (!mountedRef.current) return
         if (outcome !== 'not_recorded') {
-          notRecordedRef.current = false
           setNotRecorded(false)
           return
         }
-        const alreadyShowing = notRecordedRef.current
-        notRecordedRef.current = true
         setNotRecorded(true)
         // The words in the language just chosen (the package `t`, ⛔ the render's `useT()` closure — bound to the old one).
-        const text = translate('language.error_not_recorded', undefined, { locale: next })
-        if (alreadyShowing || Platform.OS === 'ios') announce(text)
+        announce(translate('language.error_not_recorded', undefined, { locale: next }))
       })
     },
     [locale, setLocale, memberId, currentMemberId],
@@ -123,7 +121,7 @@ export default function LanguageScreen(): React.ReactElement {
           />
         </YStack>
         {notRecorded ? (
-          <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" testID="language-not-recorded">
+          <Text accessibilityRole="alert" testID="language-not-recorded">
             {t('language.error_not_recorded')}
           </Text>
         ) : null}

@@ -2,8 +2,16 @@
 // (owned by `OtherPhoneCodeHint`, so a collapse hides only this view). Every key is a LITERAL `t('waCode.…')` (the copy test scans
 // for them). The code field takes digits only, six at most — the HOOK keeps six, ⛔ native `maxLength` (React Native truncates
 // BEFORE `onChangeText`, so a pasted "123 456" would become "12345" — code review P2) — and ⛔ `textContentType="oneTimeCode"` /
-// `autoComplete` — iOS would offer the SMS LOGIN code this phone just received, and one tap spends half the tries (WC7). Errors
-// are `AnnouncedText kind="error"`; `sent` / `sent_uncertain` are spoken on every send the member is told about (keyed on the send
+// `autoComplete` — iOS would offer the SMS LOGIN code this phone just received, and one tap spends half the tries (WC7).
+// The error line is PLAIN text (role `alert` — on Android a role description only, ⛔ a live region), SENT once each time the hook
+// SETS a line (`lineCount`), the same words included, on BOTH platforms — Story 3.15c DL1 (X1): as `AnnouncedText` it was a live
+// region (Android) / an effect keyed on the words (iOS), so a second `verify_failed` or released `send_failed` was sent NOTHING on
+// either platform, and a standing live region is re-read at a later press (6.36f D1). The 3.15a `assisted.tsx` shape: the effect
+// keys on the counter alone (⛔ `t` / the words — a language switch changes them without a new set); it also runs on MOUNT, so an
+// expand after a collapse with an error showing speaks it once (as `AnnouncedText` did). It is declared BEFORE the wait effect:
+// effects of one component run in declaration order, so on iOS `send_failed` is sent before the QUEUED `resend_wait` of the same
+// answer (F8). ⛔ focus gate: the hook drops every late result after a blur (DL7).
+// `sent` / `sent_uncertain` are spoken on every send the member is told about (keyed on the send
 // counter — the `useAnnounceOnChange` shape, which would ⛔ re-speak the same text twice), on BOTH platforms (a phase change);
 // `resend_wait` the same way, keyed on the wait counter (a press answered by a wait — ⛔ each countdown tick — code review P2),
 // QUEUED (iOS) so it follows a `send_failed` line spoken in the same render instead of cutting it off (code review round 2).
@@ -11,10 +19,9 @@
 import { useEffect, useRef } from 'react'
 
 import { useT } from '@twt/i18n/react'
-import { Button, Input, Paragraph, Spinner, YStack } from 'tamagui'
+import { Button, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { announce } from '../../lib/announce'
-import { AnnouncedText } from '../peer-request/announce'
 import { OtherPhoneDetails } from './OtherPhoneDetails'
 import type { WaCode } from './use-wa-code'
 
@@ -36,13 +43,6 @@ export function WaCodeEntry({
     spokenFor.current = form.sendCount
     if (sentLine) announce(sentLine)
   }, [form.sendCount, sentLine])
-  const waitLine = t('waCode.resend_wait')
-  const waitSpokenFor = useRef(form.waitCount)
-  useEffect(() => {
-    if (form.waitCount === waitSpokenFor.current) return
-    waitSpokenFor.current = form.waitCount
-    announce(waitLine, { queue: true })
-  }, [form.waitCount, waitLine])
 
   const errorText =
     form.line === 'wrong_retry'
@@ -58,6 +58,20 @@ export function WaCodeEntry({
               : form.line === 'no_more'
                 ? t('waCode.no_more')
                 : null
+  // Sent once per SET (and on mount) — a bump to `sent` / `sent_uncertain` speaks nothing here (the send effect owns those).
+  // ⛔ `errorText` / `t` in the deps: every change of `line` bumps `lineCount`; the body reads this render's words.
+  useEffect(() => {
+    if (errorText) announce(errorText)
+  }, [form.lineCount])
+
+  const waitLine = t('waCode.resend_wait')
+  const waitSpokenFor = useRef(form.waitCount)
+  useEffect(() => {
+    if (form.waitCount === waitSpokenFor.current) return
+    waitSpokenFor.current = form.waitCount
+    announce(waitLine, { queue: true })
+  }, [form.waitCount, waitLine])
+
   const waiting = form.wait > 0
 
   return (
@@ -103,7 +117,11 @@ export function WaCodeEntry({
           </Button>
         </YStack>
       ) : null}
-      {errorText ? <AnnouncedText kind="error" text={errorText} /> : null}
+      {errorText ? (
+        <Text fontSize="$2" color="$red10" accessibilityRole="alert" testID="wa-code-error">
+          {errorText}
+        </Text>
+      ) : null}
       {form.showResend ? (
         <Button
           disabled={form.busy || waiting}

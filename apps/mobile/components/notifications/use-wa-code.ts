@@ -60,6 +60,12 @@ export interface WaCodeState {
    * a `code_send_failed` carrying `retryAfterSeconds` — code review round 2) — `resend_wait` is spoken on it, queued behind any line.
    */
   readonly waitCount: number
+  /**
+   * Story 3.15c (DL1, X1): bumped by EVERY write that sets `line` from an answer — the same words included — so the view speaks an
+   * error line once per time it is SET (an unchanged standing line is otherwise sent nothing on either platform). The one write
+   * that keeps the line (`code_resend_too_soon` when ⛔ newly told) does ⛔ bump: its news is the wait, spoken on `waitCount`.
+   */
+  readonly lineCount: number
 }
 
 export interface WaCode extends WaCodeState {
@@ -86,6 +92,7 @@ export function initialWaCodeState(minted: CreateWaOptInResponse): WaCodeState {
     busy: false,
     sendCount: 0,
     waitCount: 0,
+    lineCount: 0,
   }
 }
 
@@ -113,6 +120,11 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
   const busyRef = useRef(false)
   const version = useRef(0)
   const patch = useCallback((next: Partial<WaCodeState>) => setState((s) => ({ ...s, ...next })), [])
+  /** Set `line` from an answer — ALWAYS a new set, so `lineCount` moves (DL1); `patch` stays for writes that never touch `line`. */
+  const setLine = useCallback(
+    (line: WaCodeLine, rest: Partial<WaCodeState> = {}) => setState((s) => ({ ...s, ...rest, line, lineCount: s.lineCount + 1 })),
+    [],
+  )
 
   // Blur and unmount invalidate an in-flight call (⛔ a collapse — the hook outlives the view).
   useFocusEffect(useCallback(() => () => { version.current += 1 }, []))
@@ -157,12 +169,13 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
         line: res.delivery === 'sent' ? 'sent' : 'sent_uncertain',
         closed: false,
         sendCount: s.sendCount + 1,
+        lineCount: s.lineCount + 1,
       }))
     } catch (err) {
       if (!current()) return
       if (mayHaveSent(err)) {
         // A code may have been sent — the field, and the count unknown (the server's 409 decides the next send).
-        setState((s) => ({ ...s, told: true, field: true, codesRemaining: null, wait: UNKNOWN_WAIT_SECONDS, line: 'sent_uncertain', sendCount: s.sendCount + 1 }))
+        setState((s) => ({ ...s, told: true, field: true, codesRemaining: null, wait: UNKNOWN_WAIT_SECONDS, line: 'sent_uncertain', sendCount: s.sendCount + 1, lineCount: s.lineCount + 1 }))
         return
       }
       const e = err as ApiError
@@ -177,7 +190,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           onActivated()
           return
         case 'wa_opt_in.not_pending':
-          patch({ line: 'no_longer_valid', lapsed: true, field: false, closed: false })
+          setLine('no_longer_valid', { lapsed: true, field: false, closed: false })
           return
         case 'wa_opt_in.code_resend_too_soon':
           // A live code the member was ⛔ told of (its send's answer was dropped by a blur): TELL them now — `sent_uncertain`, spoken
@@ -191,6 +204,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
               codesRemaining: d?.codesRemaining ?? s.codesRemaining,
               told: s.told || keepField,
               line: told ? 'sent_uncertain' : s.line,
+              lineCount: told ? s.lineCount + 1 : s.lineCount,
               sendCount: told ? s.sendCount + 1 : s.sendCount,
               waitCount: told ? s.waitCount : s.waitCount + 1,
             }
@@ -210,6 +224,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
             return {
               ...s,
               line: told ? 'sent_uncertain' : 'send_failed',
+              lineCount: s.lineCount + 1,
               told: s.told || keepField,
               sendCount: told ? s.sendCount + 1 : s.sendCount,
               codesRemaining: d.codesRemaining,
@@ -227,6 +242,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
             return {
               ...s,
               line: told ? 'sent_uncertain' : 'no_more',
+              lineCount: s.lineCount + 1,
               told: s.told || keepField,
               sendCount: told ? s.sendCount + 1 : s.sendCount,
               codesRemaining: 0,
@@ -240,13 +256,13 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       }
       // `code_unavailable`, `code_not_offered`, `channel_unavailable`, any other 4xx, a `wa_opt_in.*` code with details that do ⛔
       // parse: the line and the closed route; ⛔ send again (it would fail the same way).
-      patch({ line: 'send_failed', field: keepField, closed: true, sendBlocked: true })
+      setLine('send_failed', { field: keepField, closed: true, sendBlocked: true })
     } finally {
       busyRef.current = false
       // ALWAYS (⛔ `current()`): a blur drops the result, ⛔ the form — after unmount this setState is a no-op.
       patch({ busy: false })
     }
-  }, [patch, onActivated])
+  }, [patch, setLine, onActivated])
 
   const confirm = useCallback(async (): Promise<void> => {
     if (busyRef.current) return
@@ -262,10 +278,10 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
         const status = await withTimeout(memberAuth.getWaOptInStatus(), CALL_TIMEOUT_MS)
         if (!current()) return
         if (status.state === 'ACTIVE') onActivated()
-        else if (status.state === 'PENDING') patch({ line: 'verify_failed' })
-        else patch({ line: 'no_longer_valid', lapsed: true, field: false, closed: false })
+        else if (status.state === 'PENDING') setLine('verify_failed')
+        else setLine('no_longer_valid', { lapsed: true, field: false, closed: false })
       } catch {
-        if (current()) patch({ line: 'verify_failed' })
+        if (current()) setLine('verify_failed')
       }
     }
     try {
@@ -281,15 +297,14 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           onActivated()
           return
         case 'wa_opt_in.not_pending':
-          patch({ line: 'no_longer_valid', lapsed: true, field: false, closed: false })
+          setLine('no_longer_valid', { lapsed: true, field: false, closed: false })
           return
         case 'wa_opt_in.code_wrong':
           if (d !== null && (d.attemptsRemaining ?? 0) >= 1) {
-            patch({ line: 'wrong_retry', code: '', codesRemaining: d.codesRemaining })
+            setLine('wrong_retry', { code: '', codesRemaining: d.codesRemaining })
             return
           }
-          patch({
-            line: 'wrong_final',
+          setLine('wrong_final', {
             code: '',
             codesRemaining: d?.codesRemaining ?? 0,
             field: d?.liveCode ?? false,
@@ -297,7 +312,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           })
           return
         case 'wa_opt_in.code_no_longer_valid':
-          patch({ line: 'no_longer_valid', code: '', codesRemaining: d?.codesRemaining ?? 0, field: false, closed: (d?.codesRemaining ?? 0) === 0 })
+          setLine('no_longer_valid', { code: '', codesRemaining: d?.codesRemaining ?? 0, field: false, closed: (d?.codesRemaining ?? 0) === 0 })
           return
         default:
           // `invalid_state`, a 5xx, a 429, any other answer: the status re-read decides.
@@ -311,7 +326,7 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       const dropped = !current()
       setState((s) => ({ ...s, busy: false, code: dropped && s.code === code ? '' : s.code }))
     }
-  }, [patch, onActivated, state.code])
+  }, [patch, setLine, onActivated, state.code])
 
   const sendable = !state.sendBlocked && !state.lapsed && state.codesRemaining !== 0
   return {

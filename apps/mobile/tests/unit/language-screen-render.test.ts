@@ -101,6 +101,7 @@ vi.mock('tamagui', async () => {
 import LanguageScreen from '../../app/(settings)/language'
 import { syncAppLanguage } from '../../lib/app-language'
 import LoginScreen from '../../app/(auth)/login'
+import { NBSP, sentAs } from './announce-text'
 
 const PENDING = 'app-language.pending.v1'
 const tr = (key: string, locale: 'hi' | 'en') => t(key, undefined, { locale, namespace: 'common' })
@@ -229,31 +230,77 @@ describe('AC7 — the language screen', () => {
     expect(mock.memberLanguageSet).toHaveBeenCalledTimes(2)
   })
 
+  // Story 3.15c AC 3 (DL3, X2): the line is PLAIN text (⛔ live region — it spoke the new words at the SWITCH, before the outcome,
+  // and so doubled the announcement and spoke a false "not recorded" when the PUT then succeeded), and EVERY `not_recorded`
+  // outcome is announced ONCE, on both platforms, in the chosen language. Counts are RUNNING TOTALS of `mock.announce` calls
+  // (⛔ deltas); a "stays" is asserted after a settle. jsdom cannot hear a live region — only (e) (⛔ `aria-live`) catches it.
   for (const os of ['android', 'ios'] as const) {
-    it(`⭐ a failed PUT keeps the new language, leaves pending, shows ONE assertive alert line; announce rule (${os})`, async () => {
+    it(`⭐ a failed PUT keeps the new language, leaves pending, shows ONE alert line (⛔ live region); announced once per failure (${os}) — AC 3 (a), (b), (e)`, async () => {
       mock.os = os
       mock.memberLanguageSet.mockRejectedValue(new Error('offline'))
       renderIn(LanguageScreen, 'hi')
       fireEvent.click(screen.getByTestId('language-option-en'))
       const line = await screen.findByTestId('language-not-recorded')
       expect(line).toHaveAttribute('role', 'alert')
-      expect(line).toHaveAttribute('aria-live', 'assertive')
+      expect(line).not.toHaveAttribute('aria-live')
       expect(line).toHaveTextContent(tr('language.error_not_recorded', 'en'))
       expect(screen.getAllByRole('alert')).toHaveLength(1)
       expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-checked', 'true')
       expect(screen.getByTestId('stack-title')).toHaveTextContent('Language')
       expect(pending()).toMatchObject({ locale: 'en', memberId: mock.session?.memberId })
-      // The line MOUNTED on the failure: iOS needs the call; TalkBack already speaks a new live region (⛔ twice).
-      expect(mock.announce).toHaveBeenCalledTimes(os === 'ios' ? 1 : 0)
-      if (os === 'ios') expect(mock.announce).toHaveBeenLastCalledWith(tr('language.error_not_recorded', 'en'))
+      // (a) the first failure: total 1, in the chosen language.
+      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(1))
+      expect(mock.announce).toHaveBeenLastCalledWith(tr('language.error_not_recorded', 'en'))
 
-      // A second failure while the line is ALREADY showing: the live region does ⛔ re-fire ⇒ announced on BOTH.
+      // (b) a switch while the line shows, failing: total 2, the second in the NEW language.
       fireEvent.click(screen.getByTestId('language-option-hi'))
-      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(os === 'ios' ? 2 : 1))
+      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(2))
       expect(mock.announce).toHaveBeenLastCalledWith(tr('language.error_not_recorded', 'hi'))
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(2)
       expect(screen.getAllByRole('alert')).toHaveLength(1)
       expect(screen.getByTestId('language-not-recorded')).toHaveTextContent(tr('language.error_not_recorded', 'hi'))
+      expect(screen.getByTestId('language-not-recorded')).not.toHaveAttribute('aria-live')
       expect(pending()).toMatchObject({ locale: 'hi', memberId: mock.session?.memberId })
+    })
+
+    it(`AC 3 (c) a switch while the line shows, SUCCEEDING ⇒ the total stays 1 and the line is removed (${os})`, async () => {
+      mock.os = os
+      mock.memberLanguageSet.mockRejectedValueOnce(new Error('offline'))
+      renderIn(LanguageScreen, 'hi')
+      fireEvent.click(screen.getByTestId('language-option-en'))
+      await screen.findByTestId('language-not-recorded')
+      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(1))
+      fireEvent.click(screen.getByTestId('language-option-hi'))
+      await waitFor(() => expect(screen.queryByTestId('language-not-recorded')).toBeNull())
+      await act(async () => {
+        await settle()
+      })
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      expect(pending()).toBeNull()
+    })
+
+    it(`AC 3 (d) -388 item 1 — the switch fails (total 1), then a tap on the SHOWN language retries and fails again ⇒ total 2, the same words (${os})`, async () => {
+      mock.os = os
+      renderIn(LanguageScreen, 'hi')
+      mock.memberLanguage.mockResolvedValue({ chosenLocale: 'hi', pariwarDefaultLocale: 'hi' })
+      await syncAppLanguage(mock.session!.memberId, { setLocale: vi.fn() })
+      mock.memberLanguageSet.mockRejectedValue(new Error('offline'))
+      fireEvent.click(screen.getByTestId('language-option-en'))
+      await screen.findByTestId('language-not-recorded')
+      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(1))
+      fireEvent.click(screen.getByTestId('language-option-en'))
+      await waitFor(() => expect(mock.announce).toHaveBeenCalledTimes(2))
+      expect(mock.memberLanguageSet.mock.calls).toEqual([['en'], ['en']])
+      const words = tr('language.error_not_recorded', 'en')
+      const [first, second] = mock.announce.mock.calls.map(([s]) => String(s))
+      expect(first).toBe(words)
+      // Android: the second send of the same words carries one trailing U+00A0 (Story 3.15b `announce()`); iOS: identical.
+      expect(second).toBe(os === 'android' ? `${words}${NBSP}` : words)
+      expect(sentAs(mock.announce.mock.calls, words)).toHaveLength(2)
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
     })
   }
 

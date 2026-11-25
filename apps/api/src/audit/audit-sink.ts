@@ -634,6 +634,17 @@ export type AuthAuditEventType =
   | 'admin_claim.membership_checked'
   | 'admin_claim.membership_check_rejected'
   | 'admin_claim.membership_check_read'
+  // ── Story 3.13 (DL8, DL6a, DL13) — staff check a typed-in identity in life. ids, outcome / reason codes ONLY (⛔ a name, ⛔ a
+  // date of birth, ⛔ the note, ⛔ the MOBILE NUMBER — `-328`'s rule), with a `member:<uuid>` resourceLocator.
+  //   identity_check_read — the detail was opened (it decrypts the typed-in name, date of birth, photo and the live note).
+  //   identity_check_recorded / identity_check_rejected — the act (`member.validate_identity`), or its refusal with the reason.
+  //   member_mobile_shown — ONE line per press of "Show mobile number" (`member.reveal_mobile_for_identity_check`, `-502` Q3 B).
+  //   member_mobile_reveal_rejected — a refused press, with the reason code.
+  | 'admin_identity_check.identity_check_read'
+  | 'admin_identity_check.identity_check_recorded'
+  | 'admin_identity_check.identity_check_rejected'
+  | 'admin_identity_check.member_mobile_shown'
+  | 'admin_identity_check.member_mobile_reveal_rejected'
   // ── Story 6.21b (D5) — the helpline's read of the SELECTED member's live claims + their status ──
   // ids and status codes ONLY (⛔ never a note/date/reviewer). `admin_death_certificate.claims_read`
   // does ⛔ NOT close 6.20's "the helpline live-claims read writes no audit line" deferral — that

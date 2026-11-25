@@ -129,6 +129,12 @@ const CLAIM_FLAG_FRAUD = permissionKey('claim.flag_fraud');
 const CLAIM_RECORD_FRAUD_FINDING = permissionKey('claim.record_fraud_finding');
 // Story 6.39 (`2026-11-21-472` DL7) — the District Admin's membership check before any drive (district).
 const CLAIM_CHECK_MEMBERSHIP = permissionKey('claim.check_membership');
+// Story 3.13 (`2026-11-25-501` DL6; `-503` DL6a) — staff check a typed-in identity in life (district_admin at the member's
+// current posting district, pariwar_admin at any), and the audited number reveal to arrange it (those two + verifier +
+// helpline_operator). See permissions.ts. ⛔ field_worker (no login yet) / block_admin (a member has no block) — an inert
+// grant is refused; both deferred, the Panel told.
+const MEMBER_VALIDATE_IDENTITY = permissionKey('member.validate_identity');
+const MEMBER_REVEAL_MOBILE_FOR_IDENTITY_CHECK = permissionKey('member.reveal_mobile_for_identity_check');
 // Story 6.19b (keys (1) and (7), Decision `2026-09-28-265` §2) — the posted-letter record (+ the letter form's address
 // read) and the "who must act" change, both district-dimension, `district_admin` ONLY. See permissions.ts.
 const CLAIM_RECORD_CORRECTION_LETTER = permissionKey('claim.record_correction_letter');
@@ -567,6 +573,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       FIELD_WORKER_UNDO_ENDING,
       FIELD_WORKER_HEAR_ENDING_APPEAL,
       FIELD_WORKER_READ_ENDING_APPEALS,
+      // Story 3.13 (DL6, DL6a) — check a typed-in identity in life, any district (incl. a member with no posting — the gate's
+      // dimension moves with the caller); reveal the member's number to arrange it (`-502` Q3 B).
+      MEMBER_VALIDATE_IDENTITY,
+      MEMBER_REVEAL_MOBILE_FOR_IDENTITY_CHECK,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -626,6 +636,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 6.39 (DL7) — the MEMBERSHIP CHECK before any drive (`-424` Q1 (a) C, `-430` Q1 B); district-dimension
       // against the deceased's server-derived posting district — the same person who accepts the certificate.
       CLAIM_CHECK_MEMBERSHIP,
+      // Story 3.13 (DL6, DL6a) — check a typed-in identity in life, and reveal the member's number to arrange it; both
+      // district-dimension against the member's server-derived CURRENT posting district (an unposted member fails closed here).
+      MEMBER_VALIDATE_IDENTITY,
+      MEMBER_REVEAL_MOBILE_FOR_IDENTITY_CHECK,
       // Story 13.1 (QE10) — register a field worker in the District Admin's OWN district (the Panel's primary manager, `-441`).
       FIELD_WORKER_REGISTER,
       // Story 13.1a (AD6) — read a worker's code and see workers in the District Admin's OWN district. ⛔ Approve (Pariwar Admin only).
@@ -772,6 +786,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       MEMBER_VIEW_VALIDITY,
       CLAIM_VERIFY,
       CLAIM_VIEW_NOMINEE_NAME_CHECK,
+      // Story 3.13 (DL6a; `-502` Q3 B, widened by the Panel to verifiers) — reveal a member's number to ARRANGE an identity
+      // check (district-dimension against the member's current posting district), and read the queue. ⛔ MEMBER_VALIDATE_IDENTITY:
+      // the check itself is the District / Pariwar Admin's (`-501` DL6).
+      MEMBER_REVEAL_MOBILE_FOR_IDENTITY_CHECK,
     ],
     scopeCeiling: 'district',
   },
@@ -864,6 +882,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Trustee-ratified: *"removed within 7 days, by the helpline operator"*). ⚠ An EXECUTE grant — a named departure from the
       // 10.21 pattern (`-107` cl.1b); the 6.9 D7 precedent above (CLAIM_MANAGE_DPDPA_CONSENT). Live by the `pariwar` ceiling.
       MEMORIAL_TAKEDOWN,
+      // Story 3.13 (DL6a; `-502` Q3 B, widened by the Panel to helpline operators) — reveal a member's number to ARRANGE an
+      // identity check (pariwar-dimension), and read the queue. ⛔ MEMBER_VALIDATE_IDENTITY (the check is the DA / PA's).
+      MEMBER_REVEAL_MOBILE_FOR_IDENTITY_CHECK,
     ],
     scopeCeiling: 'pariwar',
   },

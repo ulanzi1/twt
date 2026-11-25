@@ -324,6 +324,25 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 3.13 (DL6) — member.validate_identity: district_admin + pariwar_admin (+ derived super_admin); ⛔ any other role', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('member.validate_identity'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+  });
+
+  it('Story 3.13 (DL6a; `-502` Q3 B) — member.reveal_mobile_for_identity_check: district_admin, pariwar_admin, verifier, helpline_operator (+ derived super_admin); ⛔ field_worker / block_admin (deferred — an inert grant is refused)', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('member.reveal_mobile_for_identity_check'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['district_admin', 'helpline_operator', 'pariwar_admin', 'super_admin', 'verifier']);
+    for (const role of ['field_worker', 'block_admin'] as const) {
+      expect(holds(role, 'member.reveal_mobile_for_identity_check'), role).toBe(false);
+    }
+  });
+
   it('Story 6.20 — ⛔ no role but super_admin can both RAISE and APPROVE, or give BOTH approval steps', () => {
     // ⭐ The structural half of D7's "two DIFFERENT people": no ordinary bundle carries both steps, so a
     // single grant can never walk a correction from raise to applied. (The domain writer additionally

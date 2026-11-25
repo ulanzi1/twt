@@ -284,6 +284,13 @@ export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = encryptionRuntime.CLAIM_FRA
 export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = encryptionRuntime.CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS;
 
 /**
+ * Field-class namespace for the identity check's Tier-1 note (Story 3.13, DL1 / DL14) — the staff member's note on checking a
+ * typed-in identity in life (`member_identity_validations.note_ciphertext`). Declared ONCE in `@twt/domain` `encryption` (the
+ * erasure scrub binds the same value); re-exported here. ⛔ NEVER in an event, a log line or an audit context.
+ */
+export const MEMBER_IDENTITY_VALIDATION_FIELD_CLASS = encryptionRuntime.MEMBER_IDENTITY_VALIDATION_FIELD_CLASS;
+
+/**
  * The field worker's Tier-1 field class (Story 13.1, QE4) — the worker's name and mobile (`field_workers.name_ciphertext`,
  * `field_workers.mobile_ciphertext`), and the keyed-hash class of the worker's mobile (`field_workers.mobile_blind_index`),
  * disjoint from the member login hash. Declared ONCE in `@twt/domain` `encryption`; re-exported here. ⛔ NEVER in an event,

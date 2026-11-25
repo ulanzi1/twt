@@ -81,6 +81,7 @@ import { registerMarketplaceModule } from './modules/marketplace/index.js';
 import { registerFieldWorkerModule } from './modules/field-worker/index.js';
 import { registerSurveyModule } from './modules/surveys/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
+import { registerIdentityCheckRoutes } from './modules/identity-checks/routes.js';
 import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
 import { registerQuestionnaireVersionsModule } from './modules/questionnaire-versions/index.js';
@@ -430,6 +431,10 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // by Story 10.17: `is_valid` = COVERAGE, and the separate `is_assignable` = DONOR ROSTER, on which
   // a SUSPENDED member stays TRUE — only termination removes them).
   registerMemberModerationRoutes(app, deps);
+  // Story 3.13 — staff check a typed-in identity while the member is alive (PRD FR-2's "trustee validation"): the queue, the
+  // detail, the record and the audited number reveal (`member.validate_identity` / `member.reveal_mobile_for_identity_check`).
+  // ⛔ CI gate scans this module (F7b) — its API tests prove the human-actor chain on every route.
+  registerIdentityCheckRoutes(app, deps);
   // Story 10.22 — the Niyamavali §8.8 moderation appeal. A SIBLING module, not an extension of the
   // moderation routes above: the two have different audiences (a member and an operator file; the
   // Trustee Panel alone determines) and different gates (`member.moderate` vs the Panel-only

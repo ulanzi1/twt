@@ -255,9 +255,14 @@ describe('PERMISSION_CATALOG', () => {
     // 65 at Story 6.39 +1 (claim.check_membership — district, district_admin: the membership check before any drive, the
     // preview read and the write; `2026-11-21-472` DL7, under `-424` Q1 (a) C and `-430` Q1 B; 95 -> 96 keys. Reuse-check: not
     // claim.review_death_certificate (admitting a document), not claim.approve, not claim.verify. 64 / 95 READ LIVE at 9f5e2c84).
-    expect(PERMISSION_CATALOG_VERSION).toBe(65);
+    // 66 at Story 3.13 +2 (member.validate_identity — district_admin / pariwar_admin, the identity check in life, the
+    // dimension moving with the caller; member.reveal_mobile_for_identity_check — district_admin, pariwar_admin, verifier,
+    // helpline_operator: the audited number reveal to arrange it, `-502` Q3 B; `2026-11-25-501` DL6 / `-503` DL6a; ONE bump for
+    // the two; 96 -> 98 keys. Reuse-check: not claim.check_membership, not member.moderate, not member.view_validity. 65 / 96
+    // READ LIVE at 74839891).
+    expect(PERMISSION_CATALOG_VERSION).toBe(66);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(96);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(98);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

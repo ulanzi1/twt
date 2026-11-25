@@ -101,6 +101,13 @@ declare module 'fastify' {
      */
     nomineeNameCheckQueueScope?: { dimension: 'district' | 'pariwar'; value: string | null };
     /**
+     * Story 3.13 (DL6, DL6a, DL11) — the scope an IDENTITY-CHECK route gates this caller at, for ITS key. The DIMENSION moves
+     * with the caller: a pariwar-or-broader grant holding the key is gated at `pariwar`; a district grant at `district` —
+     * against the MEMBER's server-derived current posting district (the per-member routes) or the caller's OWN district (the
+     * queue). `null` fails closed (an unposted member, for a district caller). ⛔ Any client-supplied district or dimension.
+     */
+    identityCheckScope?: { dimension: 'district' | 'pariwar'; value: string | null };
+    /**
      * Story 6.19c (AC15) — the scope the RE-FILE CONFIRMATION route gates this caller at: a caller holding
      * `claim.confirm_refile` at a pariwar-or-broader grant is gated at `pariwar`; any other at the CLOSED claim's
      * server-derived posting district (`null` fails closed).

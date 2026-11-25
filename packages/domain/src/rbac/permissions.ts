@@ -922,7 +922,26 @@ export function permissionKey(value: string): PermissionKey {
 // and a later separation of duties needs it), ⛔ `claim.approve` (approving a CLAIM — and a verifier holds it), ⛔ `claim.verify`
 // (a verifier holds it; the check is the District Admin's), ⛔ `claim.record_fraud_finding` (an investigation's outcome).
 // 64 / 95 READ LIVE at `9f5e2c84`. `defaultRoleBundles` stays 13 — ⛔ no new role. ⛔ NOT `state_trustee` (the 6.10 disposition).
-export const PERMISSION_CATALOG_VERSION = 65 as const;
+//
+// ⭐ Story 3.13 (author-commit `2026-11-25-501` DL6, amended by `2026-11-25-503` DL6a) — 65 → 66, TWO keys (96 → 98), ONE bump:
+//   · `member.validate_identity` — staff CHECK a typed-in identity while the member is alive (PRD FR-2's "trustee validation";
+//     `2026-11-25-502` Q1 A: an original photo ID, in person or on a video call). Gates the identity-check DETAIL (the KYC name,
+//     date of birth and photo — one audited view) and the RECORD (confirmed / not confirmed). `district_admin` (against the
+//     member's server-derived CURRENT posting district) and `pariwar_admin` (any district — the Trustee-Lite who acts for "the
+//     trustee" in v1) (+ derived super_admin). The gate's DIMENSION moves with the caller (a member with no posting is checkable
+//     only by a pariwar-ceiling caller — a fixed district gate would refuse everyone, `scope.ts` `scopeContains`).
+//   · `member.reveal_mobile_for_identity_check` — the member's FULL mobile, ONE press at a time, every showing audited (⛔ the
+//     number in the line), ONLY while the member is awaiting a check ("for this purpose" — `-502` Q3 B, widened by the Panel to
+//     field workers, verifiers, helpline operators and Block Admins). Also READS the queue (⛔ PII on it). `district_admin`,
+//     `pariwar_admin`, `verifier` (district ceiling) and `helpline_operator` (pariwar ceiling) (+ derived super_admin).
+//     ⛔ `field_worker` (⛔ console login yet — Story 13.3) and ⛔ `block_admin` (a member has ⛔ block — `member-geo/resolve.ts`
+//     `no-member-attribute`, permanent; a block grant could never satisfy a district or pariwar check) — an INERT grant is
+//     refused (the house rule); both DEFERRED (`deferred-work.md` PQ3a / PQ3b) and the Panel TOLD (`-503`, R3).
+// "Trustee" is the PRD's word; WHICH staff is the author's (`-501` DL6) — the Panel saw who checks in the note it ruled. `-210`
+// cl. 2 authorises no key and is not relied on. REUSE CHECK — ⛔ `claim.check_membership` (death-time, claim-keyed), ⛔
+// `member.moderate` (a sanction), ⛔ `member.view_validity` (a read of coverage — and it shows a MASKED mobile only). 65 / 96
+// READ LIVE at `74839891`. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 66 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1609,6 +1628,14 @@ export const SEED_PERMISSION_KEYS = [
   // (it opens the certificate's date of death, audited) and the write. District-dimension; `district_admin` ONLY
   // (+ derived super_admin). A failing check never denies — the claim waits.
   'claim.check_membership',
+  // Story 3.13 (`2026-11-25-501` DL6) — staff check a typed-in identity in life: the detail (the KYC name, date of birth and
+  // photo, one audited view) and the record (confirmed / not confirmed). `district_admin` (the member's current posting
+  // district) and `pariwar_admin` (any) (+ derived super_admin). The dimension moves with the caller.
+  'member.validate_identity',
+  // Story 3.13 (`2026-11-25-503` DL6a; `-502` Q3 B widened) — the member's full mobile to ARRANGE that check, one audited press
+  // at a time, only while the check is awaited; also reads the queue. `district_admin`, `pariwar_admin`, `verifier`,
+  // `helpline_operator` (+ derived super_admin). ⛔ `field_worker` / `block_admin` (deferred — an inert grant is refused).
+  'member.reveal_mobile_for_identity_check',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

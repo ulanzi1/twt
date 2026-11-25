@@ -19,3 +19,5 @@ export * from './workplace.js';
 export * from './known-people.js';
 // Story 3.15 — "Did someone help you register?": the field worker's 6-digit code at signup (GET status / POST record).
 export * from './assisted-code.js';
+// Story 3.13 — staff check a typed-in identity in life: the queue, the detail, the record, the audited number reveal.
+export * from './identity-check.js';

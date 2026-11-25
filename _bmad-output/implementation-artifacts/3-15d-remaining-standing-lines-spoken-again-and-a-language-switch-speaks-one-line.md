@@ -14,6 +14,11 @@ with an explicit, BRACED refspec (`git push -u origin "${B}:refs/heads/${B}"` �
 without `node_modules` — `pnpm install` first (Task 0.1). Every F-fact below was traced at `9df1818e` BY FUNCTION (line numbers are hints and
 rot); the dev re-derives them by function at HEAD (Task 0.2).
 
+REGISTER (declared here, v1.2, so a cold reader cannot misread the file): `⛔` NEGATES the phrase after it (`⛔ X` = not X; a stop is therefore
+written in plain words, ⛔ `⛔ HALT`); `⭐` = an action; `⚠` = a hazard; doubling is volume only. On every pass, grep `⛔ ` followed by a verb or a
+quoted word and read each hit against this line. The one prose exception is the v1.0 Change Log row's "⛔ stronger than the evidence", which
+means it WAS stronger — history rows are kept verbatim.
+
 §0 GATE (the routing template's, applied FIRST): ⛔ Panel question. Strip the citations and read the bare sentence: *"When an error stays on
 screen and the member's next try fails the same way, should a screen reader say it again — and when a member switches language twice in a
 row, which language's sentence should it say?"* Nothing here changes who is credited, told, paid, or what is stored or disclosed; no copy
@@ -54,6 +59,10 @@ Every item is qualified by its owning story — the bare letters `W1`, `Y1`, `Y2
 - **The leg (g) completeness guard** — the 3.15c story's `### Review Findings — second round`, the dismissal *"(g) has ⛔ completeness guard …
   the one dismissal worth BigDev's eye"*, and the ledger entry that closed 3.15c (read the 3.15c row block's last entry, never a line number).
 - **BigDev, 2026-11-25:** *"create story for unowned items"*.
+- **"The four" is the set 3.15c's own records named unowned** (the ledger entry that closed 3.15c: W1, Y1, Y2, leg (g)). Other 3.15c-born
+  residue stays where 3.15c recorded it and is not owned here: the Android order of `send_failed` + `resend_wait` (X1's "author's call"), the
+  `failureNotice` U-edge (3.15c's inventory table; filed at this validate as deferred item **3.15d-authoring Z2**, owner NONE YET) and X1's `send_failed` leg,
+  NOT REACHED (needs Meta).
 - `epics.md` Story 3.15d block — AC (1)–(6) in brief; the source of the ACs below.
 - **The pattern this story reuses** — Story 3.15c DL1 (`WaCodeEntry` + `use-wa-code.ts`): the line is PLAIN `Text` (`accessibilityRole="alert"`
   — on Android a role description only, ⛔ a live region), counted per SET, spoken ONCE per set by `announce()` on both platforms; Story 3.15a
@@ -64,10 +73,12 @@ Every item is qualified by its owning story — the bare letters `W1`, `Y1`, `Y2
   [[project_talkback_drops_identical_announcement]], [[project_uset_fresh_closure_memo_trap]], [[project_mobile_announce_after_heading_race]],
   [[project_mobile_android_emulator_setup]], [[feedback_gate_scope_semantic_coverage]], [[feedback_mechanization_split_commitment]].
 
-## Found facts (traced at `9df1818e`, BY FUNCTION; `VERIFIED` = read in code, `INFERENCE` = reasoned, not run)
+## Found facts (traced at `9df1818e`, BY FUNCTION; `VERIFIED` = read in code, `INFERENCE` = reasoned, not run, `FOUND at validate` = observed in a scratch run)
 
 The worktree has no `node_modules`: every claim about what TanStack Query does on a retry is `INFERENCE` (the lockfile pins
-`@tanstack/query-core@5.101.0`), resting on the repo's own comments; Task 0.3 proves it with a real `QueryClient`.
+`@tanstack/query-core@5.101.0`), resting on the repo's own comments — AT AUTHORING. The v1.2 validate RAN them (scratch scripts, outside the repo, against the main checkout's
+query-core 5.101.0 with a real `QueryClient` and observers): they hold and are marked FOUND below; Task 0.3 COMMITS the proof, against the app's
+real hooks.
 
 - **F1 — the shape to copy.** `use-wa-code.ts`: `lineCount` in `WaCodeState`, bumped in the same `setState` that sets `line` — by the `setLine`
   helper, or hand-written — the same value included; `patch` is used only for `busy`. `WaCodeEntry.tsx`: a tamagui `Text`
@@ -98,15 +109,20 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
 - **F4 — S2 `posting.tsx` "Show more" `history_error`** (`WorkplaceScreen`). Element inside `history.hasNextPage &&
   history.isFetchNextPageError` (`history` = `usePostingHistoryQuery()`, a `useInfiniteQuery` in `components/workplace/useWorkplaceQueries.ts`);
   `color="#C0392B"`. SET by a failed `fetchNextPage` (the "Show more" button or its Retry). S sequence: Show more fails (line mounts), Retry
-  fails again — `isFetchNextPageError` stays true through the retry with data (the file's header comment says so; `INFERENCE` for TanStack),
-  Retry is `disabled` while fetching, no `key=`. Signal: `history.errorUpdatedAt` (`INFERENCE` that it moves on a failed retry-with-data;
-  its use as a remount key is VERIFIED at `known-people.tsx`). ⚠ `errorUpdatedAt` ALSO moves on a page-1 refetch failure, which shows the
+  fails again — `isFetchNextPageError` stays true through the retry with data (FOUND at validate: the flag stays true and `fetchStatus` goes `fetching` through the retry — ⛔ a code comment: the `posting.tsx` header says only that a page-2
+  failure is reported beside the button, and the inline comment above the page-1 `history_error` covers a page-1 refetch after a page-2 failure),
+  Retry is `disabled` while fetching, no `key=`. Signal: `history.errorUpdateCount` (FOUND at validate: +1 on EVERY failed retry-with-data — `retry: 1` makes one press one final error — while
+  `errorUpdatedAt` is a millisecond stamp that TIES under a frozen or fake clock;
+  the stamp's use as a remount key is VERIFIED at `known-people.tsx` and is ⛔ this story's signal). ⚠ The count ALSO moves on a page-1 refetch failure, which shows the
   OTHER two `history_error` lines (they stay `AnnouncedText`; refetch clears `fetchMeta`, so the lines are mutually exclusive) ⇒ the effect
-  re-checks the line's own condition inside its body. ⚠ `WorkplaceScreen` stays mounted when `transferring` swaps the returned tree for
+  needs no body re-check: the child that owns the line is rendered INSIDE the existing `history.hasNextPage && history.isFetchNextPageError`
+  branch, so a page-1 failure (the flag is then false) unmounts it and its effect cannot run — ⛔ a body re-check (dead code, and no mutation could
+  show it bites). ⚠ `WorkplaceScreen` stays mounted when `transferring` swaps the returned tree for
   `<WorkplacePicker>`; today the `AnnouncedText` remounts on return and iOS re-speaks a standing error — an effect placed in the screen
   would not (a child component that owns the line would). The effect lives IN that child (⛔ in `WorkplaceScreen`, where it would not re-speak on return from the picker). Test:
-  `tests/unit/workplace-screen-render.test.ts` mocks `usePostingHistoryQuery` with an inline constant object WITHOUT `errorUpdatedAt`,
-  `Platform: { OS: 'ios' }` as a constant, tamagui as plain divs ⛔ role / aria; nothing pins `history_error`. Gate:
+  `tests/unit/workplace-screen-render.test.ts` mocks `usePostingHistoryQuery` with an inline constant object WITHOUT `errorUpdateCount` (or `errorUpdatedAt`),
+  `Platform: { OS: 'ios' }` as a constant, tamagui as plain divs ⛔ role / aria, so it ⛔ forwards `accessibilityLiveRegion` either (Task 5.1 maps it to `aria-live`, or AC 2 (d) is vacuous);
+  nothing pins `history_error`. Gate:
   `tests/unit/workplace-copy.test.ts` scans every literal `t('…')` in `posting.tsx` and `WorkplacePicker.tsx` against both locales.
 - **F5 — S3–S6 `PeerQuestionnaire.tsx`** (three components: `LoadError`, `Questionnaire`, `QuestionField`). All four elements are
   `<AnnouncedText … kind="error" />` with the default colour (`$red10`).
@@ -138,16 +154,21 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   text={t('districts_error')} kind="error" color={ERROR_COLOR} /> … <Button … onPress={() => void districts.refetch()}> …` — ⛔ `!data` guard,
   so the error screen replaces the whole picker even when districts are cached. SET when the districts query ends in `error`: a mount-time
   refetch when stale (`staleTime` 10 min), the Retry press, or `invalidateQueries(workplaceKeys.all)` after a refusal. S: cached districts +
-  a failed refetch, Retry fails again — with data `status` stays `error` through the refetch (`INFERENCE`), same words, silent. ⛔ S without
+  a failed refetch, Retry fails again — with data `status` stays `error` through the refetch (FOUND at validate: `isPending` false, the count unchanged until the retry fails, then +1), same
+  words, silent. ⛔ S without
   cached data (status goes pending, the words differ). **S8** "Show more" `search_error` in the `search` phase: `{search.hasNextPage &&
   search.isFetchNextPageError ? … <AnnouncedText text={t('search_error')} …/>`; `gcTime: 0`, `staleTime: 0`; a changed `q` is a new query
-  key and unmounts it; `errorUpdatedAt` also moves on a page-1 failure, which shows the OTHER `search_error` (stays `AnnouncedText`) ⇒ the
-  same re-check. Signals `districts.errorUpdatedAt` / `search.errorUpdatedAt`; focus and reconnect refetch are off (`lib/query-client.ts`),
-  default `retry: 1`. The effect must sit above `if (districts.isPending)`. ⚠ **There is NO render test for `WorkplacePicker`**
+  key and unmounts it; `errorUpdateCount` also moves on a page-1 failure, which shows the OTHER `search_error` (stays `AnnouncedText`) ⇒ the
+  same STRUCTURAL answer as S2 (the child sits inside the Show-more branch; ⛔ a body re-check). Signals `districts.errorUpdateCount` /
+  `search.errorUpdateCount`; focus and reconnect refetch are off (`lib/query-client.ts`),
+  default `retry: 1`. The effect must sit above `if (districts.isPending)` — mobile has ⛔ `react-hooks` lint plugin, so ⛔ lint backstop for hook order or deps:
+  only a leg that takes ONE mounted picker from `isPending` to loaded catches a misplaced hook (Task 6.1). ⚠ **There is NO render test for `WorkplacePicker`**
   (`workplace-screen-render.test.ts` mocks it away; only source scans touch it): a new harness is needed — `@shopify/flash-list` (precedent
   `tests/unit/known-people-find-render.test.ts`), tamagui including `View`, `XStack`, `H2`, `Input`, `Paragraph`, `Spinner`, `Button`,
-  `react-native` `ScrollView` / `Platform` (a getter) / `AccessibilityInfo`, `useWorkplaceQueries` (mutable results), `useQueryClient`,
-  `lib/member-api`, `lib/workplace-i18n`, `lib/idempotency-key`, the known-people cache. Not in the microcopy globs; `workplace-copy.test.ts`
+  `react-native` `ScrollView` / `Platform` (a getter) / `AccessibilityInfo`, `useWorkplaceQueries` (mutable results AND the `workplaceKeys` export that `invalidateQueries` uses), `useQueryClient`,
+  `lib/member-api`, `lib/workplace-i18n`, `lib/idempotency-key`, the known-people cache (mock only what the import graph needs — `workplace-screen-render` mocks `lib/idempotency-key` and loads the known-people
+  cache real). Reaching the `search` phase takes clicks through district then kind; `useAnnounceOnChange` adds title announcements, so count BY
+  TEXT (`sentAs`), ⛔ `mock.announce` totals; the tamagui mock maps `accessibilityLiveRegion` to `aria-live`. Not in the microcopy globs; `workplace-copy.test.ts`
   applies. VERIFIED except where marked.
 - **F7 — 3.15c-review W1's mechanism** (`language.tsx` `choose`; `lib/app-language.ts` `chooseLanguage`, `flush`). Every tap past its guard calls
   `chooseLanguage(next, …)`, which bumps `choiceCounter`, stores the language, OVERWRITES the single pending slot, and returns a FRESH promise
@@ -170,10 +191,13 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   ++ifscRequestSeq.current[idx]` … `if (!mountedRef.current || ifscRequestSeq.current[idx] !== seq) return`. VERIFIED.
 - **F9 — the language tests.** `tests/unit/language-screen-render.test.ts`: ⛔ leg overlaps taps (every tap is followed by `settle()`,
   `findByTestId` or `waitFor`); `mock.memberLanguageSet` resolves INSTANTLY by default; ⛔ hold-open helper (a `deferred()` exists only locally
-  in `app-language.test.ts`); real timers (a 15 s hang is untestable — settle a held promise by hand inside `act`); `useSession` returns
+  in `app-language.test.ts`); fake timers have a precedent (`wa-code-entry-render.test.ts` "a client timeout (15 s)": `vi.useFakeTimers()` + `advanceTimersByTimeAsync(15_000)`
+  inside `act`; `app-language.test.ts` "another member waiting behind a hung write") — AC 4 (g) uses it, the other legs settle a held promise by
+  hand inside `act`; `useSession` returns
   only `{session}`, so `canWrite` is always true. The 3.15c legs AC 3 (a) / (b) / (c) / (d) are all sequential and stay valid. ⚠ A held
   promise MUST be settled before the test ends — the module-level `flushing` slot stays non-null otherwise and later tests (other members)
-  queue behind it. Gates: `tests/unit/language-source-pins.test.ts` bans `t` in any `}, [ … ])` deps array in `language.tsx` (a new `useRef`
+  queue behind it. Gates: `tests/unit/language-source-pins.test.ts` bans `t` in any `}, [ … ])` deps array in `language.tsx` — but its regex ⛔ matches `choose`'s own trailing-comma multi-line array
+  (`[locale, setLocale, memberId, currentMemberId],`), so it is ⛔ protection for DL2's edit, and mobile has ⛔ `react-hooks` lint either (a new `useRef`
   adds none); `tests/unit/language-copy-keys.test.ts` needs the literal `t('language.error_not_recorded')` in the RENDER (the `translate(…)`
   call in the `.then` is ⛔ matched). The key's words: en *"Your choice is saved on this phone, but we could not record it on your account
   yet. We will try again."*, hi approved by BigDev 2026-10-23. VERIFIED.
@@ -193,7 +217,10 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   `twtp05://whatsapp` link pushed a second step onto `(signup)`), and whether a production build lets another app fire the scheme. The login
   screen's switch (`login.tsx` `onSwitchLanguage`) sits over nothing that uses the hook. A sign-in / foreground `syncAppLanguage` →
   `setLocale` re-speaks the FOCUSED step's own title — "from the same screen", ⛔ "from under another". Tests: `assisted-step-render.test.ts`
-  has the `blur` / `refocus` mock but ⛔ `setLocale` or `useLocale`; `wa-code-entry-render.test.ts` leg (h) is the locale-probe precedent.
+  has the `blur` / `refocus` mock but ⛔ `setLocale` or `useLocale`; `wa-code-entry-render.test.ts` leg (h) is the locale-probe precedent. Re-searched at v1.2 for a falsifier of "no in-app path" — ⛔ found: no
+  `addNotificationResponseReceivedListener` / `getLastNotificationResponse` / `useLastNotificationResponse` in `app/`, `components/` or `lib/`
+  (`lib/push-notifications.ts` has no importer); expo-router 55.0.17 routes no notification; every navigation into `(tabs)` is a `replace` and
+  `(signup)` steps use `replace` only; there is no resume path into the wizard from home (3.15 dev-story D1 records that gap).
 - **F11 — the guard's facts** (`use-wa-code.ts`). 14 writes set `line`: **9 through `setLine`** (send `not_pending`; the send default arm; re-read
   PENDING; re-read other-state; re-read CATCH; confirm `not_pending`; `wrong_retry`; `wrong_final`; `code_no_longer_valid`) and **5 hand-written
   `setState` literals** (send 200; the `mayHaveSent` catch; `code_resend_too_soon` — the ONE conditional keep, `told ? s.lineCount + 1 :
@@ -220,22 +247,29 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   `AnnouncedText` itself ⛔ changed. Per site, a counter bumped at EVERY set — the same words included, NEVER at a clear — and ONE effect
   with counter-only deps (⛔ `t`, ⛔ the words) that speaks the line when it is showing. The element: tamagui `Text`,
   `fontSize="$2"`, the colour the site passes today (S1, S2: `#C0392B`; S7, S8: `ERROR_COLOR`; S3–S6: `$red10`, ⛔ a hex literal in
-  `PeerQuestionnaire.tsx`), `accessibilityRole="alert"`, ⛔ `accessibilityLiveRegion`, a `testID` (S1 `address-error`, S2 `posting-history-more-error`, S3 `peer-load-unsaved`, S4 `peer-action-notice`, S5 `peer-unsaved-warning`, S6 `peer-date-invalid`, S7 `workplace-districts-error`, S8 `workplace-search-more-error`).
+  `PeerQuestionnaire.tsx`), `accessibilityRole="alert"`, ⛔ `accessibilityLiveRegion`, a `testID` (S1 `address-error`, S2 `posting-history-more-error`, S3 `peer-load-unsaved`, S4 `peer-action-notice`, S5 `peer-unsaved-warning`, S6 `peer-date-invalid-<question key>` (one `QuestionField` per question ⇒ one id per question), S7 `workplace-districts-error`, S8 `workplace-search-more-error`).
   | Site | Signal (bumped where) | The effect speaks | Placement / trap |
   |---|---|---|---|
-  | S1 `address_required` | one helper `showError(text)` used by BOTH set sites (the empty branch, the catch): `setError(text)` + a counter (or one `{text, n}` state) | `error` when non-null | clears (`onChange`, `onSubmit`) ⛔ bump |
-  | S2 "Show more" `history_error` | `history`'s error signal (the note below) | `t('history_error')` | a CHILD component of `posting.tsx` owns the line and its effect, so a return from the picker remounts it (today's behaviour); body re-checks `hasNextPage && isFetchNextPageError` |
+  | S1 `address_required` | one helper `showError(text)` used by BOTH set sites (the empty branch, the catch): `setError(text)` + a counter (or one `{text, n}` state) | `error` when non-null | clears (`onChange`, `onSubmit`) ⛔ bump; `error` holds the already-TRANSLATED string, so a locale switch changes nothing here (AC 2 (f)) |
+  | S2 "Show more" `history_error` | `history.errorUpdateCount` (the note below) | `t('history_error')` | a CHILD component of `posting.tsx` owns the line and its effect, so a return from the picker remounts it (today's behaviour); rendered INSIDE the existing `hasNextPage && isFetchNextPageError` branch, so ⛔ a body re-check (it would be dead code) |
   | S3 `peer_request.unsaved` (load error) | `setN((n) => n + 1)` in the `usePreventRemove` callback in `LoadError` | `t('peer_request.unsaved')` when `leaveTo !== null && hasUnsent` | navigation-driven |
   | S4 `actionNotice` | one helper `showActionNotice(key)` used by ALL THREE set sites + a counter | `t(actionNotice)` when non-null | the `[dirtyDates.size]` effect's functional updater is ⛔ touched (it only clears); effect above `if (phase === 'not_openable') return` |
-  | S5 `unsavedWarning` | a counter bumped at `leaveQuestions` AND in the `usePreventRemove` callback | `t('peer_request.unsaved')` when `unsavedWarning` | `leaveQuestions` is a `useCallback`: ⛔ `t` in its deps (multi-line deps scan) |
+  | S5 `unsavedWarning` | a counter bumped at `leaveQuestions` AND in the `usePreventRemove` callback | `t('peer_request.unsaved')` when `unsavedWarning` | `leaveQuestions` is a `useCallback` with a SINGLE-line deps array — keep `t` out of it (house rule; the multi-line scan in `peer-request.test.ts` covers `saveAnswer`'s, ⛔ this one) |
   | S6 `date_invalid` | a counter local to `QuestionField`, bumped ONLY when `iso === null` | `t('peer_request.date_invalid')` when `dateError` | per question, so several date questions on one page each keep their own |
-  | S7 `districts_error` | `districts`' error signal (the note below) | `t('districts_error')` when `districts.isError` | effect above `if (districts.isPending)`; only the ERROR branch's element changes — `districts_loading` stays `AnnouncedText` |
-  | S8 "Show more" `search_error` | `search`'s error signal (the note below) | `t('search_error')` when `search.hasNextPage && search.isFetchNextPageError` | a CHILD component owns the line and its effect (as S2) — the effect must ⛔ fire for a line that is not rendered (the picker's early returns, the `search` phase); the page-1 `search_error` stays `AnnouncedText`; a changed `q` unmounts the line |
-  *The query-driven sites (S2, S7, S8) depend on TanStack moving a per-error signal on a failed RETRY with data* (`INFERENCE`, F4 / F6). `errorUpdatedAt` is a MILLISECOND stamp — two failures inside one millisecond tie — so the first choice is `errorUpdateCount` (monotonic; `INFERENCE` that v5 exposes it); Task
-  0.3 proves WHICH of the two moves on every failed retry, with a real `QueryClient` (the leg is COMMITTED — AC 3's evidence); if NEITHER does, the signal becomes a local counter bumped from the retry handler
-  (`fetchNextPage()` / `refetch()` resolve with a result object — read its shape at the pin) — the AC is the behaviour, ⛔ the mechanism.
+  | S7 `districts_error` | `districts.errorUpdateCount` (the note below) | `t('districts_error')` when `districts.isError` | effect above `if (districts.isPending)`; only the ERROR branch's element changes — `districts_loading` stays `AnnouncedText`; the `districts.isError` re-check in the body is LIVE here (the count never resets, so a remount after a SUCCESS holds a non-zero count and must stay silent) |
+  | S8 "Show more" `search_error` | `search.errorUpdateCount` (the note below) | `t('search_error')` (no condition — the branch is the condition) | a CHILD component rendered INSIDE the existing `search.hasNextPage && search.isFetchNextPageError` branch owns the line and its effect (as S2) — ⛔ a body re-check, ⛔ an effect in the picker body (it would fire for a line that is not rendered: the early returns, the `search` phase); the page-1 `search_error` stays `AnnouncedText`; a changed `q` unmounts the line |
+  *The query-driven sites (S2, S7, S8) depend on TanStack moving a per-error signal on a failed RETRY with data* (F4 / F6). THE SIGNAL IS `errorUpdateCount` — ⛔ `errorUpdatedAt`, a MILLISECOND stamp: two failures inside one millisecond tie, and under a frozen
+  or fake clock every failure does. FOUND at validate (a run of query-core 5.101.0 from the main checkout's `node_modules`, a real `QueryClient` and
+  observers, `retry: false` and `retry: 1, retryDelay: 0` alike): the count is +1 on EVERY failed retry, with and without cached data; it does ⛔
+  move while a retry is merely running; and it does ⛔ reset on a later success (a remount after a success holds a non-zero count); Task
+  0.3 COMMITS that proof against the app's REAL hooks (AC 3's evidence); if the count does ⛔ move on a leg, STOP and re-derive — a local counter
+  bumped from the retry handler is ⛔ a substitute (S7 is also set by the mount-time refetch and by `invalidateQueries` after a refusal, and neither
+  passes through Retry)
+  — the count is the validated mechanism and the committed leg (Task 0.3) is its guard.
   *Mount:* each effect also runs on mount, so a view that mounts holding an error (a query already in `error`) speaks it once — as
-  `AnnouncedText` did; S1 and S3–S6 mount with a null line and speak nothing. *Why not re-key `AnnouncedText` (`key={count}`) — the shape the K
+  `AnnouncedText` did on iOS (on Android it never called `announce()` and relied on the live region at mount — the new effect sends explicitly on both, and
+  the two have never been device-compared); S1 and S3–S6 mount with a null line and speak nothing; an S7 remount holding a non-zero count after a
+  SUCCESS speaks nothing (the `isError` re-check). *Why not re-key `AnnouncedText` (`key={count}`) — the shape the K
   callers use:* it relies on a remounted live region holding the SAME words being spoken, which no pass has shown on a device, and it keeps
   the standing live region that is re-read at a press. *Why not a `seq` prop on `AnnouncedText`:* it changes the shared component other
   screens rely on. *Cost:* on Android each line is now a plain announcement — TalkBack ⛔ appends "Alert" (3.15a and 3.15c accepted the same);
@@ -252,10 +286,15 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   DL2 — one sentence, in the language on screen; sequential taps (the existing legs) are unchanged because no tap is stale when its `.then`
   runs. *Cost:* under a hung PUT the thens fire at their own timers, so the member hears nothing until the LAST tap's timer (up to the tap
   gap later than the first tap's own 15 s) — and a stale first failure never shows a line; in the "en recorded, hi failed" variant only the hi
-  sentence is spoken, which is the right one (hi is on screen and ⛔ recorded). *Alternative:* keep once-per-outcome (today) — what 3.15c's
-  DL3 and `language.tsx`'s header comment read literally ("EVERY `not_recorded` outcome is announced ONCE"), so DL2 AMENDS that sentence for
-  overlapping taps (3.15c's AC 3 legs are all sequential and stay valid); say so in the Change Log and in `language.tsx`'s header. ⛔ Panel question (the words are unchanged; nothing is owed). Not covered, and ⛔ here: the line staying up after a LATE success —
-  deferred item **3.15d-authoring Z1**.
+  sentence is spoken, which is the right one (hi is on screen and ⛔ recorded). A stale `recorded` outcome is swallowed too — it no longer clears a line; on every shared-flush path the latest
+  tap's `.then` runs last with the same result, so that is harmless (a scratch simulation of the real `app-language.ts` at validate). The one exception
+  is `chooseLanguage`'s storage-failure early return (`Promise.resolve('not_recorded')`, no shared flush): a later successful flush of the volatile
+  pending cannot clear the line — Z1's family, ⛔ fixed here. *Alternative:* keep once-per-outcome (today) — what 3.15c's
+  DL3 and the comment in `language-screen-render.test.ts` read literally ("EVERY `not_recorded` outcome is announced ONCE"; `language.tsx`'s header
+  reads "and EVERY failure is announced ONCE, on both platforms, in the language just chosen (Story 3.15c DL3, X2)"), so DL2 AMENDS those sentences for
+  overlapping taps (3.15c's AC 3 legs are all sequential and stay valid); say so in the Change Log, in `language.tsx`'s header and in that test comment. ⛔ Panel question (the words are unchanged; nothing is owed). Not covered, and ⛔ here: the line staying up after a LATE success —
+  deferred item **3.15d-authoring Z1**. Z1's TRIGGER (*"the next change to `language.tsx`, or a device pass that holds a language PUT past 15 s"*) FIRES
+  inside this story (Task 2.2 edits `language.tsx`; AC 4 (g) and Task 8.2 hold a PUT) — AC 9 records that and what Task 8.2 saw, ⛔ an owner claim.
 - **DL3 — 3.15c-dev Y2: reach FIRST, ⛔ code by default.** F10's static trace found NO in-app path (the defect was reproduced only by a deep link); the one normal path to the language
   screen (the home tab) has no `useAnnounceOnChange` caller under it. A fix means gating a shared hook used by nine callers
   (`useAnnounceOnChange` has no focus handling; several of their tests' `expo-router` mocks lack `useFocusEffect` — `known-people-find-render`,
@@ -264,7 +303,7 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   question after any blur, language change or not (a gate inside the effect body avoids that, at the same cost in nine callers and mock sweeps). So this story ESTABLISHES the reach on the emulator (Task 7: the normal path; a restart
   mid-signup; the deep link over the wizard with TTS-off capture) and records the disposition: **accepted, not fixed — no in-app path found, reproduced only by a
   deep link**, with a reopening trigger (*"the day a normal path puts any `useAnnounceOnChange` screen under another screen — a settings
-  entry reachable from signup, or 11b.8's accessibility audit"*). **If Task 7 finds ANY non-deep-link path, STOP and ask BigDev — ⛔ record this disposition.** *Cost:* a member who is deep-linked into the language screen over a wizard
+  entry reachable from signup, a way back into the wizard for a returning member (3.15 dev-story D1) or Story 13.9, or 11b.8's accessibility audit"*). **If Task 7 finds ANY non-deep-link path, STOP and ask BigDev — ⛔ record this disposition.** *Cost:* a member who is deep-linked into the language screen over a wizard
   step still hears its title re-spoken on a switch. *Alternative (BigDev may overrule at validate):* fix `assisted.tsx` and `whatsapp.tsx`
   locally (they already have, or can get, a `focused` state) — a PARTIAL fix (the other callers remain) with the refocus trap above; if chosen,
   it needs its own ACs, not an amendment here.
@@ -272,7 +311,8 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   `Partial<Omit<WaCodeState, 'line' | 'lineCount'>>` — one line; `patch({ line: … })` and `patch({ lineCount: … })` as object literals then
   fail `tsc` (the excess-property check; a non-fresh object variable would slip through — `INFERENCE`, proved by the mutation in Task 3). (ii)
   A new `tests/unit/use-wa-code-source-pins.test.ts` in the `nominee-screen-draft-pins` shape: comment-stripped source; `useWaCode`'s body;
-  the `setLine(` call count (9, definition excluded); every `setState((s) => ({ … line: … }))` literal (5 sites) carries `lineCount:` in the
+  the `setLine(` call count (9, definition excluded); every `setState(` call whose paren-matched arguments contain `line:` (5 sites: two expression-bodied `(s) => ({ … })`, three block-bodied `(s) => { const
+  told…; return { … } }` — ⛔ match only the quoted arrow shape: it counts 2 and is RED on day one) carries `lineCount:` in the
   same literal AND its value contains `s.lineCount + 1` — a bare `lineCount: s.lineCount` (present, ⛔ incremented) must FAIL;
   `code_resend_too_soon`'s `told ? s.lineCount + 1 : s.lineCount` is the ONE named conditional form; `patch`'s declared parameter type is exactly `Partial<Omit<WaCodeState, 'line' | 'lineCount'>>` (so a revert of (i) fails the pin, ⛔ only `tsc`); `patch(`'s arguments never mention
   `line`; each failing message says *"a new error-line writer is a new decision: add its row to leg (g) of
@@ -285,41 +325,44 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
   follow-up, not owed).
 - **DL5 — the device pass is a bounded SWEEP, ⛔ a gate, and it runs on the COMMITTED bundle.** Each site triggered twice on the Android
   emulator (TalkBack ON, TTS-off capture; the served bundle checked for a code-only marker of THIS branch first), recorded **fixed** /
-  **not reproduced** / **not reached** with the gate. Several sites need a state the emulator may not reach (S2 a posting history longer
+  **not reproduced** (the baseline already spoke) / **still silent** (silent on both bundles ⇒ STOP and ask BigDev; ⛔ record it as fixed) / **not reached** with the gate; **fixed** needs a BASELINE — the same two triggers run on the PIN's
+  bundle BEFORE any code edit (Task 0.4; 3.15c's DL2 did the same): silent there, spoken here — and without one the honest word is *"spoken twice on
+  the new bundle (no baseline)"*. Several sites need a state the emulator may not reach (S2 a posting history longer
   than a page; S3–S6 a peer request; S7 districts cached then stale with the API stopped) — NOT REACHED is an honest outcome, unit-shown
   only. 3.15c's device legs ran on the UNCOMMITTED tree and its records had to say so: here, ⛔ start Task 8 before the code is committed.
   ⛔ "not seen" for a leg not run ([[feedback_record_unattested_no_backfill]]).
 - **DL6 — the speech-ON listen is asked, ⛔ assumed.** BigDev listens to W1's overlapping-tap leg (expect: ONE sentence, in the language now
   on screen) and, if reached, one Y1 site; ⛔ listened ⇒ recorded un-attested in BigDev's words.
 - **DL7 — closure language and the three records.** `deferred-work.md`: each item gets a dated line — **3.15c-dev Y1**: per site, **CLOSED by
-  Story 3.15d** only with device evidence on this branch's bundle, else *"addressed in code, ⛔ device-shown"* with the gate
-  ([[feedback_closure_language_precision]]); **3.15c-review W1**: same; **3.15c-dev Y2**: *"accepted, not fixed — reachable only by a deep
-  link"* with the reopening trigger, ⛔ "closed"; **Z1** stays NONE YET. `friction-budget.md`: the `**Story 3.15d disposition (…)**` block.
-  The sprint ledger: ONE combined entry at completion, the next free letter READ LIVE across every branch and worktree.
+  Story 3.15d** only where AC 7's outcome is **fixed** (a baseline on the pin's bundle AND device evidence on this branch's), else *"addressed in code, ⛔ device-shown"* — or *"device-shown only as spoken twice on the new bundle (no baseline)"* — with the gate
+  ([[feedback_closure_language_precision]]); **3.15c-review W1**: same; **3.15c-dev Y2**: *"accepted, not fixed — no in-app path found, reproduced only by a deep
+  link"* with the reopening trigger, ⛔ "closed"; **Z1** gets ONE dated line — its trigger fired (this story edits `language.tsx` and holds a PUT past 15 s) and what Task 8.2 saw: a RESULT, ⛔ an owner
+  claim; its owner stays NONE YET (BigDev assigns). `friction-budget.md`: the `**Story 3.15d disposition (…)**` block.
+  The sprint ledger: TWO entries (3.15c's model) — one at dev done (Task 9.1), one at landing (Task 10.3) — each with the next free letter READ LIVE across every branch and worktree.
 
 ## Acceptance Criteria
 
 1. **Frozen files and the inventory (F2, F12).** `git diff 9df1818e..HEAD -- apps/mobile/components/peer-request/announce.tsx
    apps/mobile/lib/announce.ts apps/mobile/lib/announce-repeat.ts apps/mobile/lib/death-certificate-announce.ts` is EMPTY before code and
-   after. `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components` goes from 49 to **41** (**43** if the split trigger fired: S7 and S8 then belong to 3.15e; ⛔ count a `<AnnouncedText` inside a comment) — exactly the S elements this story owns are gone,
+   after. `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*|/\*|\{/\*)'` (the comment-excluding form — 49 at the pin, and the plain form agrees) goes from 49 to **41** (**43** if the split trigger fired: S7 and S8 then belong to 3.15e; ⛔ count a `<AnnouncedText` inside a comment) — exactly the S elements this story owns are gone,
    every other usage is untouched, and each of the four files' remaining `AnnouncedText` lines is the one F2 lists.
 2. **3.15c-dev Y1 — each of S1–S8, per platform (DL1).** Under `android` AND `ios`, for EACH site: (a) the line is set, then set again with the SAME
    words ⇒ `announce()` is called twice with its words (Android: the second = the words + one U+00A0; iOS: identical); (b) an unrelated
-   re-render beside the line (a `rerender` with the same props, a query tick, a `busy` flip — ⛔ a typed character at S1 / S6, which CLEARS the line) ⇒ ⛔ further announcement; (c) the line CLEARED
+   re-render beside the line (a `rerender` with the same props, a query tick — ⛔ a typed character at S1 / S6, which CLEARS the line, and ⛔ a `busy` flip at S5, whose `[busy, isSubmitting]` effect clears it; at S1 a `busy` flip cannot occur with the line standing) ⇒ ⛔ further announcement; (c) the line CLEARED
    ⇒ nothing spoken; (d) the line is role `alert`, ⛔ `aria-live`, with its `testID` and the look it had (`data-color`, `data-font-size`; ⛔ a
-   hex literal in `PeerQuestionnaire.tsx`); (e) a view that mounts holding the line speaks it once (S2, S7, S8) / mounts silent (S1, S3–S6); (f) a LOCALE SWITCH while the line stands changes its words ⇒ ⛔ further announcement (a real `LocaleProvider`, or a mutable locale mock whose `t` is a NEW function after the switch); mutations: the words, then `t`, added to the effect's deps ⇒ RED — 3.15c's round-1 lesson: a re-render leg never catches it, only this one does.
-   Site-specific: **S1** both set sites bump through ONE helper, the catch path speaks once (not twice); **S4** all THREE set sites bump
+   hex literal in `PeerQuestionnaire.tsx`) — the tamagui mock of EACH test file maps `accessibilityLiveRegion` to `aria-live` (only `death-report-refusal-announcements` does today; elsewhere this assertion is vacuous), and a mutation that plants the prop on the new `Text` turns (d) RED; (e) a view that mounts holding the line speaks it once (S2, S7, S8) / mounts silent (S1, S3–S6), and an S7 remount that holds a non-zero count after a SUCCESS is silent (the `isError` re-check — the one re-check that is live); (f) a LOCALE SWITCH while the line stands changes its words ⇒ ⛔ further announcement (a real `LocaleProvider`, or a mutable locale mock whose `t` is a NEW function after the switch AND returns locale-DISTINCT words, e.g. `${locale}:${key}` — an echo `t` returns the key in any locale and makes the words mutation an equivalent mutant at S2–S8 too); mutations: the words, then `t`, added to the effect's deps ⇒ RED (at S1 ⛔ the words mutation — `error` holds the already-translated string, a switch never changes it: S1 asserts that a switch speaks nothing and the line keeps its set-time words, and only the `t` mutation applies; the locale / `t` mocks of EVERY test file in Tasks 1, 4, 5 and 6 are made MUTABLE — today they are constants); in S4–S6 count BY TEXT (`sentAs` of the line's words), ⛔ `mock.announce` totals — `useAnnounceOnChange` re-speaks the page title on a switch and a standing `SaveLineText` re-speaks on iOS — 3.15c's round-1 lesson: a re-render leg never catches it, only this one does.
+   Site-specific: **S1** both set sites bump through ONE helper — a leg for EACH (the empty branch; the catch path, which speaks once, not twice); **S4** all THREE set sites bump
    (Next ⇒ `required`, Next ⇒ `date_unsaved`, `pageBack` ⇒ `date_unsaved`), a switch between the two keys is spoken once, the
-   `[dirtyDates.size]` clear speaks nothing; **S5** both set sites bump; **S6** an unparseable Save twice ⇒ twice, a parseable Save ⇒ nothing,
+   `[dirtyDates.size]` clear speaks nothing; **S5** both set sites bump — `leaveQuestions` (Back while a save is pending or failed) AND the `usePreventRemove` callback in `Questionnaire` (the captured `usePreventRemove.mock.lastCall?.[1]`, as the RP8 leg does; also reachable in `closing`); **S6** an unparseable Save twice ⇒ twice, a parseable Save ⇒ nothing,
    two date questions on one page count independently; **S2 / S8** the Show-more line is spoken on a retry that fails again, ⛔ spoken when
-   `errorUpdatedAt` moves because the PAGE-1 refetch failed (the other line owns that); **S7** with cached districts a failed Retry is spoken
+   `errorUpdateCount` moves because the PAGE-1 refetch failed (the other line owns that — structurally: the Show-more child sits inside the `hasNextPage && isFetchNextPageError` branch and that failure unmounts it; the leg is a regression pin, and a mutation that HOISTS the child out of the branch turns it RED; the surviving page-1 `AnnouncedText` line has the SAME words, so assert PER PLATFORM as RUNNING TOTALS and START the leg with the Show-more line standing — its own mount already sent 1 on BOTH platforms; the page-1 line's mount then adds 1 on iOS only, so iOS total **2**, Android total **1** — ⛔ a bare 0 or 1; a hoisted child with no re-check would add its own mount announcement and turn that RED); a return from `transferring` re-speaks a standing S2 line once (the remount); **S7** with cached districts a failed Retry is spoken
    again, with ⛔ cached data the existing first-failure behaviour is kept; **S5** a standing `unsavedWarning` across the `pages` → `closing` tree swap is NOT re-spoken (the `AnnouncedText` it replaces was, on the remount) — recorded, accepted (DL1). RED first;
-   every counter's bump removed ⇒ its leg RED (one mutation per site, restored). Every positive count is awaited
+   every counter's bump removed ⇒ its leg RED (one mutation per SET SITE — S1 ×2, S2, S3 ×1, S4 ×3, S5 ×2, S6 ×1, S7, S8 — restored). Every positive count is awaited
    (`await waitFor(() => expect(sentAs(…)).toHaveLength(n))`) and every "⛔ further announcement" is asserted only after a settle (an `act`
    flush + one macrotask) — a bare assertion straight after `findBy…` races the effect ([[project_mobile_announce_after_heading_race]]).
 3. **The query-driven signal is PROVEN, ⛔ assumed (S2, S7, S8).** A leg with a REAL `QueryClient` (`retryDelay: 0`, the shape of
    `tests/unit/known-people-hooks.test.ts`) shows that, with data present, a failed `fetchNextPage()` retry (infinite query) and a failed
-   `refetch()` (plain query) each move `errorUpdatedAt` — or the DL1 fallback counter is built and its leg shows the same behaviour. A mocked
+   `refetch()` (plain query) each move `errorUpdateCount` by exactly one per final failure — driven through the app's REAL hooks (`usePostingHistoryQuery`, `useWorkplaceDistrictsQuery`, `useWorkplaceSearchQuery`; `memberAuth` / `useSession` mocked) at the app's own retry (`retry: 1`, set in `lib/query-client.ts` — the workplace hooks set none of their own) plus `retryDelay: 0`, a test-only addition (the default delay is exponential); ⛔ the known-people hooks' own rule `retry: retryKnownPeople`; ⛔ fake timers; at most a non-strict `errorUpdatedAt >=` check (a millisecond stamp ties). A mocked
    query that hands back an instant constant hides the pending flip and proves nothing ([[project_tanstack_instant_mock_hides_notready_flip]]).
 4. **3.15c-review W1 — overlapping taps (DL2, F7, F9).** Under `android` AND `ios`, with a HELD PUT (`mock.memberLanguageSet.mockReturnValueOnce(held.promise)`,
    the first call awaited with `await waitFor(() => expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1))` BEFORE the second tap, the held
@@ -327,10 +370,10 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
    alert line, in Hindi; (b) the shown language tapped twice (the `-388` item 1 setup: `syncAppLanguage` first so `accountChoiceDiffers`) ⇒
    total **1**, a plain first send (⛔ NBSP); (c) en then hi, the shared flush RECORDS ⇒ total **0**, the line absent, ⛔ a false failure;
    (d) a no-op tap (the shown language, nothing to record) between a failing tap and its outcome ⇒ the failing tap is STILL spoken (the id is
-   minted after the guard); (e) the 3.15c legs AC 3 (a) / (b) / (c) / (d) stay green UNCHANGED; (f) en then hi, en's held PUT RESOLVES and the default mock for hi's PUT is overridden to REJECT ⇒ total **1**, the HINDI sentence (the 'en recorded, hi failed' variant). RED first for (a) and (b); the mutation
+   minted after the guard); (e) the 3.15c legs AC 3 (a) / (b) / (c) / (d) stay green UNCHANGED; (f) en then hi, en's held PUT RESOLVES and the default mock for hi's PUT is overridden to REJECT ⇒ total **1**, the HINDI sentence (the 'en recorded, hi failed' variant). (g) a FAKE-TIMER leg for the real offline path (precedent: `wa-code-entry-render.test.ts` "a client timeout (15 s)" — `vi.useFakeTimers()` + `advanceTimersByTimeAsync` inside `act`, real timers restored in `afterEach`; the first-call check is `await act(async () => { await vi.advanceTimersByTimeAsync(0) })`, ⛔ `waitFor` / `settle` — they run on the faked timers and hang): PUT held, tap en, +5 s, tap hi, +10 s (en's own timer fires) ⇒ total **0**, no line; +5 s more (hi's timer) ⇒ total **1**, the HINDI sentence; the held promise settled inside `act` before the test ends. RED first for (a), (b), (f) and (g) ((c), (d) and (e) are green today and pin the no-regression side); the mutation
    "mint before the guard" ⇒ (d) RED; "drop the stale check" ⇒ (a) RED (both restored). The words in the announcement are the language of the
    LATEST tap, and equal the on-screen line's.
-5. **3.15c-dev Y2 — reach and disposition (DL3, F10).** On the emulator, recorded with the log lines and a fixed / not reproduced / not reached outcome:
+5. **3.15c-dev Y2 — reach and disposition (DL3, F10).** On the emulator, recorded with the log lines and a reproduced / not reproduced / not reached outcome (⛔ "fixed" — nothing is fixed here):
    (a) the NORMAL path — the home tab → language screen — has ⛔ signup step mounted under it and re-speaks nothing; (b) a restart
    mid-signup lands on home, ⛔ in the wizard; (c) `twtp05://language` over the wizard (assisted `ask`) re-speaks the title on a switch —
    the defect, reached by deep link; (d) an attempt to reproduce the observed TWO-STEP state (the assisted title spoken with the WhatsApp step visible) WITHOUT a deep link, recorded either way — **if ANY non-deep-link path is found, STOP and ask BigDev (DL3's alternative); ⛔ record the disposition below**. `deferred-work.md` records the disposition per DL3 (*"accepted, not fixed — no in-app path found, reproduced only by a deep
@@ -340,16 +383,16 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
    added to `use-wa-code.ts` ⇒ `tsc` RED (restored); (b) `tests/unit/use-wa-code-source-pins.test.ts` pins the 9 `setLine` sites, the 5
    literals each carrying `lineCount:` with an `s.lineCount + 1` value (the one conditional form named), `patch(` never carrying `line`, and `patch`'s declared parameter type text;
    the MUTATIONS — a literal with `line:` and ⛔ `lineCount:`, a literal whose `lineCount: s.lineCount` is ⛔ incremented, a tenth `setLine(`
-   call, a `patch({ line })` — each turn it RED (restored); (c) the pin's failure text names BOTH places
+   call, a `patch({ line })` — each turn it RED (restored) — FOUR mutations; and a FIFTH, the revert of (i) (`patch`'s parameter back to `Partial<WaCodeState>`), turns the pin RED while `tsc` stays green; (c) the pin's failure text names BOTH places
    to update; (d) leg (g) of `wa-code-entry-render.test.ts` and its comment ("A NEW write site needs its row here") point at the pin. The 121
    existing tests of the two 3.15c test files (`wa-code-entry-render.test.ts`, `language-screen-render.test.ts`) stay green with ⛔ existing
    assertion edited (new legs and a pointer comment are added beside them).
 7. **The device sweep (DL5).** Each site that can be reached triggered twice on the Android emulator, TalkBack ON, TTS-off capture, on the
-   COMMITTED bundle — recorded with its log lines (timestamps, trailing U+00A0 count) and an outcome **fixed** / **not reproduced** / **not
+   COMMITTED bundle — recorded with its log lines (timestamps, trailing U+00A0 count) and an outcome **fixed** (silent on the PIN's baseline bundle — Task 0.4 — spoken here; without a baseline the word is *"spoken twice on the new bundle (no baseline)"*) / **not reproduced** (the baseline already spoke) / **still silent** (silent on the baseline AND on the new bundle ⇒ STOP and ask BigDev — the fix does not bite on the device; ⛔ record it as fixed) / **not
    reached** (the gate named); the served bundle checked for a code-only marker of THIS branch first; ⛔ "not seen" for a leg not run.
 8. **The listen (DL6).** BigDev's words on W1's overlapping-tap leg with speech ON, or *"un-attested"* in BigDev's words.
 9. **Records and gates (DL7, F13).** `deferred-work.md`: the dated lines under 3.15c-dev Y1, 3.15c-dev Y2 and 3.15c-review W1 per DL7 (each a
-   RESULT, ⛔ an owner claim for anything left); Z1 untouched. `friction-budget.md`: `**Story 3.15d disposition (…)**` APPENDED at the END
+   RESULT, ⛔ an owner claim for anything left); Z1: ONE dated line (its trigger fired; what Task 8.2 saw; owner stays NONE YET) — ⛔ an owner claim. `friction-budget.md`: `**Story 3.15d disposition (…)**` APPENDED at the END
    of the file (after the `Story 3.15c disposition` block) — ⛔ new row, ⛔ row retired, ⛔ row amended, taps unchanged; it states the iOS
    departure, that a TalkBack user now hears eight more lines again on a repeat, and that a language switch no longer re-speaks a standing line on iOS. The sprint row `ready-for-dev` (created at authoring) → `review` at dev done → `done` only after landing, and the ledger entry (next free letter READ LIVE).
    `mobile` `tsc`, `eslint`, the whole vitest suite green; `pnpm friction:check` green on the COMMITTED result; the emulator restored;
@@ -357,70 +400,77 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight (AC: 1, 3)**
+- [ ] **Task 0 — Preflight (AC: 1, 3, 7)**
   - [ ] 0.1 In the worktree: `pnpm install` (no `node_modules`); `git fetch origin`; `git merge-base --is-ancestor 9df1818e HEAD` and `git diff
         --name-only 9df1818e..origin/main -- apps packages` — a non-empty answer means a sibling SHIPPED: re-derive F2–F13 for the moved files
         BEFORE coding, and re-pin. `ListAgents` + `git worktree list`: ⛔ another session on these files.
   - [ ] 0.2 Re-derive F1–F13 BY FUNCTION at HEAD (the tracer's numbers, not these line hints); differences → the Debug Log.
-        `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components | wc -l` = 49, and `git diff 9df1818e..HEAD -- <the four frozen files>` is EMPTY (AC 1's start).
-  - [ ] 0.3 TanStack proof (AC 3): a COMMITTED leg (AC 3's evidence) in `tests/unit/workplace-query-error-signal.test.ts` with a REAL `QueryClient` (`retryDelay: 0`) — an infinite query with data whose
-        `fetchNextPage` is made to fail, retried and failing again: does `errorUpdateCount` exist and move, does `errorUpdatedAt` (a millisecond stamp — use fake timers so two failures differ) move, does `isFetchNextPageError` stay true through the
-        retry; a plain query with data whose `refetch` fails twice. Record both in the Debug Log; if NEITHER signal moves, DL1's fallback
-        applies to that site.
+        `grep -rn '<AnnouncedText' apps/mobile/app apps/mobile/components | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|\*|/\*|\{/\*)' | wc -l` = 49, and `git diff 9df1818e..HEAD -- <the four frozen files>` is EMPTY (AC 1's start).
+  - [ ] 0.3 TanStack proof (AC 3): a COMMITTED leg (AC 3's evidence) in `tests/unit/workplace-query-error-signal.test.ts` driving the app's REAL hooks (`usePostingHistoryQuery`, `useWorkplaceDistrictsQuery`, `useWorkplaceSearchQuery`; `memberAuth` / `useSession` mocked) at the app's defaults
+        (`retry: 1` from `lib/query-client.ts`, plus `retryDelay: 0` set by the test), ⛔ fake timers — an infinite query with data whose
+        `fetchNextPage` is made to fail, retried and failing again: assert `errorUpdateCount` is +1 per final failure (strict) and `isFetchNextPageError` stays true through the
+        retry; a plain query with data whose `refetch` fails twice. Record both in the Debug Log (validate saw the count move in a scratch run against query-core 5.101.0 — this leg is the COMMITTED proof; if the count does
+        ⛔ move, STOP and re-derive, ⛔ a retry-handler counter);
+        `errorUpdatedAt` at most as a non-strict `>=` (a millisecond stamp ties).
+  - [ ] 0.4 The device BASELINE on the PIN's bundle (DL5), BEFORE any code edit: emulator per [[project_mobile_android_emulator_setup]] (TalkBack ON, TTS-off
+        capture); trigger each REACHABLE site twice on the unmodified bundle — S1–S8, W1's overlapping taps, Y2's deep link (Task 7 can share the session) — and
+        record per site: timestamps, trailing U+00A0 count, the session history beside it (Trap 16). Debug Log. A site the pin cannot reach is "not reached"
+        in Task 8 too.
 - [ ] **Task 1 — S1 `address.tsx` (AC: 1, 2)**
-  - [ ] 1.1 Tests RED first: new legs for `address_required` (set twice ⇒ twice; a `rerender` ⇒ ⛔ more; a typed character CLEARS ⇒ ⛔ spoken; role / look; a locale switch ⇒ ⛔ more (AC 2 (f))); edit
+  - [ ] 1.1 Tests RED first: new legs for `address_required` (set twice ⇒ twice; a `rerender` ⇒ ⛔ more; a typed character CLEARS ⇒ ⛔ spoken; role / look; a locale switch ⇒ ⛔ more (AC 2 (f): the `useLocale` / `useT` mocks made MUTABLE; only the `t` mutation applies at S1); a leg for EACH of the TWO set sites — the catch path speaks ONCE); edit
         `death-report-refusal-announcements.test.ts`'s `address` Android leg with a per-surface branch for BOTH the Android `announce` assertions and the post-`rerender` `toHaveBeenCalledTimes` (await the Android positive with `waitFor`), and extend its tamagui mock to record `testID`, `color`, `fontSize` (the other four surfaces keep their
         `aria-live` assertions — they are `AnnouncedText` still).
   - [ ] 1.2 `showError(text)` helper + counter + the one effect; `AnnouncedText` import removed if unused; keep `lifeEventsDeathReportedKey(e)`
-        in the file (`death-report-copy-resolves.test.ts`); mutation: drop the helper's bump ⇒ RED, restored.
+        in the file (`death-report-copy-resolves.test.ts`); mutations ⇒ RED, restored: drop the helper's bump (both legs); then route ONE set site around the helper without a bump (the empty branch, then the catch) ⇒ that site's leg alone RED.
 - [ ] **Task 2 — 3.15c-review W1 `language.tsx` (AC: 4)**
-  - [ ] 2.1 A local `deferred()` helper in `language-screen-render.test.ts`; legs (a)–(f) of AC 4 per platform, RED first for (a) and (b); EVERY held
+  - [ ] 2.1 A local `deferred()` helper in `language-screen-render.test.ts`; legs (a)–(g) of AC 4 per platform ((g) is the fake-timer leg), RED first for (a), (b), (f) and (g); EVERY held
         promise settled inside `act` before the test ends (F9).
-  - [ ] 2.2 `tapSeq` ref, id minted after the guard, the stale check as the `.then`'s first line; rewrite `language.tsx`'s header sentence "EVERY failure is announced ONCE" for overlapping taps (⛔ the microcopy-gate words — it scans this file, Trap 7); the render keeps the literal
+  - [ ] 2.2 `tapSeq` ref, id minted after the guard, the stale check as the `.then`'s first line; rewrite `language.tsx`'s header sentence "EVERY failure is announced ONCE" for overlapping taps, and the same sentence in the comment in `language-screen-render.test.ts` (⛔ the microcopy-gate words — it scans `language.tsx`, Trap 7); the render keeps the literal
         `t('language.error_not_recorded')`; ⛔ `t` in any deps array; mutations "mint before the guard" and "drop the stale check" ⇒ RED,
         restored; the 3.15c legs AC 3 (a)–(d) green UNCHANGED.
 - [ ] **Task 3 — the guard (AC: 6)**
   - [ ] 3.1 Narrow `patch`'s parameter type (DL4 (i)); `tsc --noEmit` green; the mutation `patch({ line: 'send_failed' })` ⇒ `tsc` RED, restored.
-  - [ ] 3.2 `tests/unit/use-wa-code-source-pins.test.ts` (DL4 (ii)) with the failure text naming both places; the three mutations ⇒ RED,
+  - [ ] 3.2 `tests/unit/use-wa-code-source-pins.test.ts` (DL4 (ii)) with the failure text naming both places; the four mutations and the type-text revert ⇒ RED,
         restored; a pointer comment on leg (g) and on the pin, each to the other.
 - [ ] **Task 4 — S3–S6 `PeerQuestionnaire.tsx` (AC: 1, 2)**
   - [ ] 4.1 Tests RED first in `peer-questionnaire-render.test.ts`, per platform: S3 (capture the `usePreventRemove` callback, call it twice), S4
-        (Next twice for `required`; Back with a dirty date twice; the key switch), S5 (Back twice while saving), S6 (Save unparseable twice;
-        two date questions); the existing `getByRole('alert')` assertions stay green; extend the tamagui mock to record `testID`, `color`, `fontSize`; add the locale-switch leg (AC 2 (f)).
+        (ONE leg per set site: Next twice for `required`; Next with a dirty date twice for `date_unsaved`; `pageBack` with a dirty date twice; the key switch; the `[dirtyDates.size]` clear speaks nothing), S5 (BOTH sites: Back twice while a save is pending or failed — `leaveQuestions`; and the captured `usePreventRemove` callback in `Questionnaire`, called twice — plus the `pages` → `closing` swap NOT re-spoken), S6 (Save unparseable twice;
+        two date questions); the existing `getByRole('alert')` assertions stay green; extend the tamagui mock to record `testID`, `color`, `fontSize` AND to map `accessibilityLiveRegion` to `aria-live` (it forwards neither today; a mutation planting the prop turns AC 2 (d) RED); make the `useLocale` / `useClaimT` mocks MUTABLE (both are constants today); add the locale-switch leg (AC 2 (f)), counting BY TEXT; one bump-removal mutation per SET SITE (S3 ×1, S4 ×3, S5 ×2, S6 ×1), each restored.
   - [ ] 4.2 The counters / helpers and the effects (DL1 table), each ABOVE `if (phase === 'not_openable') return`; `color="$red10"`, ⛔ hex,
         ⛔ the banned words in code or comments; ⛔ `t` in any multi-line deps (`peer-request.test.ts`); one mutation per site ⇒ RED, restored.
 - [ ] **Task 5 — S2 `posting.tsx` (AC: 1, 2, 3)**
-  - [ ] 5.1 Extend `workplace-screen-render.test.ts`: a MUTABLE history mock WITH the error signal, a `Platform` getter, a mutable `useWorkplaceT` (a NEW function after a locale switch), tamagui recording `testID` / `color` / `fontSize`; legs: a locale switch ⇒ ⛔ more (AC 2 (f)); Retry fails
-        again ⇒ spoken again; a page-1 refetch failure that moves `errorUpdatedAt` ⇒ ⛔ the Show-more line speaks; a return from `transferring`
+  - [ ] 5.1 Extend `workplace-screen-render.test.ts`: a MUTABLE history mock WITH `errorUpdateCount` (and `hasNextPage` / `isFetchNextPageError` / `isError` / `isFetching`), a `Platform` getter, a mutable `useWorkplaceT` (a NEW function after a locale switch), tamagui recording `testID` / `color` / `fontSize` and mapping `accessibilityLiveRegion` to `aria-live`; legs: a locale switch ⇒ ⛔ more (AC 2 (f)); Retry fails
+        again ⇒ spoken again; a page-1 refetch failure that moves `errorUpdateCount` ⇒ ⛔ the Show-more line speaks (asserted per platform — AC 2); a return from `transferring`
         ⇒ the standing line speaks once (the remount).
-  - [ ] 5.2 The line in a CHILD component with the effect on the error signal and the body's re-check (DL1) — ⛔ an effect in `WorkplaceScreen` (it would not re-speak on return from the picker);
-        mutation ⇒ RED, restored.
+  - [ ] 5.2 The line in a CHILD component rendered INSIDE the existing `hasNextPage && isFetchNextPageError` branch, its effect on `errorUpdateCount`, ⛔ a body re-check (DL1) — ⛔ an effect in `WorkplaceScreen` (it would not re-speak on return from the picker);
+        mutations ⇒ RED, restored: the bump source removed; the child HOISTED out of the branch (the page-1 leg).
 - [ ] **Task 6 — S7–S8 `WorkplacePicker.tsx` (AC: 1, 2, 3)** ⚠ the heaviest task — see "Size and the split trigger" in the Dev Notes.
-  - [ ] 6.1 The NEW render harness (F6) in `tests/unit/workplace-picker-render.test.ts` (tamagui recording `testID` / `color` / `fontSize`; a mutable locale mock); RED first: S7 (cached districts, Retry fails again ⇒
+  - [ ] 6.1 The NEW render harness (F6) in `tests/unit/workplace-picker-render.test.ts` (tamagui recording `testID` / `color` / `fontSize` and mapping `accessibilityLiveRegion` to `aria-live`; a mutable locale mock; MUTABLE query results carrying `errorUpdateCount`, `isError`, `isPending`, `hasNextPage` and `isFetchNextPageError`; a leg that takes ONE mounted picker from `isPending` to loaded — mobile has ⛔ `react-hooks` lint, so a misplaced hook is caught only here); RED first: S7 (cached districts, Retry fails again ⇒
         twice; ⛔ cached data ⇒ the first-failure behaviour kept), S8 (Show more fails, Retry fails again ⇒ twice; a page-1 failure ⇒ the Show-more
-        line ⛔ speaks; a changed `q` ⇒ the line gone; a mount holding the error ⇒ once (S7, S8); a locale switch ⇒ ⛔ more — AC 2 (e), (f)).
-  - [ ] 6.2 The S7 effect above the early returns, guarded on `districts.isError`; the S8 line in a CHILD component (as S2); only the S7 error branch and the S8 Show-more element
-        change; `ERROR_COLOR`; mutation per site ⇒ RED, restored.
+        line ⛔ speaks; a changed `q` ⇒ the line gone; a mount holding the error ⇒ once (S7, S8); a remount holding a non-zero count after a SUCCESS ⇒ silent (S7); a locale switch ⇒ ⛔ more — AC 2 (e), (f)).
+  - [ ] 6.2 The S7 effect above the early returns, guarded on `districts.isError`; the S8 line in a CHILD component rendered INSIDE the existing branch, its effect on `search.errorUpdateCount`, ⛔ a body re-check (as S2 — Task 5.2); only the S7 error branch and the S8 Show-more element
+        change; `ERROR_COLOR`; mutations ⇒ RED, restored: the bump source removed (S7, S8); the S8 child HOISTED out of its branch (the page-1 leg).
 - [ ] **Task 7 — 3.15c-dev Y2's reach (AC: 5)**
   - [ ] 7.1 Emulator, TalkBack ON, TTS-off capture ([[project_mobile_android_emulator_setup]]): (a) home → language switch with nothing under it;
         (b) kill / restart mid-signup; (c) `twtp05://language` over the wizard's assisted `ask`; (d) try to reproduce the observed TWO-STEP state (assisted title spoken with the WhatsApp step visible) WITHOUT a deep link — if ANY non-deep-link path is found, STOP and ask BigDev (DL3's alternative), ⛔ record the disposition. Log lines, outcomes. ⚠ `uiautomator dump` turns
         TalkBack off — never dump during a capture.
   - [ ] 7.2 The disposition in `deferred-work.md` per DL3, ONLY if 7.1 found no in-app path — ⛔ code.
 - [ ] **Task 8 — The device sweep (AC: 7, 8)**
-  - [ ] 8.1 COMMIT the code first (DL5); serve the bundle; check a code-only marker; trigger each reachable site twice; record per site.
-  - [ ] 8.2 W1's overlapping-tap leg, then ask BigDev for the speech-ON listen (DL6).
+  - [ ] 8.1 COMMIT the code first (DL5); serve the bundle; check a code-only marker; trigger each reachable site twice; record per site NEXT TO its Task 0.4 baseline (fixed / not reproduced / not reached — DL5), with the session history (sign-ins, API restarts) beside every count (Trap 16). The split trigger is decided BEFORE this commit ("Size and the split trigger").
+  - [ ] 8.2 W1's overlapping-tap leg, then ask BigDev for the speech-ON listen (DL6). Holding a PUT past 15 s is ALSO Z1's trigger: note whether the "not recorded" line stays up after a late success (AC 9) — use `kill -STOP` / `kill -CONT` on the API, ⛔ a restart (Trap 16).
   - [ ] 8.3 Restore (TalkBack off, TTS on, font scale, `adb reverse --remove-all`, Metro, API, container, seed spec and env copies deleted); `git
         status` = this story's files only.
 - [ ] **Task 9 — Records (AC: 9)**
-  - [ ] 9.1 `deferred-work.md` dated lines (DL7); `friction-budget.md` disposition appended at the END; the sprint row `ready-for-dev` (created at authoring) → `review` at dev done → `done` only after landing; the sprint ledger entry (next free letter READ
+  - [ ] 9.1 `deferred-work.md` dated lines (DL7), incl. the ONE Z1 line (AC 9); `friction-budget.md` disposition appended at the END; the sprint row `ready-for-dev` (created at authoring) → `review` at dev done → `done` only after landing; the sprint ledger entry (next free letter READ
         LIVE across every branch and worktree; the safe-prepend pattern, [[project_sprint_status_safe_prepend]]; YAML parses).
 - [ ] **Task 10 — Gates (AC: 1, 9)**
   - [ ] 10.0 Re-run AC 1 at the end: the four frozen files' diff over `9df1818e..HEAD` EMPTY; the `<AnnouncedText` count 49 → 41 (or 43 if the
         split trigger fired); every other usage untouched.
-  - [ ] 10.1 Commit on `story/3-15d-…` only, branch checked before each commit; `pnpm friction:check` after the commit; `mobile` `tsc --noEmit`, `eslint .` and the whole vitest suite green (AC 9).
+  - [ ] 10.1 Commit on `story/3-15d-…` only, branch checked before each commit; `pnpm friction:check` after the commit; `pnpm --filter @twt/mobile typecheck`, `pnpm --filter @twt/mobile lint` and `pnpm --filter @twt/mobile test` (`tsc --noEmit`, `eslint .`, `vitest run` — the WHOLE suite) green, and `pnpm microcopy:check` (Trap 7: the gate reads the peer-request and language files, comments included) (AC 9).
   - [ ] 10.2 The gate is GitHub `ci.yml` (ADR-0047): the push and the PR are BigDev's word; the story lands only when the PR's `ci.yml` run AT THE
         EXACT TIP SHA concluded `success` on every job — `scripts/land.sh --dry-run <pr>` first, then `scripts/land.sh <pr>` (fast-forward; ⛔
         squash, ⛔ merge commit). `code-escrow-mirror` is red on every push — not part of the gate. `ci:local` is advisory.
+  - [ ] 10.3 Landing records (ADR-0047 cl.2), AFTER the fast-forward: ONE records commit — story Status → `done`, a Landing note, a Change Log row — and the ledger entry citing the run id, the tip SHA and jobs n/n for BOTH the PR's `ci.yml` run and the push to `main` (3.15c's landing is the model: read its records commit, ⛔ its line numbers).
 
 ## Dev Notes
 
@@ -429,38 +479,43 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
 1. **The frozen files** — `announce.tsx`, `lib/announce.ts`, `announce-repeat.ts`, `death-certificate-announce.ts` stay byte-identical (AC 1). The
    eight replacements are plain `Text`; ⛔ add a prop to `AnnouncedText`.
 2. **Counter-only deps** — ⛔ `t`, ⛔ the words in any new effect's deps: `useT()` / `useClaimT()` / `useWorkplaceT()` are fresh closures each render and
-   a language switch changes the words without a new set ([[project_uset_fresh_closure_memo_trap]]). The effect body reads this render's words.
+   a language switch changes the words without a new set ([[project_uset_fresh_closure_memo_trap]]). The effect body reads this render's words. Mobile has ⛔ `react-hooks` ESLint plugin, so a counter-only deps array needs no disable comment
+   (`WaCodeEntry.tsx` carries `[form.lineCount]` with none) — and there is ⛔ lint backstop for deps or hook order either.
 3. **Hooks order** — every new effect sits ABOVE its component's early returns: `if (phase ===
-   'not_openable') return` (`PeerQuestionnaire.tsx`), `if (districts.isPending) return` (`WorkplacePicker.tsx`).
-4. **`errorUpdatedAt` is the QUERY's, ⛔ the line's** — it moves on a page-1 failure too (S2, S8) and on any error of the districts query (S7);
-   each effect re-checks its own line's condition inside its body.
+   'not_openable') return` (`PeerQuestionnaire.tsx`), `if (districts.isPending) return` (`WorkplacePicker.tsx`) — ⛔ lint backstop (Trap 2): Task 6.1's `isPending` → loaded leg is the only guard.
+4. **`errorUpdateCount` is the QUERY's, ⛔ the line's** — it moves on a page-1 failure too (S2, S8), on any error of the districts query (S7), and never resets on a success;
+   S2 / S8 are answered STRUCTURALLY (the child sits inside the Show-more branch), S7 re-checks `districts.isError` inside its body (live: a remount after a success).
 5. **A mounted parent does not remount a child** — `WorkplaceScreen` outlives the picker; the S2 line lives in a child so a return from the
    picker re-speaks a standing error as it does today.
-6. **The address test shares one body across five surfaces** — only the `address` Android assertion changes (a per-surface branch); the four
+6. **The address test shares one body across five surfaces** — only the `address` ANDROID branch changes — THREE assertions (`aria-live`, `announce` not called, and the shared post-`rerender` `toHaveBeenCalledTimes`), by a per-surface branch; the four
    other surfaces are still `AnnouncedText`.
 7. **The microcopy gate covers `components/peer-request/*.tsx`, `app/(settings)/language.tsx`, `components/settings/LanguageSettingsEntry.tsx` and `lib/app-language.ts`** — ⛔ hex colours, ⛔ "receipt" / "invoice" / "report" / "passbook" in code and
    comments (the gate reads comments).
-8. **Two source scans bite `t` in deps** — `peer-request.test.ts` (multi-line deps, expects the literal `[editor]`) and
+8. **Two source scans bite `t` in deps (the second does ⛔ reach `choose`'s own array — F9)** — `peer-request.test.ts` (multi-line deps, expects the literal `[editor]`) and
    `language-source-pins.test.ts`; plus `workplace-copy.test.ts` (literal keys), `language-copy-keys.test.ts` (the render keeps the literal
    `t('language.error_not_recorded')`), `death-report-copy-resolves.test.ts` (`lifeEventsDeathReportedKey(e)` stays in `address.tsx`).
 9. **A held promise must be settled** — in every W1 leg, inside `act`, before the test ends; a hung `flushing` slot poisons every later test
    in the file (F9). A 15 s hang is not testable under real timers.
 10. **Mint the tap id AFTER the guard** — a no-op tap must not silence a real earlier failure (AC 4 (d)).
-11. **jsdom cannot hear a live region** — only the "⛔ `aria-live`" assertion catches a leftover live region; counts catch the rest. The Android
+11. **jsdom cannot hear a live region** — only the "⛔ `aria-live`" assertion catches a leftover live region — and only where the test's tamagui mock forwards `accessibilityLiveRegion` (AC 2 (d)); counts catch the rest. The Android
     NBSP counter resets per test (`setup-announce-repeat.ts`); leg expectations are per-test.
 12. **The announce-after-heading race** — `findBy…` then an immediate `expect(announce)` loses on CI; `waitFor` the positive, settle for the
     negative ([[project_mobile_announce_after_heading_race]]).
 13. **S4's clear effect** — the `[dirtyDates.size]` effect's functional updater compares the STRING; if `actionNotice` becomes `{ key, n }`, that
     comparison changes with it — prefer a helper + a separate counter, so the updater is ⛔ touched.
-14. **TanStack facts are `INFERENCE`** — nothing was run at authoring; Task 0.3 is not optional. `retry: 1` is the default, so one press is one
+14. **TanStack facts: FOUND by a validate-time run, COMMITTED by Task 0.3** — nothing was run at authoring; the validate run was a scratch script against the main checkout's query-core 5.101.0, ⛔ the repo's harness, so Task 0.3 is not optional. `retry: 1` is the default, so one press is one
     final error action.
 15. **Two announcements back to back** — whether TalkBack speaks both or the second cuts the first is un-attested (3.15c X1 / X2 records); ⛔
     claim an order on Android.
+16. **Device-pass premises (3.15b / 3.15c)** — `announce()`'s counters are per TEXT and clear at sign-in, sign-out and session end, so a restarted API
+    (a 401 forces a re-sign-in) resets them: log the session history beside every count and ⛔ read a trailing-U+00A0 count without it. A fresh
+    database needs a `pariwar_passport` row or the language endpoint answers 503 (`passport_missing`) ([[project_mobile_android_emulator_setup]]);
+    hold a PUT with `kill -STOP` / `kill -CONT`, ⛔ a restart; a `react-native` mock without `Platform` throws (the 3.15b story's Trap 11).
 
 ### What this story does ⛔ do
 
 - ⛔ Change `AnnouncedText`, `announce.tsx`, `lib/announce.ts`, `announce-repeat.ts`, the copy, the routes or the contracts.
-- ⛔ Fix the K callers (they rely on a remounted live region — ⛔ device-shown) or the `failureNotice` U edge (two generic `invalid` failures
+- ⛔ Fix the K callers (they rely on a remounted live region — ⛔ device-shown) or the `failureNotice` U edge (deferred item Z2; two generic `invalid` failures
   stay identical).
 - ⛔ Change the hook `useAnnounceOnChange` or any of its nine `useAnnounceOnChange(…)` CALL LINES (DL3; Tasks 4 and 6 edit two of the caller FILES, for
   other lines) — 3.15c-dev Y2 is a reach finding and a recorded disposition.
@@ -469,11 +524,11 @@ The worktree has no `node_modules`: every claim about what TanStack Query does o
 
 ### Size and the split trigger
 
-This is the largest of the 3.15 family: four source files for Y1, one for W1, one hook type + a new pin for the guard, three test files extended
-and TWO new ones, and a device sweep. **Task 6 (`WorkplacePicker`) is the single heaviest** — a 558-line component with ⛔ render test, early
+This is the largest of the 3.15 family: four source files for Y1, one for W1, one hook type + a new pin for the guard, four test files extended (a pointer comment in a fifth)
+and THREE new ones (the picker harness, the guard pin, the TanStack leg), and a device sweep. **Task 6 (`WorkplacePicker`) is the single heaviest** — a 558-line component with ⛔ render test, early
 returns and TanStack-driven sets. Order the work cheapest-first: Task 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. **Split trigger (recorded,
-⛔ acted on here):** if Task 6's harness is not green after the other tasks are, S7–S8 move to a new story 3.15e, which owns them with the
-harness, and AC 1's count becomes 43 — amend AC 1, the `epics.md` block and the 3.15c-dev Y1 owner line in `deferred-work.md` ("the eight S lines"), and say so in the Change Log and the ledger; ⛔ ship S7–S8 half-built.
+⛔ acted on here):** if, with Tasks 0–5 green, Task 6's harness does not have EVERY leg RED-then-green with its mutations — decided BEFORE Task 8.1's code commit — S7–S8 move to a new story 3.15e, which owns them with the
+harness, and AC 1's count becomes 43. A split amends: AC 1 (43), the S7 / S8 clauses of AC 2 and AC 3, AC 9's "eight more lines" and the Policy text's "eight error lines", DL1's inventory, DL5's S7 example, Tasks 0.4 (the S1–S8 baseline) / 6 / 8 / 10.0, Project Structure Notes (the picker harness, `WorkplacePicker.tsx`) and the "THREE new ones" count, the `friction-budget.md` block, the `epics.md` block (plus a new 3.15e block and a `backlog` row), the 3.15c-dev Y1 owner line in `deferred-work.md` ("the eight S lines"), the Change Log and the ledger; ⛔ ship S7–S8 half-built.
 
 ### Project Structure Notes
 
@@ -482,8 +537,8 @@ harness, and AC 1's count becomes 43 — amend AC 1, the `epics.md` block and th
   `apps/mobile/app/(settings)/language.tsx`, `apps/mobile/components/notifications/use-wa-code.ts` (the `patch` type only).
 - Tests (UPDATE): `death-report-refusal-announcements.test.ts`, `workplace-screen-render.test.ts`, `peer-questionnaire-render.test.ts`,
   `language-screen-render.test.ts`, `wa-code-entry-render.test.ts` (a pointer comment only). Tests (NEW):
-  `workplace-picker-render.test.ts`, `use-wa-code-source-pins.test.ts`, and the real-`QueryClient` leg (AC 3) in the file the dev finds fits
-  (`known-people-hooks.test.ts` is the shape).
+  `workplace-picker-render.test.ts`, `use-wa-code-source-pins.test.ts` and `workplace-query-error-signal.test.ts` (Task 0.3, AC 3 — the app's real
+  query hooks; `known-people-hooks.test.ts` is the shape of a real-`QueryClient` test, but the known-people hooks carry their own `retry: retryKnownPeople`; the workplace hooks set none, so set the client's `retry: 1` and `retryDelay: 0` on the test client).
 - Records: `deferred-work.md`, `friction-budget.md`, `sprint-status.yaml`, this file. All under `apps/mobile/` and `_bmad-output/`; ⛔ a
   package, ⛔ `packages/contracts`, ⛔ `apps/api`.
 
@@ -511,7 +566,7 @@ harness, and AC 1's count becomes 43 — amend AC 1, the `epics.md` block and th
 
 - [Source: `_bmad-output/planning-artifacts/epics.md` — Story 3.15d, and 3.15a / 3.15b / 3.15c above it]
 - [Source: `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: dev of story 3-15c" (3.15c-dev Y1, Y2); "…code review of
-  story 3-15c" (3.15c-review W1); "…authoring of story 3-15d" (Z1)]
+  story 3-15c" (3.15c-review W1); "…authoring of story 3-15d" (Z1, Z2)]
 - [Source: `_bmad-output/implementation-artifacts/3-15c-standing-line-spoken-again-and-language-switch-spoken-once.md` — DL1 (the shape), Review
   Findings round 2 (the guard), Landing]
 - [Source: `3-15a-assisted-step-error-spoken-once-and-focus-kept.md`, `3-15b-repeated-announcement-sent-as-different-text.md`]
@@ -538,5 +593,6 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`), `bmad-create-story` 2026-11-25 (three r
 
 | Version | Date | Change |
 | --- | --- | --- |
-| 1.0 | 2026-11-25 | Created (`bmad-create-story`; BigDev: *"create story for unowned items"*) in its OWN worktree cut from `origin/main` `9df1818e` after 3.15c LANDED. Owns 3.15c-dev Y1 and Y2, 3.15c-review W1 and the leg (g) completeness guard. §0: ⛔ Panel question. F10 found Y2 reachable only by a deep link (⛔ stronger than the evidence — SUPERSEDED by v1.1: "no in-app path found by static trace") — DL3 records a disposition, ⛔ a code fix. DL2 amends 3.15c's DL3 sentence ("EVERY `not_recorded` outcome is announced ONCE") for overlapping taps. New deferred item Z1 (the late-success line) recorded at authoring. Split trigger on Task 6 recorded, ⛔ acted on. |
+| 1.0 | 2026-11-25 | Created (`bmad-create-story`; BigDev: *"create story for unowned items"*) in its OWN worktree cut from `origin/main` `9df1818e` after 3.15c LANDED. Owns 3.15c-dev Y1 and Y2, 3.15c-review W1 and the leg (g) completeness guard. §0: ⛔ Panel question. F10 found Y2 reachable only by a deep link (⛔ stronger than the evidence — SUPERSEDED by v1.1: "no in-app path found by static trace") — DL3 records a disposition, ⛔ a code fix. DL2 amends 3.15c's DL3 sentence ("EVERY `not_recorded` outcome is announced ONCE") for overlapping taps. New deferred item Z1 (the late-success line) recorded at authoring. Split trigger on Task 6 recorded, ⛔ acted on. *[v1.2 note — the row above is kept verbatim: its "⛔ stronger than the evidence" means it WAS stronger; under the register declared at the top of this file the phrase reads as the opposite.]* |
 | 1.1 | 2026-11-25 | Validated by an INDEPENDENT fresh-context pass (read-only; no blocker, 5 major, 12 minor — all applied). Major: the sprint row is now created at authoring (it was claimed by three owner lines and ordered by no Task); Y2's pre-written disposition was stronger than its evidence — now *"no in-app path found by static trace; reproduced only by a deep link"*, with Task 7 trying to reproduce the observed two-step state without one and a STOP-and-ask if any path appears; AC 5 / "does ⛔ do" forbade touching the nine `useAnnounceOnChange` callers while Tasks 4 and 6 edit two of those files — now the hook and the nine CALL LINES; Task 0.3's TanStack proof was "throwaway" though S2 / S7 / S8 rest on it — now a COMMITTED leg, and `errorUpdateCount` is the first-choice signal since `errorUpdatedAt` is a millisecond stamp that can tie; AC 2 gains (f), the locale-switch leg 3.15c's own round 1 taught. Minor: F3 (both Android assertions of the address leg change), testIDs named and the three tamagui mocks extended, S2 / S8 effect in a child component, `language.tsx` in the microcopy gate, W1's header / Change Log edits and its "en recorded, hi failed" leg owned, the split count (43), the pin also pins `patch`'s type text, the behaviour changes recorded (iOS no longer re-speaks on a locale switch; S5 across the tree swap; focus gate accepted), items qualified by owning story. |
+| 1.2 | 2026-11-25 | Validated a SECOND time by four fresh-context read-only verifiers (UI sites S1 / S3–S6; S2 / S7 / S8 with a real TanStack run; W1 + the guard + Y2's reach, with a scratch simulation of `app-language.ts`; governance, records, siblings, rivals) — no blocker, one HIGH, the rest medium and low; each top finding was spot-checked in the repo before it was applied. **HIGH:** DL7 still ordered Y2 recorded as *"reachable only by a deep link"* — the overclaim v1.1 said it had removed (DL3 and AC 5 carried the weaker wording) — now DL3's wording, and the Y2 owner line in `deferred-work.md` is reworded to match. **The signal:** v1.1 made `errorUpdateCount` the first choice in DL1 only; F4, F6, Trap 4, AC 2, AC 3 and Task 5.1 still named `errorUpdatedAt` — now ONE signal everywhere, and the TanStack `INFERENCE`s were RUN (query-core 5.101.0: the count is +1 on every failed retry with and without cached data, never resets; `errorUpdatedAt` ties under a frozen clock); Task 0.3 now commits the proof against the app's real hooks, ⛔ fake timers, ⛔ a retry-handler fallback (S7 is also set by the mount refetch and by `invalidateQueries`). **S2 / S8:** a child placed in the existing branch makes the "body re-check" dead code, so no mutation could show it bites — the structure itself now answers the page-1 case, with a hoist mutation and per-platform counts. **Tests:** three tamagui mocks forward ⛔ `accessibilityLiveRegion`, so AC 2 (d) was vacuous there; the peer-questionnaire legs omitted S4's `date_unsaved` site, S5's `usePreventRemove` site and the tree-swap leg; AC 2 (f)'s words-mutation is an equivalent mutant at S1; the date testID collided across questions; AC 4 gains (g), a fake-timer leg for the real offline path; the guard pin's quoted shape would count 2 not 5, and the mutations are four plus the type-text revert. **Records:** Z1's trigger fires inside this story (one dated Z1 line, ⛔ an owner claim); "fixed" needs a baseline on the pin's bundle (new Task 0.4); Task 10.3 (landing records, ADR-0047 cl.2) and the real `pnpm` commands; the split trigger gets an objective criterion and a full amend list; the glyph register is declared; Trap 16 (device-pass premises); the file counts (four test files extended, three new). Also applied on a second "apply all findings": the v1.0 Change Log row keeps its text verbatim and gains a bracketed v1.2 note (the register would otherwise invert its "⛔ stronger than the evidence"); AC 1 and Task 0.2 use the comment-excluding grep (49 at the pin, the plain form agrees); the `failureNotice` U-edge from 3.15c's inventory is filed as deferred item Z2 (owner NONE YET; ⛔ traced, ⛔ device-shown). After the edits the file was grepped for the old signal name, the retired phrasings and `⛔`-before-a-verb inversions — three sweeps, ⛔ a blanket "every pointer verified". **Then a fix-diff review of THIS patch** (one more fresh-context verifier, given only the diff): no blocker, 4 medium and 9 low defects, every one the patch's own or left unswept — the S8 table cell and Task 6.2 still carried the dropped body-condition design; a wrong claim (carried in from a verifier's report) that `workplace-screen-render` loads `lib/idempotency-key` real — it mocks it; the retry attribution to `known-people-hooks.test.ts`; DL7 ordering ONE ledger entry where Task 10.3 orders a second; DL7's "CLOSED" not tied to a baseline; the per-platform counts of the S2 / S8 page-1 leg unstated (iOS 2, Android 1 as running totals); AC 4 (g) using `waitFor` under fake timers; an echo `t` that makes the words mutation an equivalent mutant at S2–S8 as well; a mutation per S1 set site; the split amend list incomplete — all applied. |

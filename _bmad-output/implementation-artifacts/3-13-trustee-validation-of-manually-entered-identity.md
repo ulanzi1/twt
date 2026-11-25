@@ -87,6 +87,10 @@ time."*
 typed-in identity this staff check IS that verification; §2.1 does ⛔ say who verifies or from what (⇒ PQ1). Consistent with §2.2 / the
 joining lock-in (this story moves ⛔ clock). ⛔ conflict found.
 **Checked against `-424` Q1 (a) C:** a MATCH (*"never verified since"*) — quoted above.
+⭐ **(v1.9, after `-502`)** The member-facing sentence above holds for THIS story. Two rows add to it: row `3-13a` tells a member staff
+could not confirm, AND the reason (`-502` Q2 C) — so "nothing changes for you today" stays true of their MEMBERSHIP, ⛔ of what they are
+told; row `3-16` adds the upload route (E) — *"or by sending photos of your PAN card, your masked Aadhaar and a selfie"* (`-502`'s own
+Policy-meaning sentence). ⛔ new gate: the reveal (DL6a) gates a disclosure, ⛔ a benefit.
 ⚠ **What this note does ⛔ cover:** gate 2's consequence for a member staff could ⛔ confirm (they leave coverage at lock-in end) is created
 by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes it avoidable. PQ2 puts the member-facing half to the Panel.
 
@@ -112,9 +116,14 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   from an open claim — a second door around a Trustee-ratified step. Refused, under the intake key, FIRST (DL5).
 - **N4 — Append-only record, one live row.** Every staff act is a row; a later act supersedes; ⛔ UPDATE/DELETE of history (except the
   erasure scrub of the Tier-1 note — DL14).
-- **N5 — ⛔ Aadhaar number, ⛔ document image is stored.** Staff record WHAT KIND of document they saw, ⛔ its number and ⛔ a copy.
+- **N5 — ⛔ Aadhaar number, ⛔ document image is stored BY THIS STORY.** Staff record WHAT KIND of document they saw, ⛔ its number and ⛔ a copy.
+  (v1.9) Holds for route A (`-502` item 1: *"Nothing is copied or kept"*). The E route's copies are row `3-16`'s store, kept under
+  `-502` Q4 B — ⛔ this table; a 3-16 review writes only `evidence_kind = 'uploaded_documents'` here, ⛔ a copy or reference (R1).
   Aadhaar Act s.8A(4)(b) bars storing the full number *"for any purpose"* ([[project_aadhaar_full_number_storage_barred]]).
-- **N6 — A `not_confirmed` changes nothing for the member today.** ⛔ state change, ⛔ moderation, ⛔ fraud flag, ⛔ message.
+- **N6 — A `not_confirmed` changes nothing for the member today.** ⛔ state change, ⛔ moderation, ⛔ fraud flag, ⛔ message FROM THIS
+  STORY. (v1.9) `-502` Q2 C rules that the member IS told, with the reason — built by row `3-13a`, which READS this table's live row (the
+  closed `not_confirmed_reason`, ⛔ the Tier-1 note: C's *"the reason staff recorded"* is the closed list the note put, ⛔ the note).
+  ⇒ the reason stays a plaintext closed enum (3-13a reads it member-side without a decrypt); ⛔ fold the reason into the note.
 - **N7 — The reducer is untouched.** ⛔ edit to `member/state.ts`'s `reduce`; the new event is a non-transition marker (the `default` arm);
   the `pending-valid → active` move uses the EXISTING `member.kyc_completed` arm.
 
@@ -169,7 +178,7 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   by review and by this story's own API tests (AC12). Extending the gate's scope is ⛔ this story ([[project_access_wrapper_gate_pending_scope]]).
 - **F8 — What staff already see of a member.** `apps/admin/src/modules/member-status/` (`MemberStatusPanel.tsx`) shows the KYC name and a
   **masked** mobile (`maskedMobile`) under `member.view_validity`; `packages/domain/src/member/search-read.ts` returns the encrypted
-  columns and the handler decrypts. ⛔ admin surface shows a member's FULL mobile ⇒ DL8 shows masked only (a match), ⛔ a new disclosure.
+  columns and the handler decrypts. ⛔ admin surface shows a member's FULL mobile ⇒ DL8 shows masked only (a match), ⛔ a new disclosure. (v1.9: `-502` Q3 ruled the disclosure — DL6a's audited press.)
   The decrypt precedent is `apps/api/src/modules/member-validity/handlers.ts` `adminMemberSearch`: `decryptKycField`
   (`kyc/kyc-crypto.ts`) for the KYC name, `decryptMobile` + `maskMobile` (`auth/shared/mobile-index.ts`), the anonymized-sentinel
   suppression, and ONE `audit.writeAuditEntry(deps.servicePool, …)` line. (`kyc/bounded-decrypt.ts` is ⛔ it — that is the 11b.2a
@@ -206,7 +215,18 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   it lands, ⛔ NEW `self_declared` row is written: the `self_declared` half of the queue becomes a FIXED, shrinking set, and 3.16's new
   strength joins it only when the reshape classifies it (N1a). That is why the build starts now (BigDev, 2026-11-25).
 
+- **F13 — The roles `-502` Q3 names (v1.9, traced at `74839891`).** `packages/domain/src/rbac/roles.ts`: `verifier` — ceiling
+  `district` (fits a district-dimension gate against the member's posting district, as `district_admin`); `helpline_operator` — ceiling
+  `pariwar`; `block_admin` — ceiling `block`, and a block grant can NEVER satisfy a district or pariwar check (`scope.ts` §RANK-ORDER),
+  while a member has ⛔ block at all (`member-geo/resolve.ts`: *"`block`, unconditionally → `no-member-attribute` (D5 — permanent)"*) ⇒
+  ⛔ way to say which members are in a Block Admin's block; `field_worker` — ceiling `self`, `permissions: []`, ⛔ console login (Story
+  13.3 `backlog`). The `-328` precedent (`apps/api/src/modules/claims/peer-answers-assembler.ts`) shows a number ON PAGE LOAD, audited
+  per showing (`…peer_callback_mobile_shown`, ⛔ the number); `-502` Q3 B says *"one press at a time"* ⇒ a separate reveal action (DL6a).
+
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
+
+> ⭐ **v1.9 (reshape after `-502`; BigDev's R1–R4 answers, 2026-11-25):** DL6a (the reveal) is NEW; DL7, DL8, DL8b, DL11, DL12, DL13
+> and DL16 carry dated (v1.9) amendments in place. Recorded as author-commit `2026-11-25-503` (amends `-501` items 7–9, 12–14, 17 by name; item 10 is read with `-502` Q2 C — N6).
 
 - **DL1 — One record.** A new table `member_identity_validations` (TENANT-ISOLATED, RLS by `pariwar_id`, FORCE): `validation_id` (uuid
   PK), `pariwar_id`, `member_id` (FK `members`), `outcome` (`confirmed` | `not_confirmed`), `evidence_kind` (DL7), `document_kind` (DL7,
@@ -246,8 +266,8 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   advisory lock for that; `projectMemberState`'s stream-version conflict is the backstop.
 - **DL6 — Who checks.** A NEW key `member.validate_identity`, granted to `district_admin` (against the member's server-derived CURRENT
   posting district — F7) and `pariwar_admin` (any district — the Trustee-Lite who acts for "the trustee" in v1,
-  [[project_trustee_lite_votes_not_state_trustee]]); `super_admin` by derivation. Catalog 65 → 66, keys 96 → 97; `defaultRoleBundles`
-  stays 13. ⛔ every other role: `field_worker` (who may have onboarded the member), `helpline_operator`, `verifier`, `state_trustee`
+  [[project_trustee_lite_votes_not_state_trustee]]); `super_admin` by derivation. Catalog 65 → 66, keys 96 → 98 with DL6a's key (ONE bump per story — the `permissions.ts`
+  header's 62 → 63 FOUR-keys precedent); `defaultRoleBundles` stays 13. ⛔ every other role: `field_worker` (who may have onboarded the member), `helpline_operator`, `verifier`, `state_trustee`
   (deprecated footing), `trustee_panel` (the Panel body; routine work is ⛔ its), `block_admin`, `auditor`, `finance_officer`, `it_cell`,
   `media_comms`.
   ⭐ **The gate's dimension moves with the caller (F7a — a fixed `district` gate would refuse EVERYONE for a member with no posting).** Copy
@@ -261,11 +281,28 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   `member.moderate`, ⛔ `member.view_validity` (a read). *Considered and not taken:* District Admin only (a Pariwar with few District
   Admins would stall); Pariwar Admin only (FR-2's "trustee" literally — the queue could be most members, F12). ⚠ "Trustee" is the PRD's
   word, ⛔ the Panel's; PQ1 shows the Panel who checks.
+- **DL6a — The number reveal (NEW, v1.9; `-502` Q3 B widened; BigDev R2 *"Accept as proposed (Recommended)"*, R3 *"Defer; don't
+  block go-live (Recommended)"*).** A NEW key `member.reveal_mobile_for_identity_check`, granted to `district_admin`, `pariwar_admin`,
+  `verifier` and `helpline_operator`; `super_admin` by derivation. Gate: the DL6 caller-moves-the-dimension shape — `district`-ceiling
+  callers (`district_admin`, `verifier`) against `getMemberCurrentDistrict`, `pariwar`-ceiling callers (`pariwar_admin`,
+  `helpline_operator`) at `pariwar`. ONE `POST` per press returns the full number (`decryptMobile` → canonical); EVERY press writes one
+  audit line `admin_identity_check.member_mobile_shown` (actor, member, time — ⛔ the number, the `-328` precedent's rule). **"For this
+  purpose" is STRUCTURAL:** the reveal is refused 409 `identity_validation.not_eligible` unless the member is DL4-eligible right now
+  (unverified, checkable, `lock-in` / `pending-valid`), and 409 `identity_validation.death_reported` under a standing death report (the
+  DL5 lock, FIRST); an anonymized mobile ⇒ ⛔ number. The same key READS the queue (DL11 — ⛔ PII) so a verifier or helpline operator can
+  find the member; the detail (name / DOB / photo) and the record stay `member.validate_identity` (DA / PA). ⛔ step-up
+  ([[feedback_story_validate_footguns]] #69 (a) — admin step-up is a stub in production). **NOT built (R3):** `field_worker` (⛔ login —
+  a `deferred-work.md` item triggered by Story 13.3) and `block_admin` (⛔ member block — F13; unbuildable in the current model); the Panel
+  is TOLD in a short note (showing fewer staff is the narrow side); Row 57 (b2) is met once the four are built.
 - **DL7 — What staff record they saw (built to PQ1 option A until ruled).** `evidence_kind`: `photo_id_in_person` |
   `photo_id_video_call`. `document_kind`: `aadhaar_card` | `pan_card` | `voter_id` | `driving_licence` | `passport` |
   `government_service_id`. ⛔ number field, ⛔ upload. Staff confirm the name and date of birth on the document match the record, and (when
   a photo is on record) the face. If the Panel rules B, C or D, the vocabulary changes (enum mint is delegated — `-210` cl.2,
   [[project_enum_mint_authority_delegated]]) or the write route is withdrawn.
+  ⭐ (v1.9) RULED A (`-502` item 1) — the vocabulary above stands as built. E (`-502` item 2) is row `3-16`'s (R1 *"In 3-16, writing
+  3.13's record (Recommended)"*): 3-16 builds capture, the store, Q4 B retention AND the staff review of uploads; that review writes THIS
+  table with a new `evidence_kind` value `uploaded_documents` (minted BY 3-16 — delegated, `-210` cl.2) and classifies 3-16's strength in
+  N1a. ⛔ mint `uploaded_documents` here (nothing would write it).
 - **DL8 — What staff see (the detail read).** The KYC name, date of birth and photo (decrypted with `decryptKycField` — the
   `adminMemberSearch` precedent, F8; an anonymized row shows ⛔ identity; ONE `audit.writeAuditEntry` line per view, ⛔ per field), the
   masked mobile (F8 — ⛔ full number), the member's state, signup date, current posting (district, school), the KYC route, and the history
@@ -278,13 +315,16 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   what the Trust tells about a member, so it goes to the Panel (added to the Task 0.3 note) and is built on (a) until ruled. Built: (a).
   ✅ **Answered 2026-11-21 (Task 0.2, question dialog, BigDev):** *"Ask Panel: show full mobile"* ⇒ (b): PQ3 is in the note; built (a)
   until ruled.
+  ⭐ (v1.9) RULED B, widened (`-502` item 5) ⇒ the detail shows the MASKED mobile plus DL6a's *"Show mobile number"* press; ⛔ full number
+  in the detail payload itself.
 - **DL9 — `not_confirmed`.** Reason (closed list): `details_do_not_match` | `photo_does_not_match` | `no_document_shown` |
   `member_not_reached`; a note required (Tier-1, ≤ 1,000 code points). Effect: N6 — nothing changes; the member stays in the queue with
   the latest outcome shown; staff may record again at any time. ⛔ time limit, ⛔ attempt limit.
 - **DL10 — ⛔ undo in this story.** Once `confirmed`, ⛔ route makes the member unverified again (the reducer has ⛔ `active →
   pending-valid` arm, and 6.39 would silently re-impose its check). A wrongful confirmation found later is the fraud register's (Story
   6.22; *"identity fraud"* is ground 2 of Niyamavali §8.5) — recorded in `deferred-work.md` (Task 7.4), ⛔ built.
-- **DL11 — The queue (FR-2).** `GET` list: members eligible under DL4 within the caller's scope, `pending-valid` first, then by signup date
+- **DL11 — The queue (FR-2).** (v1.9: also readable with DL6a's key — the same ⛔-PII rows, the same per-row scope filter against
+  THAT key's grant.) `GET` list: members eligible under DL4 within the caller's scope, `pending-valid` first, then by signup date
   ascending (`members.created_at`, tie-broken by `member_id`); each row: short member id, signup date, state, district, latest outcome +
   date, attempt count. ⛔ name, ⛔ mobile on the list (⛔ Tier-1 decrypt on a list — one rule for the whole surface,
   [[feedback_withholding_must_be_uniform]]); open a row for the detail. Scope: the route is gated on the caller's OWN scope (DL6), then each
@@ -301,13 +341,17 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   {reason}."*; reasons *"Details do not match the ID"* / *"Photo does not match"* / *"No ID was shown"* / *"Could not reach the member"*;
   death-lock banner *"The Trust has been told this member has died. Their identity is checked on the claim instead."*; not-eligible
   *"This member does not need an identity check."*; and the 6.39 label `trustee_verified` reworded to *"Typed in at joining, checked by
-  staff"*. ⚠ The microcopy gate scans `apps/admin/src/**/*.ts(x)` (`microcopy.yaml` `scope.code_globs`) for the WHOLE WORDS `receipt` /
+  staff"*. ⭐ (v1.9, DL6a — BigDev R4 *"Approve as shown (Recommended)"*, word for word): reveal button *"Show mobile number"*; after a
+  press *"{number}"* then *"Shown to you only to arrange this identity check."* and *"This showing is recorded."*; refused *"This member's
+  number can no longer be shown here."*; the queue keeps the title *"Identity checks"* for verifiers and helpline operators. ⛔ staff
+  hint that the member is told the reason — row `3-13a` adds it when its message ships (it would be false before). ⚠ The microcopy gate scans `apps/admin/src/**/*.ts(x)` (`microcopy.yaml` `scope.code_globs`) for the WHOLE WORDS `receipt` /
   `report` / `invoice` (`scripts/microcopy/lib.ts` matches `\b<term>\b`) in copy, test ids OR comments
   ([[project_microcopy_gate_scans_admin_code]]). So the error code `identity_validation.death_reported` and an identifier `deathReported`
   PASS (the admin helpdesk already uses `rtbf.death_reported` and `…erasureRefused.deathReported`) — keep the house `*.death_reported`
   family (withdrawal, medical, life events, erasure). The trap is the bare word: ⛔ "death report" / "report" in an admin comment, test name
   or string — write "a claim filed for the death".
-- **DL13 — Routes.** `GET /api/v1/p/:pariwarId/admin/members/identity-checks` (queue), `GET …/admin/members/:memberId/identity-check`
+- **DL13 — Routes.** (v1.9: FOUR — plus `POST …/admin/members/:memberId/identity-check/mobile` (DL6a's reveal; ⛔ `Idempotency-Key` —
+  every press is a separate audited showing; a per-actor rate limit IF an admin-route precedent exists — find it at Task 3.4, ⛔ assumed).) `GET /api/v1/p/:pariwarId/admin/members/identity-checks` (queue), `GET …/admin/members/:memberId/identity-check`
   (detail), `POST …/admin/members/:memberId/identity-check` (record; `Idempotency-Key` required — `idempotency.createKeyedStore` from
   `@twt/domain` in the shape of `apps/api/src/modules/contributions/personal-event-handlers.ts`: claim → the scope tx opened INSIDE the
   try → COMMIT → THEN `recordResult` → then the audit line, [[project_idempotent_write_handler_shape]]; there is ⛔ shared
@@ -326,7 +370,9 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   the export unchanged (it already carries `trusteeVerified`) — rejected: the record is the member's personal data.
 - **DL15 — Stale comments re-worded** (Task 7.2): the schema comment (F1), 6.39's route doc line (F5), the sprint-status row comment's
   *"Until this row is built"* (by a dated line, ⛔ an edit), and the `deferred-work.md` items' annotations (Task 7.4).
-- **DL16 — Not in scope:** the lock-in producer (row `3-14`); any member-facing screen or message (PQ2); a staff change to name / date of
+- **DL16 — Not in scope:** (v1.9) the member's message and its reason line (row `3-13a`, `-502` Q2 C); the upload capture, store,
+  retention and staff review of uploads (row `3-16`, `-502` items 2–3, R1); the reveal for `field_worker` and `block_admin` (DL6a, R3);
+  the lock-in producer (row `3-14`); any member-facing screen or message (PQ2); a staff change to name / date of
   birth / photo; a DigiLocker re-run for an already-joined member; an undo (DL10); periodic re-verification (`-424`, ⛔ put); the Aadhaar
   HMAC / duplicate-identity gap; a backfill; any change to 6.39's gate, door or copy except the one label (DL12); notifications to staff.
 
@@ -337,8 +383,8 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
 > addition to option B."*). **PQ1 — A**, and the follow-up's **E** (A and E both stand: A for a typed-in member, E with A as fallback for
 > uploads); **PQ2 — C** (⛔ our B: the member is told, AND the reason — new row `3-13a`); **PQ3 — B, widened** to field workers,
 > verifiers, helpline operators and Block Admins, for arranging the check only (the roles are the Panel's); **follow-up Q4 — B** (row
-> `3-16`). ⚠ **Everything below is the text AS PROPOSED.** The DLs, ACs and Tasks are reshaped by a re-validate (Task 0.3's own rule),
-> and dev-story does ⛔ start Task 1 before it. `-501` items 8 (DL7) and 9 (DL8b) are amended by `-502`.
+> `3-16`). ⚠ **The questions below are kept AS PUT.** ✅ The DLs, ACs and Tasks were RESHAPED by the v1.9 re-validate (2026-11-25,
+> author-commit `2026-11-25-503`) — dev-story may start Task 1. `-501` items 8 (DL7) and 9 (DL8b) were amended by `-502`.
 
 ⭐ All three pass §0: PQ1 and PQ2 are what the Trust OWES a member (whether their identity counts as verified — and so whether they are
 covered once lock-in ends — and whether they are told); PQ3 is what the Trust DISCLOSES about a member, and to which staff. None blocks
@@ -409,23 +455,31 @@ unchanged side meanwhile.
    the enum const, ⛔ a hand list of three (so 3.16's new value enters the lockstep the day it is minted); `membership-check-approval.ts`
    imports ⛔ new module (its leaf scan stays green). N1a's map is `satisfies Record<MemberKycVerificationStrength, boolean>` (a
    compile-time leg) and a unit test pins today's classification (`self_declared` only).
-8. **AC8 (DL6).** Key `member.validate_identity` in the catalog (v66, 97 keys), granted to `district_admin` and `pariwar_admin`, derived to
+8. **AC8 (DL6).** Key `member.validate_identity` in the catalog (v66, 98 keys with DL6a's), granted to `district_admin` and `pariwar_admin`, derived to
    `super_admin`; a test per role: district admin of the member's district → 200/201; of another district → 403; of a member with no
    posting → 403; pariwar admin → allowed, INCLUDING for a member with no posting (the F7a trap — this leg is red under a fixed
    `district` gate); every other role in `defaultRoleBundles` → 403 (a loop over the 13 bundles, ⛔ a hand list). The queue: a district
    admin sees only their district's members; a pariwar admin sees every district and the unposted member. ⛔ client-supplied district or
    dimension is read.
+8a. **AC8a (DL6a, v1.9).** Key `member.reveal_mobile_for_identity_check` granted to exactly `district_admin`, `pariwar_admin`,
+   `verifier`, `helpline_operator` (+ `super_admin` derived): a test per role in scope → 200 with the full number; a district-ceiling
+   caller of another district → 403; every other bundle (incl. `field_worker`, `block_admin`) → 403 (a loop over the 13 bundles).
+   EVERY press writes ONE `admin_identity_check.member_mobile_shown` line whose payload has ⛔ the number (asserted by searching the
+   serialized line for the digits); two presses ⇒ two lines. Refused 409 `not_eligible` once the member is confirmed (purpose ended) — a
+   passing control on an eligible member beside it; 409 `death_reported` under a standing report, the intake lock taken FIRST. The
+   detail payload carries ⛔ full number. The queue is readable with this key alone; the detail and the record are ⛔ (403).
 9. **AC9 (DL7, DL9, N5).** The POST body accepts only the DL7 / DL9 vocabularies (a closed `z.enum`, `.strict()`); a body carrying any
    number-like field or an upload is refused 400; `not_confirmed` without a note → 400; `confirmed` with a reason → 400. A grep-test proves
-   ⛔ column or field in the new table / contract named like `*number*` / `*aadhaar*` / `*image*`.
+   ⛔ column or field in the new table / contract named like `*number*` / `*aadhaar*` / `*image*`. (v1.9) `not_confirmed_reason` is a
+   plaintext enum column (N6 — row `3-13a` reads it); `evidence_kind` has ⛔ `uploaded_documents` value in this story (DL7).
 10. **AC10 (DL8, DL11).** The queue returns exactly the DL4-eligible members in scope, in DL11's order (a test with ≥ 3 members including a
     tie on `created_at`), with ⛔ Tier-1 field and ⛔ decrypt call (a spy); the querystring `limit` is bounded (`forced-pagination.spec.ts`
     green on the emitted OpenAPI) and goes through `clampLimit`. The detail returns the DL8 fields, decrypts the name / DOB / photo and only
-    the live row's note, writes ONE view audit line, and the mobile is masked.
+    the live row's note, writes ONE view audit line, and the mobile is masked (the full number only through DL6a's press).
 11. **AC11 (DL12).** Every staff string is the Task-0.2-approved text, from the admin i18n file (⛔ inline literals); the 6.39
     `trustee_verified` label reads the approved rewording; the microcopy gate is green ON these files (read its config list — ⛔ its
     header — [[feedback_gate_scope_semantic_coverage]]).
-12. **AC12 (DL13).** Three routes, plain-literal paths, the human-actor chain inlined on each; because ⛔ CI gate scans this module (F7b),
+12. **AC12 (DL13).** Four routes (v1.9 — DL6a's reveal included), plain-literal paths, the human-actor chain inlined on each; because ⛔ CI gate scans this module (F7b),
     an API test proves for EACH route: ⛔ admin session → 401, a member session → refused, a valid admin session without the key → 403.
     POST without `Idempotency-Key` → 400; a replay returns the recorded result and writes nothing new. OpenAPI regenerated (compare with
     anchors resolved — [[project_openapi_yaml_anchor_renumbering]]).
@@ -434,7 +488,8 @@ unchanged side meanwhile.
     test covers it ([[project_contracts_tests_outside_tsc]]).
 14. **AC14 (admin UI).** The admin module renders the queue, the detail and both forms; vitest covers: empty queue copy, the death-lock
     banner hides the form, `not_confirmed` requires a note before submit, a 409 shows the not-eligible line, a successful confirm refreshes
-    the detail, and the console nav shows the link to the queue (DL13). A real-browser pass is a GO-LIVE leg, ⛔ a merge condition ([[project_not_in_production_merge_is_not_golive]]).
+    the detail, the console nav shows the link to the queue (DL13), and (v1.9) *"Show mobile number"* calls the reveal ONCE per press
+    and renders DL12's shown / refused lines; a verifier / helpline session sees the queue and the press but ⛔ the identity detail or forms. A real-browser pass is a GO-LIVE leg, ⛔ a merge condition ([[project_not_in_production_merge_is_not_golive]]).
 15. **AC15 (records).** DL15's comments re-worded; `deferred-work.md` annotated (Task 7.4); the PR's GitHub `ci.yml` run at the EXACT tip
     SHA being landed concluded `success`, all jobs (41 at `74839891`) — ADR-0047 cl.1, ratified by `2026-11-24-499`; the ledger line cites
     the run id, the tip SHA and jobs passed / total for the PR run AND the push to `main` (cl.2). `pnpm ci:local` may be cited, ⛔ required;
@@ -483,6 +538,7 @@ unchanged side meanwhile.
         it builds DL7 option A for `self_declared` members only, and N1a keeps 3.16's new strength out until the reshape.
         ⭐ 2026-11-25 — BOTH NOTES RULED, `-502` (above the Panel questions). The follow-up's sending is INFERRED from the ruling. ⇒ the
         reshape re-validate is OWED now, before Task 1 (it supersedes the "build now, typed-in only" plan above where they differ).
+        ✅ 2026-11-25 — DONE: v1.9 (R1–R4, BigDev, all as recommended; author-commit `2026-11-25-503`). Dev-story starts at Task 1.
   - [x] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
         Policy meaning, PQ1/PQ2/PQ3 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
         ⭐ 2026-11-25 — [`2026-11-25-501`](../../.decision-log.md#decision-2026-11-25-501), committed ALONE `f6987b0d` (BigDev: "yes,
@@ -516,6 +572,8 @@ unchanged side meanwhile.
   - [ ] 2.4 Unit + live-DB tests for AC3–AC6 (live tests on your own container, DB named `twt_dev`).
 - [ ] **Task 3 — RBAC + API (AC8, AC9, AC10, AC12).**
   - [ ] 3.1 Key + grants + catalog note in `permissions.ts` (the house REUSE-CHECK paragraph) and `roles.ts`; contracts mirror if one exists.
+        (v1.9) BOTH keys (DL6, DL6a), one bump 65 → 66, 96 → 98; the grant comments name `-502` Q3 and why `field_worker` / `block_admin`
+        are ⛔ granted (F13 — an inert grant is refused, the roles.ts house rule).
   - [ ] 3.2 The scope preHandler (DL6, F7a): a per-file copy of 6.18's `resolveQueueScope` shape — the caller's own grant scope decides the
         dimension; a district-ceiling caller is checked against `getMemberCurrentDistrict(…, deps.clock())` (per-member routes) or their own
         district (the list); a pariwar-ceiling caller at `pariwar`. Server-derived only; ⛔ client district or dimension.
@@ -525,7 +583,7 @@ unchanged side meanwhile.
         do (F7b) — AC12's tests carry it.
   - [ ] 3.5 API integration tests for AC8–AC12 (including the pariwar-admin-on-an-unposted-member leg and the per-route chain tests).
 - [ ] **Task 4 — Admin UI (AC11, AC14).** `apps/admin/src/modules/identity-checks/` (queue page, detail, two forms), i18n-en entries
-      (DL12), router entry + the `RootLayout.tsx` nav link (DL13); the 6.39 label change; vitest. ⚠ jsdom traps ([[project_jsdom_disabled_button_keeps_focus]],
+      (DL12), router entry + the `RootLayout.tsx` nav link (DL13); (v1.9) the reveal press (DL6a); the 6.39 label change; vitest. ⚠ jsdom traps ([[project_jsdom_disabled_button_keeps_focus]],
       [[project_tanstack_instant_mock_hides_notready_flip]]).
 - [ ] **Task 5 — Erasure + export (AC13).** `anonymize.ts` scrub (`encSentinel` under the new field class, beside the
       `claimMembershipChecks` scrub); export section (⛔ staff attribution) + contract + fixture. ⛔ guard migration — the guard was written
@@ -556,9 +614,10 @@ unchanged side meanwhile.
    human is identified by `actorId` on the projector call.
 5. **The 6.39 leaf.** `membership-check-approval.ts` must import nothing new (its header, the NW1 transitive scan). The lockstep test
    lives in the TEST, importing both.
-6. **⛔ Name in a list, ⛔ full mobile anywhere.** DL11 / DL8. A full mobile to staff is a new disclosure (the Panel ruled the field-worker
-   analogue, `-459` Q2: *"Keep the phone number out."*) — how staff reach the member is DL8b / PQ3, ⛔ a quiet unmask.
-7. **No Aadhaar number, no copy, no upload** — not even "last 4" typed by staff (N5). The masked Aadhaar column is DigiLocker's, ⛔ this.
+6. **⛔ Name in a list; the full mobile ONLY through DL6a's audited press.** (v1.9) `-502` Q3 ruled the disclosure, for arranging the check
+   only: ⛔ the number in the detail payload, the list, a log line or an audit payload; ⛔ a reveal once the member is no longer awaiting a
+   check. (`-459` Q2's *"Keep the phone number out."* is a field WORKER's number — ⛔ this.)
+7. **No Aadhaar number, no copy, no upload IN THIS STORY** (uploads are row `3-16`'s, R1) — not even "last 4" typed by staff (N5). The masked Aadhaar column is DigiLocker's, ⛔ this.
 8. **Clock ties.** Two acts in one test transaction share `now()` — "latest" must not rest on `created_at` alone (DL1).
 9. **Hand-format; Prettier is not enforced** ([[project_prettier_not_enforced]]); `**cl.3**`-style text in a JSDoc closes it
    ([[project_markdown_emphasis_closes_jsdoc]]).
@@ -573,7 +632,7 @@ unchanged side meanwhile.
 
 ### What this story does ⛔ do
 It does not end anyone's lock-in, make anyone `active` today (⛔ member is `pending-valid` until `3-14`), change 6.39's gate or what a family
-sees, tell any member anything, change any typed-in detail, undo a confirmation, or close the duplicate-identity gap.
+sees, tell any member anything (row `3-13a` does — `-502` Q2 C), store or review an upload (row `3-16`), change any typed-in detail, undo a confirmation, or close the duplicate-identity gap.
 
 ### Project Structure Notes
 - New: `packages/domain/migrations/02NN_*.sql` (numbers at Task 0.1), `packages/domain/src/schema/member_identity_validations.ts`,
@@ -624,3 +683,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.6 | 2026-11-25 | Task 0.2 DONE: DL1–DL5 + N1a, DL7 / DL9 / DL10, DL8, DL11 (incl. the `lock-in` widening), DL12 (words approved verbatim), DL13 / DL15 / DL16 and DL14 (export without staff names) put to BigDev in two question dialogs — every answer the recommended option, recorded verbatim at Task 0.2. Next: Task 0.4 (decision `-501`, committed alone), 0.5 (roster Row 57), 0.6. ⛔ Code. |
 | 1.7 | 2026-11-25 | Task 0 COMPLETE (BigDev: "yes, write 0.4, 0.5 and 0.6"): 0.1 ticked against the v1.5 re-derivation; 0.4 — Decision `2026-11-25-501` committed ALONE `f6987b0d`; 0.5 — roster Row 57 `identity-validation-live` (legs (a)–(e); (e) = the follow-up note) + a `deferred-work.md` section for PQ1–PQ3 and the follow-up; 0.6 — row `ready-for-dev → in-progress`, Status in-progress. AC1 met. ⛔ Code. |
 | 1.8 | 2026-11-25 | Both Panel notes RULED — Decision `2026-11-25-502` (Trustee-ratified, DR + KB, committed alone `6cb66cef`): PQ1 A + follow-up Q1 E, Q4 B, PQ2 C (⛔ our suggestion), PQ3 B widened to four more roles (the Panel's). Ruled banner above the Panel questions; Task 0.3 annotated; ruling blocks filled in both notes; Row 57 / `deferred-work.md` dated lines; new row `3-13a`. The text below the banner is AS PROPOSED — the reshape re-validate is owed before Task 1. ⛔ Code. |
+| 1.9 | 2026-11-25 | RE-VALIDATED after the rulings (`bmad-create-story validate 3.13`, the reshape; BigDev R1–R4, all as recommended; author-commit `2026-11-25-503`). F13 (traced at `74839891`): `verifier` district / `helpline_operator` pariwar ceilings fit; `field_worker` has ⛔ login and ⛔ keys (13.3); a member has ⛔ block (`no-member-attribute`, permanent) ⇒ ⛔ `block_admin` scope; the `-328` precedent shows on page load, `-502` Q3 B needs a press. NEW DL6a — `member.reveal_mobile_for_identity_check` (DA, PA, verifier, helpline; SA derived), one audited POST per press, refused once the purpose ends (DL4) or a death is reported; also reads the queue; field worker + Block Admin DEFERRED, the Panel TOLD (R3). DL7: A stands; E's review + `uploaded_documents` mint are row `3-16`'s (R1). N5 / N6 / Policy meaning / DL8b / DL11 / DL12 (R4 words) / DL13 (4th route) / DL16 / AC8 (98 keys) / AC8a (new) / AC9 / AC10 / AC12 / AC14 / Task 3.1 / Task 4 / Traps 6–7 / "does not do" amended in place, each marked (v1.9). Catalog 65 → 66 once, 96 → 98. Dev-story may start Task 1. ⛔ Code. |

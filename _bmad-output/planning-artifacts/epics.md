@@ -2067,6 +2067,13 @@ on the list; ⛔ undo, ⛔ member-facing words (PQ2), ⛔ change to 6.39's gate 
 > 📝 **2026-11-21 — RESHAPED (sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`):** when DigiLocker is
 > unavailable the person uploads a PAN, a masked Aadhaar and a selfie (Story 3.16) and staff check the uploads; a follow-up Panel note
 > (Q1 option E, Q4 retention) was written before the first note is ruled. This block is re-validated after both rulings.
+>
+> ✅ **2026-11-25 — BOTH RULED ([`-502`](../../.decision-log.md#decision-2026-11-25-502), Trustee-ratified) and the story RE-VALIDATED (v1.9,
+> author-commit [`-503`](../../.decision-log.md#decision-2026-11-25-503)):** proof is A (photo ID in person or on video) or E (uploads,
+> reviewed in Story 3.16, writing this story's record); a member staff could not confirm is told, with the reason (row `3-13a`); the full
+> mobile is shown, one audited press at a time and only while a check is awaited, to the District Admin, Pariwar Admin, verifiers and
+> helpline operators (field workers and Block Admins deferred — ⛔ login / ⛔ member block). The brief ACs above stand except where these
+> rulings change them.
 
 ---
 

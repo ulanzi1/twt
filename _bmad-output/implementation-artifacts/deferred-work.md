@@ -25,6 +25,17 @@ and blocks GO-LIVE through roster Row 57 (`identity-validation-live`), ⛔ the b
   - **2026-11-25 — RULED B, widened** (`-502`): option B's admins AND field workers, verifiers, helpline operators and Block Admins, for
     arranging the check only ⇒ the audited number read for all of them (Story 3.13's re-validate scopes it; `field_worker` waits on
     Story 13.3). Open until built.
+  - **2026-11-25 — built for four roles; two DEFERRED** ([Decision 2026-11-25-503](../../.decision-log.md#decision-2026-11-25-503); the items
+    below). Row 57 (b2) is met by the four.
+- **PQ3a — the number reveal for FIELD WORKERS (`-502` Q3, the Panel's role).** [`packages/domain/src/rbac/roles.ts` `field_worker` —
+  ceiling `self`, `permissions: []`] ⛔ console login. Trigger: Story 13.3 gives field workers a login ⇒ grant
+  `member.reveal_mobile_for_identity_check` on a field-worker surface, scoped to THAT worker's members (which members are "the member's
+  field worker's" — the 3.15 capture, or the worker's current district — is that story's to decide; field workers rotate,
+  [[project_field_workers_rotate_districts_and_pariwars]]). Tell the Panel when built (the told note promises it).
+- **PQ3b — the number reveal for BLOCK ADMINS (`-502` Q3, the Panel's role).** [`packages/domain/src/member-geo/resolve.ts` — *"`block`,
+  unconditionally → `no-member-attribute` (D5 — permanent)"*; `rbac/scope.ts` §RANK-ORDER] a member has ⛔ block, and a block grant can
+  never satisfy a district or Pariwar check ⇒ ⛔ seed the grant (it would be inert). Trigger: a member gains a server-derived block (a
+  posting carrying a school's block) ⇒ a block-dimension gate as Story 6.17 did for inspections. Tell the Panel when built.
 - **Follow-up — Q1 option E (an uploaded PAN + masked Aadhaar + selfie) and Q4 (how long copies are kept).** WRITTEN, ⛔ SENT —
   `trustee-panel-routing-note-2026-11-21-3-13-follow-up-uploaded-documents.md` (`a18654f2`; BigDev, 2026-11-25: *"Not sent yet"*).
   ⛔ built in 3.13 (row `3-16`'s upload store). Trigger: sent and ruled ⇒ `bmad-create-story validate 3.13` (the reshape: DL7

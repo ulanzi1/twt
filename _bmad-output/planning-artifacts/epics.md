@@ -2077,6 +2077,27 @@ on the list; ⛔ undo, ⛔ member-facing words (PQ2), ⛔ change to 6.39's gate 
 
 ---
 
+### Story 3.13a: A Member Is Told When Staff Could Not Confirm Their Identity — and Why `[SURFACE]`
+
+> ⚠ **Added 2026-11-26 (`bmad-create-story 3.13a`)** — the row `3-13a-member-told-when-identity-not-confirmed` was added 2026-11-25
+> (BigDev: *"New row 3-13a (Recommended)"*; ledger `2026-11-25r`) to build [`-502`](../../.decision-log.md#decision-2026-11-25-502)
+> item 4 (Q2 C, Trustee-ratified): *"As B, and the member is also told the reason staff recorded"* — B being *"The app tells the member,
+> in their language, that their identity could not be checked yet and how to arrange it."* The member's words (Hindi and English) are
+> the Panel's to approve — one note at the story's Task 0.3; they block go-live (roster Row 57 (b)), ⛔ the build. AI-10-1: ⛔ benefit
+> gate is introduced or changed.
+
+As a member who typed in my own identity details and whose identity staff could not confirm, I want the app to tell me — in my
+language — that it could not be confirmed yet, why, and how to arrange it, so that I can put it right before it matters.
+
+**Acceptance Criteria (in brief):** a card on the app's home screen (⛔ SMS, push or WhatsApp — the ruling says "the app"), shown only
+while the member's LIVE Story 3.13 record is `not_confirmed` AND the member is still awaiting a check under 3.13's own eligibility rule
+AND no claim is filed for their death; it shows the reason from 3.13's closed list (⛔ the staff note, ⛔ who checked, ⛔ the ID kind,
+⛔ the date), one line on how to arrange the check, and an "Ask for help" button into the member helpdesk's KYC category; it goes away
+once staff confirm; ⛔ kept in the phone's storage. A new member read `GET /api/v1/member/identity-check-notice` (strict, the reason
+code only). Staff see, on the "Could not confirm" form, that the member is told the reason. ⛔ change to 3.13's writer, routes or record.
+
+---
+
 ### Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). ⛔ Panel question. Takes Story 13.8's C2 / C4 for 6-digit field-worker codes only.

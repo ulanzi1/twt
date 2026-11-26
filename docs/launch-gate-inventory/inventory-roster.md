@@ -958,6 +958,9 @@ observes these.
     ⚠ Limits, ⛔ overclaimed: the claims, receipts and the second staff member's check were seeded; the passkey and the session were
     faked; ⛔ screen reader listened; the family's two lines (`-473` Q3 B, Q4 B) still have ⛔ device check (the mobile app has ⛔
     render harness — the pure view and a real-`t()` leg stand in). A later change to the console re-opens this leg.
+  - **2026-11-27 — the PQ1 (b) half's build DECIDED**, [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510)
+    (author-commit, Story 6.39a DL1–DL14); its go-live is tracked on **Row 58** (`fee-bank-date-live`). ⛔ Built yet — (b)'s "reflected in
+    code" half for PQ1 (b) stays OPEN until row `6-39a-…` lands (Row 58 (a)). ⛔ Leg moves.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 
@@ -1267,3 +1270,47 @@ observes these.
   - **2026-11-26 — leg (b): the ANDROID DEVICE PASS RUN (Story 3.13a AC9) — on an EMULATOR, ⛔ a physical device; limits stated below.** The Pixel_9 AVD (Android 15, arm64) with the installed dev client (`org.teacherswelfaretrust.p0prototype` 0.1.0, updated 2026-11-25) loading THIS branch's bundle from Metro — the served bundle was checked for the card, the final retry rule, the `accessible` comment and the preselect BEFORE the pass; a throwaway Postgres 16 and the real API, the real OTP login, every staff act through the real staff route. Observed: (1) **the card, Hindi and English** (reason: details do not match) renders and wraps over several lines with nothing clipped; its accessibility node is ONE `android.widget.Button`, clickable and focusable, whose label EQUALS the approved strings (English: exactly `title. reason how action`; Hindi: each approved line present, in order), with four child text views that are NOT focusable; a third reason (could not reach the member) in Hindi carries the approved strings for that reason. (2) **TalkBack** (Google TTS disabled so speech logs as text; focus moved by keyboard Tab): the card is ONE stop (header → card → next control); the label occurs ONCE in each spoken item, and TalkBack logs two items per focus move (the label; the label + ". Button") for every control reached this way — three other buttons checked — the second flushing the first. (3) **Pressing the card** opened the help form with "KYC or verification help" selected and the other categories not, announced as "Ask for help. Heading". (4) **Staff confirm** (real route, 201, the live act now `confirmed`): with the member on another tab, back on the home tab the card was gone within 2 s; with the app backgrounded (Home key) and foregrounded, gone within 2 s; both with the SAME app process, ⛔ a restart. ⚠ NOT covered: a physical device; an AUDIBLE listen (speech was captured as log text — [[project_installed_debug_apk_cannot_reach_metro]]); TalkBack touch-exploration and swipe gestures (keyboard focus only); TalkBack's Hindi voice; a font scale other than 1.0; a release build (this is a development build). Observed beside it, ⛔ a leg: a dev-only Metro require-cycle warning through the new hook — `deferred-work.md` `3.13a-DP-W1`. The emulator's arrival state was restored (TalkBack off, Google TTS enabled, font scale 1.0). Both conditions the `-508` record names for (b) — built, and its device pass recorded — now hold on the story branch; the review is done (three rounds); ⛔ landed. Whether an emulator pass with these limits closes (b) is BigDev's call — this line does ⛔ mark (b) MET and ⛔ edits the leg's text.
   - **2026-11-26 — leg (b): the device pass, ADDENDUM — three things it showed or could not show, ⛔ edits to the line above.** (i) ⭐ **`3.13a-G2` was ⛔ EXERCISED.** The home screen's lock-in widget did ⛔ render for the two seeded members, so how the card sits above the widget's cover promise was ⛔ seen on the device. Cause, READ in the code (`getLockInClock`, `packages/domain/src/member/read.ts`): the widget reads a `member.lock_in_entered` event, and the pass's fixture reached `lock-in` through `member.vyawastha_shulk_paid` alone and wrote none, so the widget fails soft to nothing. A pass that wants G2 on screen must seed that event. (ii) The approved correction sentence of the *details do not match* line — *"If a detail you gave was wrong, ask for help here too."* — is on the device in both languages; no route corrects a wrong typed-in detail yet (`deferred-work.md` `3.13a-G1`, the ruled cost of `-508` Q2 (ii)) — ⛔ a new finding. (iii) A "Cannot connect to Expo CLI" line appeared at the instant the dev client resumed from Home; Metro was running and every later screen worked — the dev client, ⛔ this code.
   - **2026-11-26 — leg (b): Story 3.13a LANDED on `main` by fast-forward** (`scripts/land.sh 355`; PR #355, `f5c559d0..e9ad7617`, 31 commits; the branch had been rebased onto `f5c559d0` first, so its SHAs differ from the earlier lines on this row — the SHA map is in the story). Evidence (ADR-0047 cl.2): the PR run `ci.yml` 45875015905 = 41/41 success on exactly `e9ad7617` (its `integration-tests` job about 29 min); the push to `main`: `ci.yml` run 45879219799 = 41/41 success on `e9ad7617` (about 19 min); `code-escrow-mirror` (45879219788) red as on every push — not part of the gate. Row `3-13a` review → done. (b) is ⛔ marked MET here: both conditions the `-508` record names — built, and its device pass recorded — now hold on `main`, but the device pass was on an EMULATOR with the limits stated above, and whether it closes (b) is BigDev's call. Merged is NOT live: nothing is in production; Row 57 `identity-validation-live` stays open.
+
+## Row 58 — Story 6.39a: the bank's date can be used at go-live (decision-authored, `-510`)
+
+> **Appended 2026-11-27 by Story 6.39a (Task 0.5)** under [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510)
+> (the next free row: the roster's highest is 57 on `main` and on every branch and worktree, grepped 2026-11-27 — the number belongs to
+> the first COMMIT). Like Rows 17–57 the row has no architecture source line; it cites the decision that created it. It blocks no build
+> and no merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 58 — `fee-bank-date-live`
+
+- **gate_name:** ⛔ Staff record a bank date for a joining fee in production — and ⛔ claim is helped by one — until the Panel has
+  answered the four edges of `-473` Q2 B, two different people can do the two acts, the staff screens have been seen in a real browser,
+  and (while the step-up stands) an admin can complete a step-up in production.
+- **architecture_source_line:** N/A — **decision-authored**: [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510)
+  (the author-commit — DL1–DL14), building [Decision 2026-11-21-473](../../.decision-log.md#decision-2026-11-21-473) Q2 B under
+  [Decision 2026-11-21-474](../../.decision-log.md#decision-2026-11-21-474) item 1.
+- **owner:** BigDev (gate); the Trustee Panel — (b).
+- **support:** row `6-39a-bank-date-for-a-fee-recorded-after-the-death` — (a); the Trustee Panel — (b); BigDev and the Trust's staffing —
+  (c); the session's real-browser pass, or BigDev — (d); deferral R4's owner — (e).
+- **closure_criteria:** ALL FIVE, each recorded as a Decision or a dated line here: **(a)** ⏳ OPEN — row `6-39a-…` is `done` on `main`;
+  **(b)** ⏳ OPEN — the note's Q1–Q4 (`trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`) RULED, recorded as a Decision,
+  and the code reflects each answer (built B on Q1, A on Q2–Q4); **(c)** ⏳ OPEN — at go-live a NAMED person holds
+  `claim.record_fee_bank_date` (a finance officer, or the Super Admin by a dated decision) AND has the Trust's bank statements, and a
+  DIFFERENT person holds `claim.check_membership` in each district that has claims — with one person only, a bank date they record leaves
+  the claim waiting (Story 6.39a TR14); **(d)** ⏳ OPEN — the real-browser pass of the finance officer's page and the console's new lines,
+  run — or recorded un-attested, ⛔ backfilled; **(e)** ⏳ OPEN — while `-510` DL9's step-up stands, an admin can complete a step-up in
+  production (deferral R4 discharged — the dependency Row 47's notes name) — or a dated decision withdraws the step-up.
+- **target_date:** before the first bank date is recorded in production (relative-to-fact).
+- **current_status:** `open` <2026-11-27 — every leg open; the decision entry `-510` committed (`22770eb0`, on the story branch); the
+  Panel note WRITTEN, ⛔ sent; ⛔ code yet>
+- **closure_evidence_link:** (a) — `sprint-status.yaml` row `6-39a-…`: `in-progress` on its story branch, ⛔ on `main`. (b) —
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`: WRITTEN, ⛔ sent. (c)–(e) — none yet.
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** (a) row `6-39a-…` landing on `main`; (b) BigDev sends the note → the Panel rules → a Decision, with a
+  dated line here, then a follow-up on row `6-39a-…` (or a new row) for any answer that differs from the build; (c) BigDev, at go-live;
+  (d) the session's browser pass after the build; (e) deferral R4 (*"ADMIN step-up OTP-over-SMS"*), or a dated decision.
+- **notes:** "6-39a `done`" ≠ "staff may record bank dates in production". Merge ≠ go-live. **(1)** The note numbers its questions
+  Q1–Q4; the story's PQ1–PQ4 are its Q1–Q4. ⛔ An open Panel question can stay open for ever behind a built default — hence (b), as Row 46
+  note 1. **(2)** A correction stops once a claim reaches the trustee approval (`state_trustee_approved`, outside the review window): a
+  wrong bank date found later cannot be corrected by this act. **(3)** Row 46 (b)'s PQ1 (b) half is reflected in code when this row's (a)
+  is MET; Row 46 gets a dated line then. **(4)** Row `3-17` (the fee-optional switch) touches the same table and guard; if the Panel makes
+  the fee optional, most of this row matters only while the fee is required.
+- **dated lines (appended later — the criteria above are never edited, [[feedback_supersede_never_reinterpret]]):**
+  - (none yet)

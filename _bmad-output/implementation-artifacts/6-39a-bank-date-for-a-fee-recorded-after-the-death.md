@@ -66,7 +66,7 @@ questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel
 
 # Story 6.39a: Staff May Use the Bank's Date for a Joining Fee Recorded After the Death — When the Trust's Own Bank Statement Shows It Arrived Before
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.39 compares the date of death on the accepted certificate with the date the joining
 > fee was **recorded** — the moment the member (or, after the death, the family) typed the payment's reference into the app — and,
@@ -717,9 +717,14 @@ or one user holding both role grants), a bank date that person records leaves th
         item 3 amended for the recorded-date case, the declarations (finance officer a MATCH; the reference a NARROWING — Q2; the earlier
         date a MATCH; after an appeal the widest literal reach — Q1), Q1–Q4 named open with Q4 asked beyond `-474` item 1's three, the key
         and Row 58 minted; ⛔ ratified text superseded. Story citations of `-510` are by id.
-  - [ ] 0.5 Records: the roster row (DL13); `deferred-work.md` — PQ1–PQ4 open (trigger: the ruling) and the corrected-UTR item's dated
+  - [x] 0.5 Records: the roster row (DL13); `deferred-work.md` — PQ1–PQ4 open (trigger: the ruling) and the corrected-UTR item's dated
         note (DL13); the row-`6-39a` dated comment in `sprint-status.yaml`; ledger line + row `ready-for-dev → in-progress`
         ([[project_sprint_status_safe_prepend]] — verify `yaml.safe_load` and the row count).
+        ⭐ DONE 2026-11-27 (ledger `2026-11-27e`): roster **Row 58** `fee-bank-date-live` (five legs (a)–(e), every one OPEN; the next
+        free row on every ref) and a dated line on Row 46 (the PQ1 (b) half's build decided; ⛔ leg moves); `deferred-work.md` — a new
+        section *"Story 6.39a Task 0.5 — four edges open with the Panel"* (PQ1–PQ4, each with its trigger), a dated *"Not addressed by
+        6.39a"* note under the corrected-UTR item (its text kept), and a dated line under 6.39's PQ1 (b); the row comment; the row
+        `ready-for-dev → in-progress`. Governance is DONE — Task 1 is next.
 - [ ] **Task 1 — The record (AC1, AC11)**
   - [ ] 1.1 The migration (HAND-WRITTEN like `0212`; the guard REPLACE in the same file), `schema/claim_fee_bank_dates.ts` + barrel, the two
         columns in `schema/claim_membership_checks.ts` (+ `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` — LOCKSTEP with the CHECK and the contract), the
@@ -924,6 +929,8 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
   *"Before sending"* paragraph removed, told line 7 (TL4) added, E4 re-run at `6536b8bb`; questions unchanged; WRITTEN, ⛔ sent.
 - 2026-11-27 — Task 0.4 DONE (ledger `2026-11-27d`): decision `2026-11-27-510` (author-commit) committed ALONE as `22770eb0`; the
   remaining staff words (form prompts, three refusal lines, the 400 / 401 lines) approved and added to DL11. Next: Task 0.5 (records). ⛔ Code.
+- 2026-11-27 — Task 0.5 DONE (ledger `2026-11-27e`): roster Row 58 + Row 46's dated line; `deferred-work.md` PQ1–PQ4 open and the
+  corrected-UTR item's dated note; row and story `ready-for-dev → in-progress`. Task 0 complete; ⛔ code yet.
 
 ### File List
 
@@ -938,3 +945,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | 2026-11-27 | v1.4 | Task 0.2 answered by BigDev — every DL as proposed (DL8 the finance officer; DL9 the step-up kept; DL6 the same-person refusal and the earlier of the two dates; DL5 check first, ⛔ record during an appeal; DL11 the amended note and every listed line approved word for word; DL3 trim and ignore letter case; the rest accepted as written). The section and each decision marked ANSWERED, each alternative kept as *"Not chosen at 0.2"*; the answers recorded under Debug Log References; Task 0.2 ticked with the words still owed. |
 | 2026-11-27 | v1.5 | Task 0.3 done: the Panel note re-read against the Task 0.2 answers — status line, §0, Q1 A's cost, told lines 1 and 4 corrected (the first approver; record the check, then ask), told line 7 added (= new TL4, DL6's earlier date), the "Before sending" paragraph removed, E2 / E3 re-stated and E4 re-run at `6536b8bb` (six commands added); the questions and options unchanged; WRITTEN, ⛔ sent. Task 0.3 ticked; the agenda's `06a80355` pointer flagged as stale. |
 | 2026-11-27 | v1.6 | Task 0.4 done: decision `2026-11-27-510` (author-commit, BigDev) committed ALONE as `22770eb0`; DL11 gains the words approved with it (the form's five prompts; the not-found, no-joining-payment and no-display-name refusals; the 400 and 401 lines); Task 0.2's owed-words note marked approved; Task 0.4 ticked. |
+| 2026-11-27 | v1.7 | Task 0.5 done: roster Row 58 `fee-bank-date-live` (legs (a)–(e), all open) and a dated line on Row 46; `deferred-work.md` — PQ1–PQ4 open with their triggers, the corrected-UTR item's dated *"Not addressed by 6.39a"* note, a dated line under 6.39's PQ1 (b); Status `ready-for-dev → in-progress`; Task 0 complete. |

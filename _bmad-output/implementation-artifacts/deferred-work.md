@@ -4,6 +4,35 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.39a Task 0.5 — four edges open with the Panel (2026-11-27)
+
+All four are in ONE routing note, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`:
+WRITTEN 2026-11-21, brought into line with the build decisions 2026-11-27, ⛔ sent (BigDev sends — from the story branch's tip, ⛔ the
+pre-rebase `06a80355` the sitting agenda names). Non-blocking for the build and the merge; each holds go-live (roster Row 58 (b)).
+Recorded under author-commit [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510). Owner: the Panel. Read with the
+fee-optional note (`-482` item 5): if the fee becomes optional, most of these matter only while the fee is required.
+
+- **PQ1 — a family already refused** (the note's Q1). Not addressed — routed to the Panel. Built **B**: a bank date can be recorded
+  once an appeal sends a refused claim back (`reversed` is in the review window; the appeal stages and `denied` are ⛔). The cost stated
+  to the Panel: the appeal is decided before any bank date can be recorded, and if the bank does not bear it out the claim can be
+  refused again with the family's one appeal spent.
+  - **Trigger:** the Panel's ruling. A means a new rule refusing the record on a `reversed` claim that was refused for its fee; C (reopen
+    without an appeal) is a new build; B needs nothing. The one test that names PQ1 (Story 6.39a AC6) follows the answer.
+- **PQ2 — a payment reference that does not match** (the note's Q2). Not addressed — routed to the Panel. Built **A**: only the member's
+  recorded reference counts (trimmed, letter case ignored — the author's); a member whose recorded reference is wrong cannot be helped.
+  - **Trigger:** the Panel's ruling. B (match by amount, day and name, with a second person) is a new build and shows the finance
+    officer the member's name. The test that names PQ2 (AC4) follows the answer.
+- **PQ3 — a bank date ON the day of death** (the note's Q3). Not addressed — routed to the Panel. Built **A**: it counts as after
+  (`same_day`, one rule with `-473` Q1 B).
+  - **Trigger:** the Panel's ruling. B means a second line for "before the death", for bank dates only. The test that names PQ3 (AC5)
+    follows the answer.
+- **PQ4 — whether one person's reading is enough** (the note's Q4; asked beyond `-474` item 1's three — `-473` records it as *"⛔
+  asked"*). Not addressed — routed to the Panel. Built **A**: one finance officer's record is enough; ⛔ second confirmation.
+  - **Trigger:** the Panel's ruling. B (a second person with the statement confirms) or C (keep a copy of the statement line) is a new
+    build; C also needs counsel (other payers' data). The test that names PQ4 (AC3) follows the answer.
+
+---
+
 ## Deferred from: dev-story of story 3-13-trustee-validation-of-manually-entered-identity (2026-11-25)
 
 - **⛔ undo of a wrong identity confirmation (Story 3.13 DL10).** [`packages/domain/src/member/identity-validation.ts` — DL4 refuses an
@@ -286,6 +315,10 @@ Seen working (attested by screenshot, UI hierarchy, the TalkBack log and the `me
   anything: the membership check compares the receipt's `paid_at` (DL2), not the UTR. Also latent on the same event: `amount_inr`
   comes from config, ⛔ the receipt (no reader of it today). Owner: BigDev. **Trigger:** row `6-39a-bank-date-for-a-fee-recorded-after-the-death`
   (matching a payment to the Trust's bank statement) is built — it is the first consumer that may need the true UTR.
+  - **2026-11-27 — Not addressed by 6.39a** ([Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510) DL3 / DL13): the
+    bank date is matched against the receipt's STORED UTR (Story 6.39a N3), so a member whose stored UTR is the wrong one cannot be
+    matched — the Panel's PQ2 (the note's Q2). The item above is kept as written; its trigger stands for whichever row first needs the
+    true UTR.
 
 ---
 
@@ -346,6 +379,9 @@ roster Row 46 (b), (c) stay open for the "reflected in code" half. The items bel
   - **2026-11-21, later — the build ROUTED to row `6-39a-bank-date-for-a-fee-recorded-after-the-death`** (`backlog`; author-commit
     [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 1). Story 6.39 merges WITHOUT it — the comparison stays binding with
     ⛔ staff remedy until then.
+  - **2026-11-27 — the build DECIDED** by author-commit [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510)
+    (Story 6.39a DL1–DL14); its four edges are open with the Panel (the section *"Story 6.39a Task 0.5 — four edges open with the
+    Panel"*); ⛔ built yet.
 - **(Task 8, 2026-11-21) Q3 B's line stops at the appeal.** Built where `appeal.eligible` sat — with the "file appeal" affordance. Once
   the family files, the card shows the stage line, and after a Stage-3 uphold the exhausted lines — ⛔ the reason (as for every refusal
   before). `-473` does ⛔ say whether the reason follows the family through the appeal. ⛔ Addressed — owner BigDev (a disclosure past

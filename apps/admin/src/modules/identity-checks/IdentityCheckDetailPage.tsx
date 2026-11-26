@@ -491,7 +491,15 @@ function RecordForms({
     });
   };
 
-  const select = (id: string, label: string, value: string, set: (v: string) => void, options: string[], labels: Record<string, string>) => (
+  const select = (
+    id: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    options: string[],
+    labels: Record<string, string>,
+    describedBy?: string,
+  ) => (
     <label className="flex flex-col text-sm" htmlFor={id}>
       {label}
       <select
@@ -500,6 +508,7 @@ function RecordForms({
         className="mt-1 rounded border p-1"
         required
         aria-invalid={emptyIds.has(id) ? true : undefined}
+        aria-describedby={describedBy}
         value={value}
         onChange={(e) => {
           set(e.target.value);
@@ -532,7 +541,11 @@ function RecordForms({
       </form>
 
       <form onSubmit={couldNotConfirm} className="flex flex-col gap-2 rounded border p-3" data-testid="identity-check-not-confirmed-form">
-        {select('not-confirmed-reason', t.form.reason, reason, changeReason, REASONS, t.reasons)}
+        {select('not-confirmed-reason', t.form.reason, reason, changeReason, REASONS, t.reasons, 'not-confirmed-reason-hint')}
+        {/* Story 3.13a (DL9, `-509`) — the app shows the member the reason picked here (true since the card ships, same PR). */}
+        <p id="not-confirmed-reason-hint" data-testid="not-confirmed-reason-hint" className="text-xs text-gray-600">
+          {t.form.reasonToldToMember}
+        </p>
         {asksEvidence ? select('not-confirmed-evidence', t.form.evidenceKind, evidence, setEvidence, EVIDENCE, t.form.evidenceKinds) : null}
         {asksDocument ? select('not-confirmed-document', t.form.documentKind, documentKind, setDocumentKind, DOCUMENTS, t.form.documentKinds) : null}
         <label className="flex flex-col text-sm" htmlFor="not-confirmed-note">

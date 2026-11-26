@@ -18,7 +18,8 @@
 // again", the load error's button); `form.displayNameMissing` (a save refused because the account has no display name).
 // ⭐ Round 4 (2026-11-26, BigDev: "Show a line (Recommended)"; R4-D1, Decision `2026-11-26-506` item 1) APPROVED word for word:
 // `reveal.hiddenAway` (a number that arrived while the page was hidden, so it was ⛔ shown).
-// ⛔ A staff hint that the member is TOLD the reason — row `3-13a` adds it when its message ships (it would be false before).
+// ⭐ 2026-11-26 — Story 3.13a SHIPPED the staff hint that the member is shown the reason, with its message (same PR — it would be
+// false before): `form.reasonToldToMember`, DL9 option (b), BigDev: "Build questions as recommended" (Decision `2026-11-26-509`).
 
 export const identityCheckEn = {
   title: 'Identity checks',
@@ -99,6 +100,8 @@ export const identityCheckEn = {
     evidenceKind: 'How was the ID shown?',
     documentKind: 'Which ID?',
     reason: 'Why could you not confirm?',
+    // Story 3.13a (DL9 (b), `-509`) — under the reason choice; true only since the member's card ships.
+    reasonToldToMember: 'The app shows the member this reason.',
     note: 'Note',
     noteOptional: 'Note (optional)',
     noteRequired: 'Write a note saying what happened.',

@@ -15013,3 +15013,43 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
 - **3.13-R3-W9 — 0218's `note_ciphertext` UPDATE grant allows any rewrite, not only the erasure sentinel; a live act can be superseded without a successor.** Mirrors 0212's live-row mechanism. Pre-existing posture. Owner: BigDev. Trigger: the next append-only guard change.
 - **3.13-R3-W10 — the new identity-check routes send staff to sign in on ANY failed session refetch, not only a 401.** The house route pattern (13.1g R4-W4). Pre-existing. Owner: BigDev. Trigger: when R4-W4 is fixed.
 - **3.13-R4-W1 — an identity-check act's events are stamped at transaction START.** The shared event writer (`member/project.ts`; `events_log.occurred_at` DEFAULT `now()`) stamps `member.identity_validation_recorded` / `member.kyc_completed` at BEGIN, while R3-P13 stamps the act's own row after the intake lock: under a lock wait the export's `event_stream.json` times can run backwards against `profile.identityChecks[].decidedAt`. Round 4 of Story 3.13's code review (2026-11-26). Pre-existing (every event writer). Owner: BigDev. Trigger: the event writer's next change, or any reader that orders events by `occurred_at`.
+
+---
+
+## Deferred from: governance of story 3-13a-member-told-when-identity-not-confirmed — Task 0.5 (2026-11-26)
+
+Observed and escalated, ⛔ planned here ([[feedback_gap_analysis_observational]]).
+
+- **3.13a-G1 — ⛔ route corrects a wrong typed-in identity detail, for anyone. OPEN, unhomed (⛔ row).** A member who typed their name
+  or date of birth wrongly when they joined can never be confirmed by the staff identity check: the ID they show carries the TRUE
+  detail, which cannot match the wrong one on record. Story 3.13a's F10 (d); the Panel note's "one fact that decides it".
+  - **What the code does (re-verified 2026-11-26 on `story/3-13a-…`, tip `bc0e06f7`):** the typed-in identity lives in
+    `member_kyc_profiles`, written only by `upsertMemberKycProfile` (`packages/domain/src/kyc/profile-write.ts`), reachable only through
+    the two KYC routes, which refuse a member who is past `pending-kyc` (`kyc.not_pending`, `apps/api/src/modules/kyc/kyc.handlers.ts`).
+    The staff confirm `markKycTrusteeVerified` sets `trusteeVerified` and `updatedAt` only. Every other `.update(members)` sets the
+    locale, the lock-in days or the custom fields. Story 10.21's correction process (`packages/domain/src/member-data-rights/corrections.ts`)
+    RECORDS a request on a helpdesk ticket and ⛔ writes a profile field (its header: *"⛔ Nothing in this module writes a member profile
+    field, and nothing added to it should."*) — for a wrong name or date of birth its only honest outcomes are `recorded` or `declined`;
+    `applied` would record a change that never happened.
+  - **Who it hits:** `details_do_not_match` caused by a typing mistake; `photo_does_not_match` caused by the Trust's own record rather
+    than the member's ID. ⛔ the other two reasons, and ⛔ a member who showed the wrong ID (a matching ID finishes it). What happens to
+    such a member today: the 3.13a card (Q2 (ii)) tells them the detail *"cannot be changed at present"*; a help request reaches a
+    helpline operator, who can hand it to a District Admin or the Pariwar Admin, who can only record "could not confirm" again; the
+    member stays unconfirmed with no end. How many members this is: unknown (⛔ member uses the system).
+  - **What binds a fix (quoted, ⛔ read further here):**
+    - `2026-08-14-109` row 2 (Trustee-ratified): *"a **recorded, staff-executed correction process carried on a helpdesk ticket** is
+      sufficient"*; and *"⛔ **No general admin member-profile editor is built** — that carries its own RBAC surface, its own PII
+      write-audit posture and its own correction-vs-falsification question, none of which this ruling authorises."*
+    - `2026-10-31-424` Q2 (b), the Panel's addition: *"even though staff can change, old entry cannot be gone in this particular case,
+      but clearly visible along with new entry made by staff"* — read there as binding *"every FUTURE staff-change path, the name
+      included"* once a death is reported; the KYC name is stored latest-wins today.
+    - What the Panel was TOLD (2026-11-21 routing note, info line 6): correcting a member's details *"is a separate piece of work"*.
+    - The law (public text, `docs/legal/DPDP Act.pdf`): s.12(2) — *"A Data Fiduciary shall, upon receiving a request for correction,
+      completion or updating from a Data Principal,— (a) correct the inaccurate or misleading personal data"*; s.8(3) — data *"likely to
+      be— (a) used to make a decision that affects the Data Principal"* must be kept complete, accurate and consistent. Whether and from
+      when these bind the Trust, and whether "cannot be changed at present" fits them, is counsel's ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
+    - The rulebook (Niyamavali Part 10, ⛔ ratified — [[feedback_niyamavali_rulebook_not_spec]]) says the Trust honours
+      *"access, correction, portability, and erasure"* rights.
+  - **⛔ Panel question yet** on who may correct a typed-in detail, on what evidence, and how a correction is told apart from
+    falsification (`-109` row 2 names that question as un-analysed). Owner: BigDev. Trigger: the Panel's ruling on Story 3.13a's note
+    (its Q1 / Q2 — the story's PQ1) or roster Row 57's go-live, whichever is first.

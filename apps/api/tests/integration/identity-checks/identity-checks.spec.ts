@@ -16,6 +16,7 @@ import * as service from '../../../src/modules/auth/admin/admin-auth.service.js'
 import * as mobileIndex from '../../../src/modules/auth/shared/mobile-index.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { encryptIdentityCheckNote } from '../../../src/modules/identity-checks/crypto.js';
+import { createIdentityCheckHandlers } from '../../../src/modules/identity-checks/handlers.js';
 import * as kycCrypto from '../../../src/modules/kyc/kyc-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
@@ -428,6 +429,55 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect((await pa.inject({ method: 'GET', url: queueUrl(w) })).headers['cache-control']).toBe('no-store');
   });
 
+  it('⭐ R4-P11 — the queue\'s EMPTY answer (a scope with ⛔ district value) is `no-store` too: over HTTP the gate refuses that caller first (403 — the early return is a backstop), so the HANDLER is called directly with that scope', async () => {
+    const w = await world();
+    // The HTTP leg: a District Admin whose grant names ⛔ district is refused by the gate (a null target fails closed).
+    const { client: none } = await actor(w.pariwarId, 'district_admin', 'district', null);
+    expect((await none.inject({ method: 'GET', url: queueUrl(w) })).statusCode).toBe(403);
+    // The backstop leg: the handler itself, given the scope the pre-handler stashes for such a caller.
+    const scopeTx = await openScopeTx(deps, w.pariwarId);
+    try {
+      const headers: Record<string, string> = {};
+      const reply = { header: (k: string, v: string) => ((headers[k.toLowerCase()] = v), reply) };
+      const request = {
+        scopeTx,
+        requestContext: { actorId: randomUUID() },
+        query: {},
+        identityCheckScope: { dimension: 'district', value: null },
+      };
+      const body = await createIdentityCheckHandlers(deps).getQueue(request as never, reply as never);
+      expect(body).toEqual({ entries: [], can_check: false, has_more: false });
+      expect(headers['cache-control']).toBe('no-store');
+    } finally {
+      await closeScopeTx(scopeTx, false);
+    }
+  });
+
+  it('⭐ R4-P7 / `-505` item 2 — the detail READ line\'s flags are RECOVERED from its PERSISTED row: for a member with a death claim the stored hash matches exactly one candidate over every flag combination and the member\'s known validation ids — `identity_opened: false`, `death_reported: true`', async () => {
+    const w = await world();
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    await fileClaim(w);
+    const res = await da.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(res.statusCode, res.body).toBe(200);
+    // The read line is an AWAITED disclosure (`writeAuditEntry` on `servicePool`): it is already in `audit_log_entries` — ⛔ a re-emit.
+    const rows = await persisted('admin_identity_check.identity_check_read', w.memberId);
+    expect(rows).toHaveLength(1);
+    const stored = String(rows[0]!.request_payload_hash);
+    // `live_validation_id` is read off the table (a reader who holds the row holds the member's acts too); `null` when none.
+    const liveIds: (string | null)[] = [null, ...(await validations(w.memberId)).filter((r) => r.superseded_at === null).map((r) => String(r.validation_id))];
+    const bools = [true, false];
+    const candidates = liveIds.flatMap((live_validation_id) =>
+      bools.flatMap((identity_opened) =>
+        bools.flatMap((eligible) =>
+          bools.map((death_reported) => ({ member_id: w.memberId.toLowerCase(), identity_opened, live_validation_id, eligible, death_reported })),
+        ),
+      ),
+    );
+    const recovered = candidates.filter((c) => contextHash(c) === stored);
+    expect(recovered).toHaveLength(1);
+    expect(recovered[0]).toMatchObject({ identity_opened: false, death_reported: true });
+  });
+
   it('AC8a — a verifier / helpline operator reads the QUEUE (can_check false) but ⛔ the detail and ⛔ the record (403)', async () => {
     const w = await world();
     for (const [role, dim, value] of [
@@ -709,6 +759,13 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     const supersededIds = [j(p), j(q)].map((b) => b.superseded_validation_id).filter((v) => v !== null);
     expect(supersededIds).toEqual([older.validation_id]);
     expect([j(p).validation_id, j(q).validation_id]).toContain(liveRows[0]!.validation_id);
+    // ⭐ (code review R4-P12) R3-P13 across TWO connections: the act that waited on the intake key is stamped when it RAN, so the
+    // live act is strictly LATER than the act it superseded, and the supersession falls between them (⛔ `now()` = BEGIN, which
+    // would stamp the waiting act first).
+    const t = (v: unknown) => new Date(v as string | Date).getTime();
+    expect(t(liveRows[0]!.decided_at)).toBeGreaterThan(t(older.decided_at));
+    expect(t(older.superseded_at)).toBeGreaterThanOrEqual(t(older.decided_at));
+    expect(t(liveRows[0]!.decided_at)).toBeGreaterThanOrEqual(t(older.superseded_at));
     expect(await markers(w2.memberId)).toBe(2);
 
     const w3 = await world();

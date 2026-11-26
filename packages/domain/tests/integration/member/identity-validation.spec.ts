@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { intakeAdvisoryLockKey } from '../../../src/claim/icp-lock.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId, type MemberId, type PariwarId } from '../../../src/ids/index.js';
 import {
+  IDENTITY_CHECK_QUEUE_MAX_OFFSET,
   IdentityValidationRecordedPayloadSchema,
   IdentityValidationRefusedError,
   assertIdentityCheckAwaited,
@@ -561,6 +562,11 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     expect(inf.entries.map((r) => r.memberId)).toEqual([first, dead, last]);
     const deep = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, offset: 5_000_000 });
     expect(deep).toEqual({ entries: [], hasMore: false });
+    // ⭐ R4-P10 — past the ceiling the domain answers an EMPTY page WITHOUT reading (⛔ the page at the ceiling answered as the
+    // one asked for): a db whose every query throws proves ⛔ SQL ran. The control: AT the ceiling the read still runs.
+    const refusing = { execute: () => Promise.reject(new Error('SQL ran past the ceiling')) } as unknown as typeof tx;
+    expect(await listIdentityCheckQueuePage(refusing, pariwarId, { ...opts, offset: IDENTITY_CHECK_QUEUE_MAX_OFFSET + 1 })).toEqual({ entries: [], hasMore: false });
+    await expect(listIdentityCheckQueuePage(refusing, pariwarId, { ...opts, offset: IDENTITY_CHECK_QUEUE_MAX_OFFSET })).rejects.toThrow(/SQL ran/);
   });
 
   it('⭐ R3-P13 — each act is stamped when it RUNS (after the lock), ⛔ when its transaction began: a superseding act is never earlier than the act it replaced', async () => {

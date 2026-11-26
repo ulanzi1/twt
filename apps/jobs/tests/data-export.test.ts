@@ -419,6 +419,10 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       const all = JSON.stringify(profile);
       expect(all).not.toContain('ZZ-STAFF-NAME');
       expect(all).not.toContain(note); // ⛔ the stored ciphertext, anywhere in the profile
+      // ⭐ (code review R4-P8) BESIDE the key set, over the WHOLE profile: a decrypted note or a staff-attribution key leaking
+      // into ANY other key of the profile is caught too (the row HAS a decryptable note, seeded above).
+      expect(all).not.toContain('ZZ came without an ID');
+      expect(all).not.toMatch(/decidedBy|decided_by/);
       // ⭐ `-505` item 1: the two events a staff check writes carry ⛔ staff user id; the controls keep theirs.
       const stream = JSON.parse(await zip.file('event_stream.json')!.async('string')) as {
         records: { eventVersion: number; eventType: string; actorId: string | null }[];

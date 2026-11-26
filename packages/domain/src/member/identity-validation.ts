@@ -361,7 +361,7 @@ export interface ListIdentityCheckQueueOptions {
 
 /** DL11's page bounds. */
 export const IDENTITY_CHECK_QUEUE_LIMIT = { default: 50, cap: 200 } as const;
-/** The deepest page the queue reads — the contract's own ceiling (`IdentityCheckQueueQuery.offset`), held here too. */
+/** The deepest page the queue reads — the contract's own ceiling (`IdentityCheckQueueQuery.offset`), held here too; a contracts test pins the two equal (R4-P10). */
 export const IDENTITY_CHECK_QUEUE_MAX_OFFSET = 1_000_000;
 
 interface QueueSqlRow extends Record<string, unknown> {
@@ -402,14 +402,14 @@ export async function listIdentityCheckQueuePage(
 ): Promise<IdentityCheckQueuePage> {
   // Clamped BEFORE interpolation (the forced-pagination invariant applies to a raw-SQL LIMIT too).
   // ⚠ A non-finite value (`NaN`, `Infinity`) from an in-process caller would pass `Math.min` / `Math.trunc` straight into SQL
-  // (code review R3-P15): it falls back to the default / the first page, and the offset has the contract's ceiling here too.
+  // (code review R3-P15): it falls back to the default / the first page.
   const limit = Math.trunc(clampLimit(Number.isFinite(opts.limit) ? opts.limit : undefined, IDENTITY_CHECK_QUEUE_LIMIT));
   const probe = limit + 1;
   const rawOffset = opts.offset;
-  const offset =
-    typeof rawOffset === 'number' && Number.isFinite(rawOffset)
-      ? Math.min(IDENTITY_CHECK_QUEUE_MAX_OFFSET, Math.max(0, Math.trunc(rawOffset)))
-      : 0;
+  const offset = typeof rawOffset === 'number' && Number.isFinite(rawOffset) ? Math.max(0, Math.trunc(rawOffset)) : 0;
+  // Past the ceiling there is no page to read (code review R4-P10): an EMPTY page, ⛔ the page AT the ceiling answered as if it
+  // were the one asked for. ⛔ SQL runs.
+  if (offset > IDENTITY_CHECK_QUEUE_MAX_OFFSET) return { entries: [], hasMore: false };
   const districtFilter = opts.district === null ? sql`` : sql`AND p.district = ${opts.district}`;
   const result = await db.execute<QueueSqlRow>(sql`
     SELECT m.member_id, m.state::text AS state, m.created_at, p.district,

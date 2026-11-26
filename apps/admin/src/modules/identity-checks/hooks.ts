@@ -80,6 +80,13 @@ export function useRecordIdentityCheck(pariwarId: string, memberId: string, { on
       refresh();
     },
     onError: (err) => {
+      // A 403 / 404: the viewer may no longer see this member (a grant revoked, the posting moved districts) — the page is
+      // re-read so its own 403 / 404 drops the identity and the forms (code review R4-P3; ⛔ a "Try again" that can never work
+      // left beside the typed-in identity).
+      if (isAccessLost(err)) {
+        refresh();
+        return;
+      }
       const refusal = standingRefusalOf(err);
       if (refusal === null) return;
       onRefused?.(refusal);
@@ -88,16 +95,31 @@ export function useRecordIdentityCheck(pariwarId: string, memberId: string, { on
   });
 }
 
+/** A 403 / 404: the server now refuses this viewer this member — whatever the page still shows was read before. */
+function isAccessLost(err: unknown): boolean {
+  return err instanceof api.ApiError && (err.status === 403 || err.status === 404);
+}
+
 /** The server's own refusal of a number press: a 409 `identity_validation.*` (the member no longer awaits a check, a claim is filed for the death, the number is gone). */
 export function isRevealRefusal(err: unknown): boolean {
   return err instanceof api.ApiError && err.status === 409 && err.code.startsWith('identity_validation.');
 }
 
 /**
+ * The refusal that means the member's STANDING changed under the screen: a 409 `identity_validation.not_eligible` (the member no
+ * longer awaits a check — a claim filed for the death is answered with the same code, `-504` item 4). ⛔ `mobile_unavailable`:
+ * the number is gone, but whether a check is awaited is unchanged, so it is ⛔ a reason to re-read the AUDITED detail (R4-P2).
+ */
+export function isRevealStandingRefusal(err: unknown): boolean {
+  return err instanceof api.ApiError && err.status === 409 && err.code === 'identity_validation.not_eligible';
+}
+
+/**
  * ONE showing per press — ⛔ retried, ⛔ cached (`gcTime: 0`: the number is gone from the mutation cache on unmount; it lives in the
- * component's state only). A REFUSAL means the member's standing changed under the screen, so the detail and the queue are
- * re-read (code review R3-P2) — ⛔ the typed-in identity, the forms and the press left up beside "can no longer be shown here",
- * ⛔ a row that no longer awaits a check left in the list. Any other failure refreshes nothing.
+ * component's state only). A STANDING refusal means the member's standing changed under the screen, so the detail and the queue
+ * are re-read (code review R3-P2, narrowed by R4-P2) — ⛔ the typed-in identity, the forms and the press left up beside "can no
+ * longer be shown here", ⛔ a row that no longer awaits a check left in the list. A 403 / 404 re-reads them too (R4-P3: the
+ * viewer may no longer see this member). Any other failure refreshes nothing.
  */
 export function useRevealIdentityCheckMobile(pariwarId: string, memberId: string) {
   const qc = useQueryClient();
@@ -106,7 +128,7 @@ export function useRevealIdentityCheckMobile(pariwarId: string, memberId: string
     retry: false,
     gcTime: 0,
     onError: (err) => {
-      if (!isRevealRefusal(err)) return;
+      if (!isRevealStandingRefusal(err) && !isAccessLost(err)) return;
       void qc.invalidateQueries({ queryKey: identityCheckDetailKey(pariwarId, memberId) });
       void qc.invalidateQueries({ queryKey: identityCheckQueueKey(pariwarId) });
     },

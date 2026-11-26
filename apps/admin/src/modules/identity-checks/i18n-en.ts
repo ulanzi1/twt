@@ -16,6 +16,8 @@
 // detail for a member NOT awaiting a check — the queue keeps its two); `history.confirmed` / `history.notConfirmed` (they REPLACE
 // the Task-0.2 pair: the how / which ID of a confirmation, and who recorded a not-confirmed act — DL8); `detail.retry` ("Try
 // again", the load error's button); `form.displayNameMissing` (a save refused because the account has no display name).
+// ⭐ Round 4 (2026-11-26, BigDev: "Show a line (Recommended)"; R4-D1, Decision `2026-11-26-506` item 1) APPROVED word for word:
+// `reveal.hiddenAway` (a number that arrived while the page was hidden, so it was ⛔ shown).
 // ⛔ A staff hint that the member is TOLD the reason — row `3-13a` adds it when its message ships (it would be false before).
 
 export const identityCheckEn = {
@@ -126,6 +128,7 @@ export const identityCheckEn = {
     recorded: 'This showing is recorded.',
     refused: "This member's number can no longer be shown here.",
     couldNotShow: 'The number could not be shown. Try again.',
+    hiddenAway: 'The number was hidden because you left this page. Press again to see it.',
   },
 } as const;
 

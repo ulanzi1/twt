@@ -7,13 +7,16 @@
 // longer awaits a check, or a claim is filed for the death) shows the refused line and ⛔ a number, and re-reads the page (R3-P2);
 // a 401 (the session ended) sends staff to sign in, back to this page (R3-P3 — "Try again" could never work); ANY other failure
 // (a rate limit, a 5xx, the network) shows its own line and the press stays available (P10). A number that ARRIVES while the tab
-// is already hidden is ⛔ put on screen at all (R3-P1): the hidden-tab rule hears only a CHANGE of visibility.
+// is already hidden is ⛔ put on screen at all (R3-P1): the hidden-tab rule hears only a CHANGE of visibility — and the press says
+// why, in the words `2026-11-26-506` item 1 approved (R4-D1; ⛔ a press that seems to have done nothing). Only a STANDING refusal
+// (409 `identity_validation.not_eligible`) re-reads the page and tells it (`onRefused`, R4-P1 / R4-P2): the re-read takes this
+// press away, so the PAGE says why and takes the focus; `mobile_unavailable` shows the refused line and re-reads nothing.
 
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { isRevealRefusal, useRevealIdentityCheckMobile } from './hooks.js';
+import { isRevealRefusal, isRevealStandingRefusal, useRevealIdentityCheckMobile } from './hooks.js';
 import { identityCheckEn } from './i18n-en.js';
 
 const t = identityCheckEn.reveal;
@@ -21,17 +24,20 @@ const t = identityCheckEn.reveal;
 /** How long a showing stays on screen. */
 const REVEAL_SHOWN_FOR_MS = 60_000;
 
-type Problem = 'refused' | 'could_not_show' | null;
+type Problem = 'refused' | 'could_not_show' | 'hidden_away' | null;
 
 export function RevealMobile({
   pariwarId,
   memberId,
   onSignedOut,
+  onRefused,
 }: {
   pariwarId: string;
   memberId: string;
   /** A 401 on the press: send staff to sign in, back to the page they were on. */
   onSignedOut: () => void;
+  /** A STANDING refusal (the member no longer awaits a check): the page re-reads and this press goes — the page takes the focus. */
+  onRefused?: () => void;
 }): ReactElement {
   const { mutate, reset, isPending } = useRevealIdentityCheckMobile(pariwarId, memberId);
   // An object, so a SECOND press (a new audited showing) restarts the minute even when the number is the same.
@@ -51,6 +57,7 @@ export function RevealMobile({
     // The backstop of the check in `onSuccess`: a tab hidden between that check and this effect.
     if (document.visibilityState === 'hidden') {
       clear();
+      setProblem('hidden_away');
       return undefined;
     }
     const timer = setTimeout(clear, REVEAL_SHOWN_FOR_MS);
@@ -72,6 +79,7 @@ export function RevealMobile({
         // The tab was hidden while the showing was awaited: ⛔ onto the screen (and out of the mutation) — the hidden-tab rule.
         if (document.visibilityState === 'hidden') {
           clear();
+          setProblem('hidden_away');
           return;
         }
         setShown({ mobile: r.mobile });
@@ -84,6 +92,7 @@ export function RevealMobile({
         }
         // ONLY the server's own refusal reads "can no longer be shown here"; a 429 / 5xx / network failure does not.
         setProblem(isRevealRefusal(err) ? 'refused' : 'could_not_show');
+        if (isRevealStandingRefusal(err)) onRefused?.();
       },
     });
   };
@@ -111,6 +120,11 @@ export function RevealMobile({
       {problem === 'refused' ? (
         <p role="alert" className="mt-1 text-xs" data-testid={`reveal-mobile-refused-${memberId}`}>
           {t.refused}
+        </p>
+      ) : null}
+      {problem === 'hidden_away' ? (
+        <p role="alert" className="mt-1 text-xs" data-testid={`reveal-mobile-hidden-away-${memberId}`}>
+          {t.hiddenAway}
         </p>
       ) : null}
       {problem === 'could_not_show' ? (

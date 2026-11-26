@@ -7,11 +7,13 @@
 // stranded on page 2 by an error), and a LATER page that comes back empty steps back by itself — "No member is waiting" is
 // said only for an empty FIRST page, because it would be false while earlier pages still hold members. The page buttons are
 // ⛔ `disabled` (a disabled button drops the focus it holds — Previous on returning to page 1, Next onto the last page): they say
-// `aria-disabled` and ignore the press, and both say so while a page loads (R3-P10), the list marked `aria-busy`.
+// `aria-disabled` and ignore the press, and both say so while a page loads (R3-P10), the list marked `aria-busy`. A row whose
+// number press is refused because the member no longer awaits a check leaves the list on the re-read, taking the focused press
+// with it: focus then moves to the list (or, when the list is now empty, to the page heading) — ⛔ to the page (R4-P1).
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, IDENTITY_CHECK_QUEUE_PAGE_SIZE } from '../../api/client.js';
 import { useSession } from '../../api/hooks.js';
@@ -40,11 +42,24 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
   const queue = useIdentityCheckQueue(pariwarId, offset);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  // The member whose press was REFUSED (a standing refusal), and when the list was last read: once a LATER read has taken their row
+  // away, focus goes to the list.
+  const [refusedRow, setRefusedRow] = useState<{ memberId: string; readAt: number } | null>(null);
   const status = queue.error instanceof ApiError ? queue.error.status : null;
   useEffect(() => {
     if (status === 401) void navigate({ to: '/login', search: { next: identityChecksPath(pariwarId) } });
   }, [status, navigate, pariwarId]);
   const entries = queue.data?.entries ?? [];
+  // Settled = a read newer than the refusal has answered (or failed). The row gone ⇒ focus to the list; kept ⇒ the press keeps it.
+  const refusedSettled = refusedRow !== null && (queue.dataUpdatedAt > refusedRow.readAt || queue.isError);
+  const refusedGone = refusedRow !== null && refusedSettled && !entries.some((e) => e.member_id === refusedRow.memberId);
+  useEffect(() => {
+    if (!refusedSettled) return;
+    if (refusedGone) (listRef.current ?? headingRef.current)?.focus();
+    setRefusedRow(null);
+  }, [refusedSettled, refusedGone]);
   const canCheck = queue.data?.can_check ?? false;
   const hasMore = queue.data?.has_more ?? false;
   // A LATER page that has SETTLED empty (its members were checked meanwhile): step back to the page before it.
@@ -90,7 +105,9 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
 
   return (
     <main className="mx-auto max-w-4xl p-4">
-      <h1 className="text-lg font-semibold">{t.title}</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none" data-testid="identity-checks-heading">
+        {t.title}
+      </h1>
       {queue.isLoading ? (
         <p role="status" data-testid="identity-checks-loading" className="mt-4 text-sm">
           {t.queue.loading}
@@ -114,7 +131,7 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
           {t.queue.empty}
         </p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-3" data-testid="identity-checks-list" aria-busy={loadingPage}>
+        <ul ref={listRef} tabIndex={-1} className="mt-4 flex flex-col gap-3 outline-none" data-testid="identity-checks-list" aria-busy={loadingPage}>
           {entries.map((e) => (
             <li key={e.member_id} className="rounded border p-3 text-sm" data-testid={`identity-checks-item-${e.member_id}`}>
               <p className="font-medium">
@@ -144,7 +161,7 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
                 </button>
               ) : (
                 // DL6a — a verifier / helpline operator ARRANGES the check: the number press, ⛔ the identity.
-                <RevealMobile pariwarId={pariwarId} memberId={e.member_id} onSignedOut={signIn} />
+                <RevealMobile pariwarId={pariwarId} memberId={e.member_id} onSignedOut={signIn} onRefused={() => setRefusedRow({ memberId: e.member_id, readAt: queue.dataUpdatedAt })} />
               )}
             </li>
           ))}

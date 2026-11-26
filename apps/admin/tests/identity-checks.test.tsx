@@ -319,6 +319,8 @@ describe('DL12 — the approved words', () => {
       recorded: 'This showing is recorded.',
       refused: "This member's number can no longer be shown here.",
       couldNotShow: 'The number could not be shown. Try again.',
+      // R4-D1 (`2026-11-26-506` item 1), approved word for word.
+      hiddenAway: 'The number was hidden because you left this page. Press again to see it.',
     });
     expect(JSON.stringify(verifierConsoleEn)).toContain('"trustee_verified":"Typed in at joining, checked by staff"');
   });
@@ -1447,23 +1449,70 @@ describe('⭐ R3 — the detail page', () => {
     expect(screen.queryByTestId('identity-check-retry')).toBeNull();
   });
 
-  it('⭐ R3-P27 — "Try again" on the load error asks ONCE per press (the read is audited); it is gone while that read is in flight', async () => {
+  it('⭐ R3-P27 / R4-P4 — "Try again" on the load error asks ONCE per press (the read is audited); while that read runs the error view STAYS, the button says it is off (`aria-disabled`, ⛔ `disabled`), and focus goes to the heading when it lands', async () => {
     const reads = gateAnswers(getIdentityCheckDetail);
     renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
     await waitFor(() => expect(reads).toHaveLength(1));
     await act(async () => reads[0]!.reject(new ApiError(503, 'identity_validation.audit_unavailable', 'no')));
     const retry = await screen.findByTestId('identity-check-retry');
     expect(retry).toHaveTextContent(/^Try again$/);
+    expect(retry).toHaveAttribute('aria-disabled', 'false');
+    retry.focus();
     fireEvent.click(retry);
-    fireEvent.click(retry); // a second press in the same moment: the button is held (`disabled` while fetching) ...
     await waitFor(() => expect(reads).toHaveLength(2));
-    // ... and while the re-read is in flight the page is loading (a page with no data goes back to pending — TanStack v5): ⛔ a
-    // button to press again.
-    expect(screen.queryByTestId('identity-check-retry')).toBeNull();
+    // ⛔ the "Loading…" swap (a page with no data goes back to pending — TanStack v5): the pressed button is the SAME node, off.
+    expect(screen.queryByTestId('identity-check-loading')).toBeNull();
+    expect(screen.getByTestId('identity-check-retry')).toBe(retry);
+    expect(retry).toHaveAttribute('aria-disabled', 'true');
+    expect(retry).not.toBeDisabled();
+    expect(document.activeElement).toBe(retry);
+    fireEvent.click(retry); // a press while the read runs is ignored
     await sleep(10);
     expect(reads).toHaveLength(2);
     await act(async () => reads[1]!.resolve(detail()));
     expect(await screen.findByTestId('identity-check-name')).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('identity-check-heading')));
+  });
+
+  it('R4-P4 — a "Try again" re-read that FAILS again leaves the error view, the button back on, and the focus on it', async () => {
+    const reads = gateAnswers(getIdentityCheckDetail);
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    await waitFor(() => expect(reads).toHaveLength(1));
+    await act(async () => reads[0]!.reject(new ApiError(503, 'identity_validation.audit_unavailable', 'no')));
+    const retry = await screen.findByTestId('identity-check-retry');
+    retry.focus();
+    fireEvent.click(retry);
+    await waitFor(() => expect(reads).toHaveLength(2));
+    await act(async () => reads[1]!.reject(new ApiError(503, 'identity_validation.audit_unavailable', 'no')));
+    await waitFor(() => expect(retry).toHaveAttribute('aria-disabled', 'false'));
+    expect(screen.getByTestId('identity-check-retry')).toBe(retry);
+    expect(document.activeElement).toBe(retry);
+  });
+
+  it('⭐ R4-P4 — with the data ON SCREEN (a re-read failed after a save), two presses of "Try again" in the same moment are ONE re-read; the button is `aria-disabled` while it runs; focus to the heading when it lands', async () => {
+    let answer: ((v: unknown) => void) | undefined;
+    getIdentityCheckDetail
+      .mockResolvedValueOnce(detail())
+      .mockRejectedValueOnce(new ApiError(503, 'identity_validation.audit_unavailable', 'no'))
+      .mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    recordIdentityCheck.mockResolvedValue(notConfirmedOk);
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    await saveNotConfirmed();
+    await screen.findByTestId('identity-check-refresh-error');
+    expect(getIdentityCheckDetail).toHaveBeenCalledTimes(2);
+    const retry = screen.getByTestId('identity-check-retry');
+    retry.focus();
+    fireEvent.click(retry);
+    fireEvent.click(retry);
+    await waitFor(() => expect(getIdentityCheckDetail).toHaveBeenCalledTimes(3));
+    expect(retry).toHaveAttribute('aria-disabled', 'true');
+    expect(retry).not.toBeDisabled();
+    fireEvent.click(retry);
+    await sleep(10);
+    expect(getIdentityCheckDetail).toHaveBeenCalledTimes(3);
+    await act(async () => answer?.(detail()));
+    await waitFor(() => expect(screen.queryByTestId('identity-check-refresh-error')).toBeNull());
+    expect(document.activeElement).toBe(screen.getByTestId('identity-check-heading'));
   });
 
   it('R3-P27 — after a save, a FAILED re-read offers "Try again" beside its line, and a press re-reads', async () => {
@@ -1569,5 +1618,150 @@ describe('⭐ R3 — the approved words (`-505` items 3–4), verbatim', () => {
     expect(t.queue.stateLabels).toEqual({ 'lock-in': 'In lock-in', 'pending-valid': 'Waiting for identity check' }); // the queue keeps its two
     expect(t.detail.retry).toBe('Try again');
     expect(t.form.displayNameMissing).toBe('Your account has no display name yet, so it cannot record a check. Ask the Super Admin.');
+  });
+});
+
+// ── Round 4 — an adversarial review of round 3's patches (`2026-11-26-506`) ─────────────────────────────────────────────
+
+describe('⭐ R4 — the number press', () => {
+  afterEach(() => {
+    delete (document as unknown as Record<string, unknown>)['visibilityState'];
+  });
+
+  it('⭐ R4-D1 — a number that ARRIVES while the page is hidden is ⛔ shown, and the press says why in the approved words (an alert); a new press clears the line', async () => {
+    const pending = gateAnswers(revealIdentityCheckMobile);
+    renderWithClient(<RevealMobile pariwarId={PARIWAR} memberId={M} onSignedOut={signedOut} />);
+    fireEvent.click(screen.getByTestId(PRESS(M)));
+    await waitFor(() => expect(pending).toHaveLength(1));
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await act(async () => pending[0]!.resolve({ mobile: MOBILE }));
+    const line = await screen.findByTestId(`reveal-mobile-hidden-away-${M}`);
+    expect(line).toHaveTextContent(/^The number was hidden because you left this page\. Press again to see it\.$/);
+    expect(line).toHaveAttribute('role', 'alert');
+    expect(screen.queryByText(MOBILE)).toBeNull();
+    delete (document as unknown as Record<string, unknown>)['visibilityState'];
+    fireEvent.click(screen.getByTestId(PRESS(M)));
+    await waitFor(() => expect(pending).toHaveLength(2));
+    expect(screen.queryByTestId(`reveal-mobile-hidden-away-${M}`)).toBeNull();
+    await act(async () => pending[1]!.resolve({ mobile: MOBILE }));
+    expect(await screen.findByText(MOBILE)).toBeInTheDocument();
+  });
+
+  it('R4-D1 control — a number shown on a VISIBLE page and later cleared by hiding the tab says nothing (the line is for a number that never reached the screen)', async () => {
+    revealIdentityCheckMobile.mockResolvedValue({ mobile: MOBILE });
+    renderWithClient(<RevealMobile pariwarId={PARIWAR} memberId={M} onSignedOut={signedOut} />);
+    fireEvent.click(screen.getByTestId(PRESS(M)));
+    expect(await screen.findByText(MOBILE)).toBeInTheDocument();
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await waitFor(() => expect(screen.queryByText(MOBILE)).toBeNull());
+    expect(screen.queryByTestId(`reveal-mobile-hidden-away-${M}`)).toBeNull();
+  });
+
+  it('⭐ R4-P1 — on the DETAIL, a press refused because the member no longer awaits a check tells the PAGE at once: the not-needed line, the press gone, focus on the standing region — before the re-read answers', async () => {
+    let answerReread: ((v: unknown) => void) | undefined;
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockImplementationOnce(() => new Promise((resolve) => (answerReread = resolve)));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    expect(await screen.findByTestId('identity-check-not-eligible')).toBeInTheDocument();
+    expect(press.isConnected).toBe(false);
+    expect(screen.queryByTestId('identity-check-forms')).toBeNull();
+    expect(screen.queryByTestId('identity-check-name')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByTestId('identity-check-standing'));
+    expect(getIdentityCheckDetail).toHaveBeenCalledTimes(2); // the re-read was asked (and is still open)
+    await act(async () => answerReread?.(detail({ eligible: false, identity: null, masked_mobile: null })));
+    expect(screen.getByTestId('identity-check-not-eligible')).toBeInTheDocument();
+  });
+
+  it('⭐ R4-P1 — on the QUEUE, a refused row that the re-read takes away moves focus to the list (and to the heading when the list is now empty)', async () => {
+    const entryB = { ...entry, member_id: '22222222-2222-4222-8222-222222222222', short_member_id: '22222222' };
+    getIdentityCheckQueue
+      .mockResolvedValueOnce({ entries: [entry, entryB], can_check: false, has_more: false })
+      .mockResolvedValueOnce({ entries: [entryB], can_check: false, has_more: false })
+      .mockResolvedValue({ entries: [], can_check: false, has_more: false });
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    await waitFor(() => expect(screen.queryByTestId(`identity-checks-item-${M}`)).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('identity-checks-list')));
+    const pressB = screen.getByTestId(PRESS(entryB.member_id));
+    pressB.focus();
+    fireEvent.click(pressB);
+    await screen.findByTestId('identity-checks-empty');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('identity-checks-heading')));
+  });
+
+  it('R4-P1 control — a refused row the re-read KEEPS leaves the focus on its press', async () => {
+    getIdentityCheckQueue.mockResolvedValue({ entries: [entry], can_check: false, has_more: false });
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    await waitFor(() => expect(getIdentityCheckQueue).toHaveBeenCalledTimes(2));
+    await sleep(20);
+    expect(document.activeElement).toBe(press);
+  });
+
+  it('⭐ R4-P2 — `mobile_unavailable` (the number is gone, the check still awaited) shows the refused line and re-reads ⛔ the audited detail; the forms stay', async () => {
+    getIdentityCheckDetail.mockResolvedValue(detail());
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.mobile_unavailable', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.click(await screen.findByTestId(PRESS(M)));
+    expect(await screen.findByTestId(`reveal-mobile-refused-${M}`)).toHaveTextContent("This member's number can no longer be shown here.");
+    await sleep(20);
+    expect(getIdentityCheckDetail).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('identity-check-forms')).toBeInTheDocument();
+    expect(screen.queryByTestId('identity-check-not-eligible')).toBeNull();
+  });
+
+  it.each([
+    [403, 'rbac.forbidden', t.detail.forbidden],
+    [404, 'identity_validation.not_found', t.detail.notFound],
+  ] as const)('⭐ R4-P3 — a %s on the PRESS re-reads the detail, so its own refusal drops the identity, the press and the forms', async (status, code, line) => {
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockRejectedValue(new ApiError(status, code, 'no'));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(status, code, 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.click(await screen.findByTestId(PRESS(M)));
+    expect(await screen.findByTestId('identity-check-load-error')).toHaveTextContent(line);
+    expect(getIdentityCheckDetail).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('identity-check-name')).toBeNull();
+    expect(screen.queryByTestId(PRESS(M))).toBeNull();
+    expect(screen.queryByTestId('identity-check-forms')).toBeNull();
+  });
+});
+
+describe('⭐ R4 — saving', () => {
+  it.each([
+    [403, 'rbac.forbidden', t.detail.forbidden],
+    [404, 'identity_validation.not_found', t.detail.notFound],
+  ] as const)('⭐ R4-P3 — a %s on a SAVE re-reads the detail (and the queue), so its own refusal drops the identity and the forms (⛔ "Try again" beside them)', async (status, code, line) => {
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockRejectedValue(new ApiError(status, code, 'no'));
+    recordIdentityCheck.mockRejectedValue(new ApiError(status, code, 'no'));
+    const client = createQueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    render(
+      <QueryClientProvider client={client}>
+        <IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(await screen.findByTestId('confirm-evidence'), { target: { value: 'photo_id_in_person' } });
+    fireEvent.change(screen.getByTestId('confirm-document'), { target: { value: 'voter_id' } });
+    fireEvent.click(screen.getByTestId('identity-check-confirm'));
+    expect(await screen.findByTestId('identity-check-load-error')).toHaveTextContent(line);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: identityCheckDetailKey(PARIWAR, M) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: identityCheckQueueKey(PARIWAR) });
+    expect(screen.queryByTestId('identity-check-name')).toBeNull();
+    expect(screen.queryByTestId('identity-check-forms')).toBeNull();
   });
 });

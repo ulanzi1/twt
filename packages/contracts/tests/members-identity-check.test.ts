@@ -72,20 +72,56 @@ describe('Story 3.13 — AC9: the record request carries ⛔ number, ⛔ image, 
    * element) is caught, ⛔ only the top-level keys (code review R3-P22).
    */
   function allKeys(schemaIn: z.ZodTypeAny, path: string, out: string[]): string[] {
-    let s: z.ZodTypeAny = schemaIn;
-    for (;;) {
-      if (s instanceof z.ZodNullable || s instanceof z.ZodOptional) s = s.unwrap() as z.ZodTypeAny;
-      else if (s instanceof z.ZodEffects) s = s.innerType() as z.ZodTypeAny;
-      else if (s instanceof z.ZodArray) s = s.element as z.ZodTypeAny;
-      else break;
+    const s: z.ZodTypeAny = schemaIn;
+    // Wrappers: walk what they wrap (a union / intersection / pipeline: every branch).
+    if (s instanceof z.ZodNullable || s instanceof z.ZodOptional) return allKeys(s.unwrap() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodDefault) return allKeys(s.removeDefault() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodCatch) return allKeys(s.removeCatch() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodEffects) return allKeys(s.innerType() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodBranded) return allKeys(s.unwrap() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodReadonly) return allKeys(s.unwrap() as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodLazy) return allKeys(s.schema as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodArray) return allKeys(s.element as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodRecord) return allKeys(s.valueSchema as z.ZodTypeAny, path, out);
+    if (s instanceof z.ZodPipeline) {
+      allKeys(s._def.in as z.ZodTypeAny, path, out);
+      return allKeys(s._def.out as z.ZodTypeAny, path, out);
+    }
+    if (s instanceof z.ZodIntersection) {
+      allKeys(s._def.left as z.ZodTypeAny, path, out);
+      return allKeys(s._def.right as z.ZodTypeAny, path, out);
+    }
+    if (s instanceof z.ZodUnion || s instanceof z.ZodDiscriminatedUnion) {
+      for (const o of s.options as z.ZodTypeAny[]) allKeys(o, path, out);
+      return out;
     }
     if (s instanceof z.ZodObject) {
       for (const [k, child] of Object.entries(s.shape as Record<string, z.ZodTypeAny>)) {
         out.push(`${path}.${k}`);
         allKeys(child, `${path}.${k}`, out);
       }
+      return out;
     }
-    return out;
+    // Leaves: nothing below them is named.
+    if (
+      s instanceof z.ZodString ||
+      s instanceof z.ZodNumber ||
+      s instanceof z.ZodBigInt ||
+      s instanceof z.ZodBoolean ||
+      s instanceof z.ZodDate ||
+      s instanceof z.ZodEnum ||
+      s instanceof z.ZodNativeEnum ||
+      s instanceof z.ZodLiteral ||
+      s instanceof z.ZodNull ||
+      s instanceof z.ZodUndefined ||
+      s instanceof z.ZodUnknown ||
+      s instanceof z.ZodAny
+    ) {
+      return out;
+    }
+    // ⭐ (code review R4-P9) A kind the walk does not know FAILS LOUDLY — ⛔ a schema silently skipped, whose `*_number` field
+    // would then never be checked.
+    throw new Error(`allKeys: unhandled zod kind ${s.constructor.name} at '${path}' — teach the walk this kind`);
   }
 
   it('⛔ field at ANY depth of ANY identity-check schema (or the export element) is named like a number, an Aadhaar or an image', () => {
@@ -119,6 +155,24 @@ describe('Story 3.13 — AC9: the record request carries ⛔ number, ⛔ image, 
     expect(keys.filter((k) => /number|aadhaar|image|upload/i.test(k.split('.').pop() ?? ''))).toEqual([]);
   });
 
+  it('⭐ R4-P9 — the walk reaches a number field behind a union, a default, a brand, a lazy and a record — and an UNKNOWN kind fails loudly', () => {
+    const decoy = z.object({
+      u: z.union([z.object({ a_number: z.string() }), z.object({ b: z.string() })]),
+      d: z.array(z.object({ c_number: z.string() })).default([]),
+      br: z.object({ e_number: z.string() }).brand<'X'>(),
+      lz: z.lazy(() => z.object({ f_number: z.string() })),
+      rec: z.record(z.object({ g_number: z.string() })),
+    });
+    expect(allKeys(decoy, 'Decoy', []).filter((k) => /number/.test(k)).sort()).toEqual([
+      'Decoy.br.e_number',
+      'Decoy.d.c_number',
+      'Decoy.lz.f_number',
+      'Decoy.rec.g_number',
+      'Decoy.u.a_number',
+    ]);
+    expect(() => allKeys(z.object({ fn: z.function() }), 'Odd', [])).toThrow(/unhandled zod kind ZodFunction at '\.?Odd\.fn'/);
+  });
+
   it('a decoy nested number field IS caught by the walk (the walk can fail)', () => {
     const decoy = z.object({ outer: z.object({ inner: z.array(z.object({ document_number: z.string() })).nullable() }) });
     expect(allKeys(decoy, 'Decoy', []).filter((k) => /number/.test(k))).toEqual(['Decoy.outer.inner.document_number']);
@@ -126,6 +180,12 @@ describe('Story 3.13 — AC9: the record request carries ⛔ number, ⛔ image, 
 });
 
 describe('Story 3.13 — DL11: the queue is bounded and carries ⛔ PII', () => {
+  it('⭐ R4-P10 — the domain\'s offset ceiling IS the contract\'s (the domain holds its own copy: it can never import a contracts value)', () => {
+    expect(member.IDENTITY_CHECK_QUEUE_MAX_OFFSET).toBe(identityCheckContract.IDENTITY_CHECK_QUEUE_MAX_OFFSET);
+    expect(IdentityCheckQueueQuery.safeParse({ offset: String(identityCheckContract.IDENTITY_CHECK_QUEUE_MAX_OFFSET) }).success).toBe(true);
+    expect(IdentityCheckQueueQuery.safeParse({ offset: String(identityCheckContract.IDENTITY_CHECK_QUEUE_MAX_OFFSET + 1) }).success).toBe(false);
+  });
+
   it('the `limit` is bounded (forced pagination)', () => {
     expect(IdentityCheckQueueQuery.safeParse({ limit: String(IDENTITY_CHECK_QUEUE_MAX_LIMIT) }).success).toBe(true);
     expect(IdentityCheckQueueQuery.safeParse({ limit: String(IDENTITY_CHECK_QUEUE_MAX_LIMIT + 1) }).success).toBe(false);

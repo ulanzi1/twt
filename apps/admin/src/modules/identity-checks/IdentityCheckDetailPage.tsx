@@ -7,9 +7,13 @@
 // masked number. After a save the page says so ("Identity confirmed." / "Saved.") in a live region that is ALWAYS mounted, and
 // moves focus to it — a confirmation makes the member ineligible, so the forms (and the button that was pressed) go away AT
 // ONCE, before the refetch answers. A refetch that fails keeps the page on its data and says so; it never swaps the page away —
-// EXCEPT a 403 / 404, which means the viewer may no longer see this member: the data goes (R3-P4). A REFUSAL moves focus to the
-// banner / not-needed line, which sits in an always-mounted region (R3-P5). An awaited check whose name or date of birth is
-// missing shows the load error and ⛔ the forms (`-504` item 1, R3-P7). The load error has a "Try again" button (`-505`).
+// EXCEPT a 403 / 404, which means the viewer may no longer see this member: the data leaves the SCREEN (R3-P4; the query keeps it
+// until the page unmounts — `gcTime: 0`, and the console has ⛔ persister). A 403 / 404 on a save or a number press re-reads the
+// page, so that branch is reached (R4-P3). A REFUSAL — of a save, or of a number press (R4-P1) — moves focus to the banner /
+// not-needed line, which sits in an always-mounted region (R3-P5). An awaited check whose name or date of birth is missing shows
+// the load error and ⛔ the forms (`-504` item 1, R3-P7). The load error has a "Try again" button (`-505`): ONE re-read per press,
+// `aria-disabled` while it runs (⛔ `disabled`, which drops the focus it holds), the error view kept on screen meanwhile (⛔ a
+// "Loading…" swap that unmounts the pressed button), and focus to the page heading when the re-read lands (R4-P4).
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { IdentityCheckDetailResponse, IdentityCheckRecordRequest } from '@twt/contracts';
@@ -52,7 +56,7 @@ function identityMissing(d: IdentityCheckDetailResponse): boolean {
 }
 
 /** What the last write's refusal means on screen (by CODE — the API's message is ⛔ shown). */
-type WriteRefusal = 'not_eligible' | 'death_reported' | 'other' | null;
+type WriteRefusal = 'not_eligible' | 'death_reported' | null;
 /** The outcome of the last SAVED write (the page-level acknowledgement), or `null` before one / after the next attempt starts. */
 type SavedOutcome = IdentityCheckRecordRequest['outcome'] | null;
 
@@ -64,6 +68,10 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   const [saved, setSaved] = useState<SavedOutcome>(null);
   const savedRef = useRef<HTMLDivElement>(null);
   const standingRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // A "Try again" re-read in flight (the error view stays while it runs), and whether the one that landed should take the focus.
+  const [retrying, setRetrying] = useState(false);
+  const [focusHeading, setFocusHeading] = useState(false);
   const signIn = (): void => void navigate({ to: '/login', search: { next: identityCheckPath(pariwarId, memberId) } });
   useEffect(() => {
     if (status === 401) void navigate({ to: '/login', search: { next: identityCheckPath(pariwarId, memberId) } });
@@ -85,14 +93,33 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   useEffect(() => {
     if (refusal !== null) standingRef.current?.focus();
   }, [refusal]);
-  // One re-read per press of "Try again" (the read is AUDITED, one fetch one view — ⛔ a retry loop).
+  useEffect(() => {
+    if (!focusHeading) return;
+    headingRef.current?.focus();
+    setFocusHeading(false);
+  }, [focusHeading]);
+  // One re-read per press of "Try again" (the read is AUDITED, one fetch one view — ⛔ a retry loop). `aria-disabled` + a guard,
+  // ⛔ `disabled` (R4-P4).
+  // The guard is a REF: two presses in the same moment both see the state of the last render (⛔ a second, cancelling re-read).
+  const retryInFlight = useRef(false);
+  const retryOff = retrying || detail.isFetching;
+  const onRetry = (): void => {
+    if (retryOff || retryInFlight.current) return;
+    retryInFlight.current = true;
+    setRetrying(true);
+    void detail.refetch().then((r) => {
+      retryInFlight.current = false;
+      setRetrying(false);
+      if (!r.isError) setFocusHeading(true);
+    });
+  };
   const retry = (
     <button
       type="button"
-      className="mt-2 rounded border px-3 py-1 text-sm"
+      className={`mt-2 rounded border px-3 py-1 text-sm${retryOff ? ' cursor-not-allowed opacity-50' : ''}`}
       data-testid="identity-check-retry"
-      disabled={detail.isFetching}
-      onClick={() => void detail.refetch()}
+      aria-disabled={retryOff}
+      onClick={onRetry}
     >
       {t.detail.retry}
     </button>
@@ -109,7 +136,9 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
     </button>
   );
 
-  if (detail.isLoading) {
+  // ⛔ The "Loading…" view during a "Try again" re-read: a page with no data goes back to pending (TanStack v5), and the swap would
+  // unmount the pressed button (R4-P4) — the error view below stays instead.
+  if (detail.isLoading && !retrying) {
     return (
       <main className="mx-auto max-w-3xl p-4">
         <p role="status" data-testid="identity-check-loading">
@@ -157,7 +186,7 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
           {retry}
         </div>
       ) : null}
-      <h1 className="mt-2 text-lg font-semibold">
+      <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-lg font-semibold outline-none" data-testid="identity-check-heading">
         {t.title} · {t.queue.member} {d.short_member_id}
       </h1>
       {/* The lead says "This member typed in their identity details…" — true only of a member whose check is awaited (R3-P6). */}
@@ -183,7 +212,7 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
         </div>
       </div>
 
-      <IdentityFacts d={d} pariwarId={pariwarId} awaiting={awaiting} onSignedOut={signIn} />
+      <IdentityFacts d={d} pariwarId={pariwarId} awaiting={awaiting} onSignedOut={signIn} onPressRefused={() => setRefusal('not_eligible')} />
       <History d={d} />
 
       {/* ALWAYS mounted (a live region inserted already populated is often ignored); the text is what arrives. `tabIndex` so a save can focus it. */}
@@ -205,11 +234,14 @@ function IdentityFacts({
   pariwarId,
   awaiting,
   onSignedOut,
+  onPressRefused,
 }: {
   d: IdentityCheckDetailResponse;
   pariwarId: string;
   awaiting: boolean;
   onSignedOut: () => void;
+  /** The number press was refused because the member no longer awaits a check: the page says so and takes the focus (R4-P1). */
+  onPressRefused: () => void;
 }): ReactElement {
   // `lock-in` / `pending-valid` in the queue's words; every other state in the words `-505` item 4 approved.
   const stateLabel = t.queue.stateLabels[d.state] ?? t.detail.stateLabels[d.state];
@@ -236,7 +268,7 @@ function IdentityFacts({
           <dt className="font-medium">{t.detail.mobile}</dt>
           <dd>
             <span data-testid="identity-check-masked-mobile">{d.masked_mobile}</span>
-            <RevealMobile pariwarId={pariwarId} memberId={d.member_id} onSignedOut={onSignedOut} />
+            <RevealMobile pariwarId={pariwarId} memberId={d.member_id} onSignedOut={onSignedOut} onRefused={onPressRefused} />
           </dd>
         </>
       ) : null}

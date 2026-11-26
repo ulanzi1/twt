@@ -11,6 +11,11 @@
 // the console's own paging words ("Previous" / "Next" — the banners list's `banner.page.prev` / `banner.page.next`), ⛔ new ones.
 // ⚠ The microcopy gate scans this file for the whole words it bars (`microcopy.yaml`) — say "a claim filed for the death",
 // ⛔ the bare word for what a family files.
+// ⭐ Round 3 of the code review (2026-11-26, BigDev: "Approve as written (Recommended)"; R3-D3, Decision `2026-11-26-505` items 3–4)
+// APPROVED word for word: `queue.previous` / `queue.next` ("Previous" / "Next"); `detail.stateLabels` (the member's state on the
+// detail for a member NOT awaiting a check — the queue keeps its two); `history.confirmed` / `history.notConfirmed` (they REPLACE
+// the Task-0.2 pair: the how / which ID of a confirmation, and who recorded a not-confirmed act — DL8); `detail.retry` ("Try
+// again", the load error's button); `form.displayNameMissing` (a save refused because the account has no display name).
 // ⛔ A staff hint that the member is TOLD the reason — row `3-13a` adds it when its message ships (it would be false before).
 
 export const identityCheckEn = {
@@ -50,6 +55,8 @@ export const identityCheckEn = {
     forbidden: 'You do not have access to this member’s identity check.',
     notFound: 'Member not found.',
     loadError: 'The identity check could not be loaded. Try again.',
+    // The load error's button — one re-read per press (`-505` item 3).
+    retry: 'Try again',
     back: 'Back to identity checks',
     name: 'Name',
     dateOfBirth: 'Date of birth',
@@ -62,10 +69,21 @@ export const identityCheckEn = {
     history: 'Checks recorded',
     noHistory: 'Not checked yet',
     note: 'Note',
+    // The member's state for a member NOT awaiting a check (`-505` item 4); `lock-in` / `pending-valid` read in the queue's words.
+    stateLabels: {
+      'pending-kyc': 'Has not finished joining',
+      'pending-fee': 'Fee not paid yet',
+      active: 'Active member',
+      'active-in-grace': 'Active, payment overdue',
+      'lapsed-unpaid': 'Lapsed: not paid',
+      withdrawn: 'Withdrawn',
+      anonymized: 'Details erased',
+    } as Record<string, string>,
   },
   history: {
-    confirmed: 'Identity confirmed by {name} on {date}.',
-    notConfirmed: 'Not confirmed on {date}: {reason}.',
+    // `{how}` / `{document}` are the approved form labels (`form.evidenceKinds` / `form.documentKinds`) — `-505` item 3.
+    confirmed: 'Identity confirmed by {name} on {date} ({how}, {document}).',
+    notConfirmed: 'Not confirmed by {name} on {date}: {reason}.',
   },
   reasons: {
     details_do_not_match: 'Details do not match the ID',
@@ -85,6 +103,8 @@ export const identityCheckEn = {
     choose: 'Choose…',
     saving: 'Saving…',
     saveError: 'The check could not be saved. Try again.',
+    // A save refused with 409 `admin.display_name_missing` — a retry can never work (`-505` item 3).
+    displayNameMissing: 'Your account has no display name yet, so it cannot record a check. Ask the Super Admin.',
     savedConfirmed: 'Identity confirmed.',
     savedNotConfirmed: 'Saved.',
     evidenceKinds: {

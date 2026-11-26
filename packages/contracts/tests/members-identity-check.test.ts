@@ -3,6 +3,7 @@
 
 import { member, schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import {
   IDENTITY_CHECK_DOCUMENT_KINDS,
@@ -11,12 +12,12 @@ import {
   IDENTITY_CHECK_OUTCOMES,
   IDENTITY_CHECK_QUEUE_MAX_LIMIT,
   IDENTITY_CHECK_QUEUE_STATES,
-  IdentityCheckDetailResponse,
   IdentityCheckQueueEntry,
   IdentityCheckQueueQuery,
   IdentityCheckRecordRequest,
   ProfileSection,
 } from '../src/index.js';
+import * as identityCheckContract from '../src/members/identity-check.js';
 
 describe('Story 3.13 — the identity check vocabulary', () => {
   it('each contracts tuple equals the domain tuple, in order', () => {
@@ -65,14 +66,62 @@ describe('Story 3.13 — AC9: the record request carries ⛔ number, ⛔ image, 
     expect(IdentityCheckRecordRequest.safeParse({ ...ok, note: hindi + 'क' }).success).toBe(false);
   });
 
-  it('⛔ field in the request, queue or detail contract is named like a number, an Aadhaar or an image', () => {
+  /**
+   * Every key at every depth of a schema (objects, nested objects, array elements; `nullable` / `optional` / `effects` unwrapped),
+   * as `Parent.path.key` — so a number creeping into a NESTED object (the detail's `identity`, a history entry, the export's
+   * element) is caught, ⛔ only the top-level keys (code review R3-P22).
+   */
+  function allKeys(schemaIn: z.ZodTypeAny, path: string, out: string[]): string[] {
+    let s: z.ZodTypeAny = schemaIn;
+    for (;;) {
+      if (s instanceof z.ZodNullable || s instanceof z.ZodOptional) s = s.unwrap() as z.ZodTypeAny;
+      else if (s instanceof z.ZodEffects) s = s.innerType() as z.ZodTypeAny;
+      else if (s instanceof z.ZodArray) s = s.element as z.ZodTypeAny;
+      else break;
+    }
+    if (s instanceof z.ZodObject) {
+      for (const [k, child] of Object.entries(s.shape as Record<string, z.ZodTypeAny>)) {
+        out.push(`${path}.${k}`);
+        allKeys(child, `${path}.${k}`, out);
+      }
+    }
+    return out;
+  }
+
+  it('⛔ field at ANY depth of ANY identity-check schema (or the export element) is named like a number, an Aadhaar or an image', () => {
+    const schemas = Object.entries(identityCheckContract).filter(([, v]) => v instanceof z.ZodType) as [string, z.ZodTypeAny][];
+    const objects = schemas.filter(([, v]) => allKeys(v, '', []).length > 0).map(([n]) => n);
+    // The control: every object schema the module exports is walked — a new one is walked the day it is added.
+    expect(objects).toEqual(
+      expect.arrayContaining([
+        'IdentityCheckQueueQuery',
+        'IdentityCheckQueueEntry',
+        'IdentityCheckQueueResponse',
+        'IdentityCheckHistoryEntry',
+        'IdentityCheckDetailResponse',
+        'IdentityCheckRecordRequest',
+        'IdentityCheckRecordResponse',
+        'IdentityCheckMobileResponse',
+      ]),
+    );
     const keys = [
-      ...Object.keys(IdentityCheckRecordRequest.shape),
-      ...Object.keys(IdentityCheckQueueEntry.shape),
-      ...Object.keys(IdentityCheckDetailResponse.shape),
+      ...schemas.flatMap(([n, v]) => allKeys(v, n, [])),
+      ...allKeys(ProfileSection.shape.identityChecks, 'ProfileSection.identityChecks', []),
     ];
-    expect(keys.length).toBeGreaterThan(15); // the control
-    expect(keys.filter((k) => /number|aadhaar|image|upload/.test(k))).toEqual([]);
+    // The control: the nested keys are reached (the detail's identity, a history entry inside the detail, the export element).
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'IdentityCheckDetailResponse.identity.date_of_birth',
+        'IdentityCheckDetailResponse.history.document_kind',
+        'ProfileSection.identityChecks.documentKind',
+      ]),
+    );
+    expect(keys.filter((k) => /number|aadhaar|image|upload/i.test(k.split('.').pop() ?? ''))).toEqual([]);
+  });
+
+  it('a decoy nested number field IS caught by the walk (the walk can fail)', () => {
+    const decoy = z.object({ outer: z.object({ inner: z.array(z.object({ document_number: z.string() })).nullable() }) });
+    expect(allKeys(decoy, 'Decoy', []).filter((k) => /number/.test(k))).toEqual(['Decoy.outer.inner.document_number']);
   });
 });
 

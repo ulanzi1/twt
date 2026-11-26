@@ -346,8 +346,13 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     const eventsBefore = await eventTypes(client, memberId);
     const flagBefore = (await kycRow(client, memberId))?.trustee_verified;
     await client.query('SAVEPOINT refused');
-    const err = await refusal(recordIdentityValidation(client, { ...CONFIRM, pariwarId: PARIWAR_A, memberId }));
+    // ⭐ The proof that can FAIL (code review R3-P19): the refused call issues ⛔ INSERT / UPDATE at all. The counts after the
+    // rollback below cannot fail on their own ([[feedback_assertion_after_savepoint_rollback_is_vacuous]]).
+    const rec = recording(client);
+    const err = await refusal(recordIdentityValidation(rec.client, { ...CONFIRM, pariwarId: PARIWAR_A, memberId }));
     expect(err.reason).toBe('not_eligible');
+    expect(rec.texts.length).toBeGreaterThan(1); // the control: the lock and the reads ran through the recorder
+    expect(rec.texts.filter((t) => /^\s*(insert|update)\b/i.test(t))).toEqual([]);
     await client.query('ROLLBACK TO SAVEPOINT refused');
     expect(await validationCount(client, memberId)).toBe(0);
     expect(await eventTypes(client, memberId)).toEqual(eventsBefore);
@@ -548,6 +553,43 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     expect(exact.entries).toHaveLength(3);
     expect(exact.hasMore).toBe(false);
     expect((await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: 1, offset: 3 })).hasMore).toBe(false);
+    // R3-P15 — a non-finite bound from an in-process caller reaches ⛔ SQL: NaN / Infinity fall back to the default page (with
+    // the control that the same call with real bounds pages), and an offset past the ceiling reads an empty page, ⛔ an error.
+    const nan = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: Number.NaN, offset: Number.NaN });
+    expect(nan.entries.map((r) => r.memberId)).toEqual([first, dead, last]);
+    const inf = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: Number.POSITIVE_INFINITY, offset: Number.POSITIVE_INFINITY });
+    expect(inf.entries.map((r) => r.memberId)).toEqual([first, dead, last]);
+    const deep = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, offset: 5_000_000 });
+    expect(deep).toEqual({ entries: [], hasMore: false });
+  });
+
+  it('⭐ R3-P13 — each act is stamped when it RUNS (after the lock), ⛔ when its transaction began: a superseding act is never earlier than the act it replaced', async () => {
+    // Both acts run in ONE transaction, so `now()` — the column DEFAULT, the transaction's start — is the SAME instant for both
+    // ([[project_db_clock_ordering_tests_tie]]). That is the inversion's root: an act that waited on the intake lock behind another
+    // staff member's act carried its own earlier `now()`. With the stamp taken as the statement runs, the order is strict.
+    const { tx, client } = getTx();
+    const memberId = await seedTypedInMember(tx);
+    await enterAppScope(client, PARIWAR_A);
+    const txStartUs = BigInt((await client.query<{ us: string }>(`SELECT (extract(epoch FROM now()) * 1000000)::bigint::text AS us`)).rows[0]!.us);
+    const first = await recordIdentityValidation(client, { ...NOT_CONFIRMED, pariwarId: PARIWAR_A, memberId });
+    const second = await recordIdentityValidation(client, { ...CONFIRM, pariwarId: PARIWAR_A, memberId });
+    const rows = await client.query<{ validation_id: string; decided_at: Date; superseded_at: Date | null; d_us: string; s_us: string | null }>(
+      `SELECT validation_id, decided_at, superseded_at,
+              (extract(epoch FROM decided_at) * 1000000)::bigint::text AS d_us,
+              (extract(epoch FROM superseded_at) * 1000000)::bigint::text AS s_us
+         FROM member_identity_validations WHERE member_id = $1`,
+      [memberId],
+    );
+    const byId = new Map(rows.rows.map((r) => [r.validation_id, r]));
+    const a = byId.get(first.validationId)!;
+    const b = byId.get(second.validationId)!;
+    // The transaction's own start (`now()`) is ⛔ what was stamped — it would EQUAL it for both acts.
+    expect(BigInt(a.d_us)).toBeGreaterThan(txStartUs);
+    expect(BigInt(b.d_us)).toBeGreaterThan(BigInt(a.d_us)); // strictly later — `now()` would make these EQUAL
+    expect(a.s_us).not.toBeNull();
+    expect(BigInt(a.s_us!)).toBeGreaterThanOrEqual(BigInt(a.d_us)); // ⛔ superseded before it was decided
+    expect(BigInt(b.d_us)).toBeGreaterThanOrEqual(BigInt(a.s_us!)); // the successor is decided at or after the supersession
+    expect(b.superseded_at).toBeNull();
   });
 
   it('AC10 — the detail: ciphertext as stored, the posting, the history (live first) and ONLY the live note', async () => {

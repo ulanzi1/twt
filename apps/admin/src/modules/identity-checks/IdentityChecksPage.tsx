@@ -5,7 +5,9 @@
 // (`-504` item 3): 50 a page, "Next" only while the server says `has_more`, so a member staff could not reach never hides the
 // members behind them. The page controls stay mounted while a page loads or fails (⛔ focus dropping to the page; ⛔ staff
 // stranded on page 2 by an error), and a LATER page that comes back empty steps back by itself — "No member is waiting" is
-// said only for an empty FIRST page, because it would be false while earlier pages still hold members.
+// said only for an empty FIRST page, because it would be false while earlier pages still hold members. The page buttons are
+// ⛔ `disabled` (a disabled button drops the focus it holds — Previous on returning to page 1, Next onto the last page): they say
+// `aria-disabled` and ignore the press, and both say so while a page loads (R3-P10), the list marked `aria-busy`.
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
@@ -53,27 +55,33 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
   // The page controls: on any later page (an error there leaves Previous — staff are ⛔ stranded) and on a page with rows.
   const showPager = offset > 0 || entries.length > 0;
   // While the next page loads the old rows are still on screen (`keepPreviousData`): a press then would skip a page nobody saw.
-  const turnTo = (to: number): void => {
-    if (queue.isPlaceholderData) return;
-    setOffset(to);
-  };
+  const loadingPage = queue.isPlaceholderData;
+  const prevOff = offset === 0 || loadingPage;
+  const nextOff = !hasMore || loadingPage;
+  const signIn = (): void => void navigate({ to: '/login', search: { next: identityChecksPath(pariwarId) } });
+  const offClass = (off: boolean): string => `rounded border px-2 py-1${off ? ' cursor-not-allowed opacity-50' : ''}`;
   const pager = (
     <div className="mt-4 flex items-center justify-between gap-2 text-sm">
       <button
         type="button"
         data-testid="identity-checks-page-prev"
-        disabled={offset === 0}
-        onClick={() => turnTo(Math.max(0, offset - IDENTITY_CHECK_QUEUE_PAGE_SIZE))}
-        className="rounded border px-2 py-1 disabled:opacity-50"
+        aria-disabled={prevOff}
+        onClick={() => {
+          if (!prevOff) setOffset(Math.max(0, offset - IDENTITY_CHECK_QUEUE_PAGE_SIZE));
+        }}
+        className={offClass(prevOff)}
       >
         {t.queue.previous}
       </button>
       <button
         type="button"
         data-testid="identity-checks-page-next"
-        disabled={!hasMore}
-        onClick={() => turnTo(offset + IDENTITY_CHECK_QUEUE_PAGE_SIZE)}
-        className="rounded border px-2 py-1 disabled:opacity-50"
+        aria-disabled={nextOff}
+        onClick={() => {
+          // While the next page loads the old rows (and their `has_more`) are still on screen: a press would skip a page nobody saw.
+          if (!nextOff) setOffset(offset + IDENTITY_CHECK_QUEUE_PAGE_SIZE);
+        }}
+        className={offClass(nextOff)}
       >
         {t.queue.next}
       </button>
@@ -106,7 +114,7 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
           {t.queue.empty}
         </p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-3" data-testid="identity-checks-list">
+        <ul className="mt-4 flex flex-col gap-3" data-testid="identity-checks-list" aria-busy={loadingPage}>
           {entries.map((e) => (
             <li key={e.member_id} className="rounded border p-3 text-sm" data-testid={`identity-checks-item-${e.member_id}`}>
               <p className="font-medium">
@@ -136,7 +144,7 @@ export function IdentityChecksView({ pariwarId }: { pariwarId: string }): ReactE
                 </button>
               ) : (
                 // DL6a — a verifier / helpline operator ARRANGES the check: the number press, ⛔ the identity.
-                <RevealMobile pariwarId={pariwarId} memberId={e.member_id} />
+                <RevealMobile pariwarId={pariwarId} memberId={e.member_id} onSignedOut={signIn} />
               )}
             </li>
           ))}

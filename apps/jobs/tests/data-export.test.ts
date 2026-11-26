@@ -374,6 +374,24 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
     const note = await encryption.serializeEnvelope(
       await encryption.encryptTier1(Buffer.from('ZZ came without an ID', 'utf-8'), { pariwarId, fieldClass: 'member_identity_validation' }, enc.kms, enc.kekRef),
     );
+    // The two events a check writes, by a STAFF actor (`-505` item 1), and the controls: the same `kyc_completed` type from
+    // another trigger, and another staff-written event, keep their actor (⛔ a blanket blanking of every actor).
+    const staffActor = randomUUID();
+    const controlActor = randomUUID();
+    const events: [number, string, Record<string, unknown>, string][] = [
+      [1, 'member.identity_validation_recorded', { from_state: 'pending-valid', to_state: 'pending-valid', trigger: 'staff_identity_validation', actor: 'trustee', validation_id: randomUUID(), outcome: 'not_confirmed' }, staffActor],
+      [2, 'member.identity_validation_recorded', { from_state: 'pending-valid', to_state: 'pending-valid', trigger: 'staff_identity_validation', actor: 'trustee', validation_id: randomUUID(), outcome: 'confirmed' }, staffActor],
+      [3, 'member.kyc_completed', { from_state: 'pending-valid', to_state: 'active', trigger: 'staff_identity_validation', actor: 'trustee', kyc_reference: randomUUID() }, staffActor],
+      [4, 'member.kyc_completed', { from_state: 'pending-valid', to_state: 'active', trigger: 'lock_in_expired', actor: 'system' }, controlActor],
+      [5, 'member.moderation.suspended', {}, controlActor],
+    ];
+    for (const [version, eventType, payload, actor] of events) {
+      await pool.query(
+        `INSERT INTO events_log (stream_id, event_type, payload, event_version, actor_id, pariwar_id, occurred_at)
+         VALUES ($1, $2, $3::jsonb, $4, $5, $6, now())`,
+        [memberId, eventType, JSON.stringify(payload), version, actor, pariwarId],
+      );
+    }
     try {
       await withPariwarScope(pool, pariwarId, async (_tx, client) => {
         await client.query(
@@ -393,12 +411,27 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
         { decidedAt: '2026-11-01T09:00:00.000Z', outcome: 'not_confirmed', evidenceKind: 'photo_id_in_person', documentKind: null, notConfirmedReason: 'no_document_shown' },
         { decidedAt: '2026-11-02T09:00:00.000Z', outcome: 'confirmed', evidenceKind: 'photo_id_video_call', documentKind: 'passport', notConfirmedReason: null },
       ]);
-      // ⭐ The row in the table HAS a decryptable note (seeded above) — so this is the proof it is held back, not that none existed.
+      // ⭐ The proof the note is held back is the EXACT key set of every element (code review R3-P23): the export never
+      // decrypts, so a leak would be a `noteCiphertext` (or any other) key — ⛔ the plaintext a `not.toContain` looks for.
+      // The row in the table HAS a note (seeded above), so this is not "none existed".
+      const KEYS = ['decidedAt', 'documentKind', 'evidenceKind', 'notConfirmedReason', 'outcome'];
+      for (const el of profile.identityChecks) expect(Object.keys(el as object).sort()).toEqual(KEYS);
       const all = JSON.stringify(profile);
-      expect(all).not.toContain('ZZ came without an ID');
-      expect(JSON.stringify(profile.identityChecks)).not.toMatch(/"note"/);
       expect(all).not.toContain('ZZ-STAFF-NAME');
-      expect(all).not.toMatch(/decidedBy|decided_by/);
+      expect(all).not.toContain(note); // ⛔ the stored ciphertext, anywhere in the profile
+      // ⭐ `-505` item 1: the two events a staff check writes carry ⛔ staff user id; the controls keep theirs.
+      const stream = JSON.parse(await zip.file('event_stream.json')!.async('string')) as {
+        records: { eventVersion: number; eventType: string; actorId: string | null }[];
+      };
+      const actors = stream.records.map((r) => [r.eventVersion, r.eventType, r.actorId]);
+      expect(actors).toEqual([
+        [1, 'member.identity_validation_recorded', null],
+        [2, 'member.identity_validation_recorded', null],
+        [3, 'member.kyc_completed', null],
+        [4, 'member.kyc_completed', controlActor],
+        [5, 'member.moderation.suspended', controlActor],
+      ]);
+      expect(JSON.stringify(stream)).not.toContain(staffActor);
     } finally {
       await cleanup(memberId);
     }

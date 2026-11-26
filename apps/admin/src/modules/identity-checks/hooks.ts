@@ -88,7 +88,27 @@ export function useRecordIdentityCheck(pariwarId: string, memberId: string, { on
   });
 }
 
-/** ONE showing per press — ⛔ retried, ⛔ cached (`gcTime: 0`: the number is gone from the mutation cache on unmount; it lives in the component's state only). */
+/** The server's own refusal of a number press: a 409 `identity_validation.*` (the member no longer awaits a check, a claim is filed for the death, the number is gone). */
+export function isRevealRefusal(err: unknown): boolean {
+  return err instanceof api.ApiError && err.status === 409 && err.code.startsWith('identity_validation.');
+}
+
+/**
+ * ONE showing per press — ⛔ retried, ⛔ cached (`gcTime: 0`: the number is gone from the mutation cache on unmount; it lives in the
+ * component's state only). A REFUSAL means the member's standing changed under the screen, so the detail and the queue are
+ * re-read (code review R3-P2) — ⛔ the typed-in identity, the forms and the press left up beside "can no longer be shown here",
+ * ⛔ a row that no longer awaits a check left in the list. Any other failure refreshes nothing.
+ */
 export function useRevealIdentityCheckMobile(pariwarId: string, memberId: string) {
-  return useMutation({ mutationFn: () => api.revealIdentityCheckMobile(pariwarId, memberId), retry: false, gcTime: 0 });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.revealIdentityCheckMobile(pariwarId, memberId),
+    retry: false,
+    gcTime: 0,
+    onError: (err) => {
+      if (!isRevealRefusal(err)) return;
+      void qc.invalidateQueries({ queryKey: identityCheckDetailKey(pariwarId, memberId) });
+      void qc.invalidateQueries({ queryKey: identityCheckQueueKey(pariwarId) });
+    },
+  });
 }

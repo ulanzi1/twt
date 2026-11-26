@@ -170,6 +170,22 @@ async function decryptField(
  * (the caller has opened the scope-tx as `pariwarId`); Tier-1 PII is decrypted (the member is the
  * legitimate audience). Returns a plain object keyed by the export filenames.
  */
+/**
+ * The two events a staff identity check writes (Story 3.13 DL3) carry the checking staff member's user id as `actor_id`. The
+ * member's export names ⛔ staff on them (`2026-11-26-505` item 1, applying DL14 / `-504` item 5: *"a staff name or user id is
+ * the staff member's data"*): `member.identity_validation_recorded`, and a `member.kyc_completed` whose `trigger` is
+ * `staff_identity_validation` (the same event type from DigiLocker or a fee keeps its actor). Every other event is unchanged.
+ */
+function isStaffIdentityCheckEvent(eventType: string, payload: unknown): boolean {
+  if (eventType === 'member.identity_validation_recorded') return true;
+  return (
+    eventType === 'member.kyc_completed' &&
+    typeof payload === 'object' &&
+    payload !== null &&
+    (payload as { trigger?: unknown }).trigger === 'staff_identity_validation'
+  );
+}
+
 export async function assembleMemberExport(
   client: Db,
   enc: ExportEncryption,
@@ -595,7 +611,7 @@ export async function assembleMemberExport(
       eventType: e.eventType,
       eventVersion: e.eventVersion,
       occurredAt: e.occurredAt.toISOString(),
-      actorId: e.actorId ?? null,
+      actorId: isStaffIdentityCheckEvent(e.eventType, e.payload) ? null : (e.actorId ?? null),
       payload: e.payload,
     })),
   };

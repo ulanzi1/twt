@@ -36,6 +36,19 @@ function pgCode(err: unknown): string | undefined {
   return (err as { code?: string }).code ?? (err as { cause?: { code?: string } }).cause?.code;
 }
 
+/**
+ * The server's MESSAGE — both triggers raise `23000`, so a trigger leg must also name WHICH trigger refused it (code review
+ * R3-P20; AC2: "asserting the refusing rule"). Drizzle wraps the driver error under `.cause`.
+ */
+function pgMessage(err: unknown): string {
+  const cause = (err as { cause?: { message?: string } }).cause;
+  return String(cause?.message ?? (err as { message?: string }).message ?? '');
+}
+/** The append-only guard's two refusals and the one-way supersession trigger's, as 0218 raises them. */
+const GUARD_UPDATE = /append-only — only the supersession stamp and the RTBF scrub of the note may update/;
+const GUARD_DELETE = /append-only — an identity check is never deleted/;
+const ONE_WAY = /supersession is one-way — a superseded identity check is never revived or re-stamped/;
+
 /** The violated constraint's NAME — a CHECK leg must be refused by ITS check, ⛔ not a neighbour's. */
 function pgConstraint(err: unknown): string | undefined {
   return (err as { constraint?: string }).constraint ?? (err as { cause?: { constraint?: string } }).cause?.constraint;
@@ -249,6 +262,7 @@ describe.skipIf(!hasDatabase)('migration 0218 — member_identity_validations: R
           (e: unknown) => e,
         );
       expect(pgCode(err), label).toBe('23000');
+      expect(pgMessage(err), label).toMatch(ONE_WAY);
       await s.client.query('ROLLBACK TO SAVEPOINT ow');
     }
     await s.tx.update(schema.memberIdentityValidations).set({ noteCiphertext: '[anonymized]' }).where(byId);
@@ -333,6 +347,7 @@ describe.skipIf(!hasDatabase)('migration 0218 — member_identity_validations: R
         (e: unknown) => e,
       );
       expect(pgCode(err), label).toBe('23000');
+      expect(pgMessage(err), label).toMatch(label === 'DELETE' ? GUARD_DELETE : GUARD_UPDATE);
       await s.client.query('ROLLBACK TO SAVEPOINT t');
     }
     await s.client.query(`UPDATE ${TABLE} SET note_ciphertext = '[anonymized]' WHERE validation_id = $1`, [c!.validationId]);
@@ -357,6 +372,7 @@ describe.skipIf(!hasDatabase)('migration 0218 — member_identity_validations: R
       (e: unknown) => e,
     );
     expect(pgCode(err)).toBe('23000');
+    expect(pgMessage(err)).toMatch(GUARD_DELETE); // TRUNCATE falls through to the guard's never-deleted refusal
     await client.query('ROLLBACK TO SAVEPOINT tr');
   });
 

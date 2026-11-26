@@ -4,14 +4,16 @@
 // EVERY clearing also resets the mutation, so `mutation.data.mobile` never outlives the number on screen. Its block is rendered
 // into a live region that is ALWAYS mounted (empty until a number exists), so a screen reader hears the number appear — many
 // ignore a live region inserted already populated. A press the SERVER refuses (409 `identity_validation.*`: the member no
-// longer awaits a check, or a claim is filed for the death) shows the refused line and ⛔ a number; ANY other failure (the
-// session ended, a rate limit, the network) shows its own line and the press stays available (P10).
+// longer awaits a check, or a claim is filed for the death) shows the refused line and ⛔ a number, and re-reads the page (R3-P2);
+// a 401 (the session ended) sends staff to sign in, back to this page (R3-P3 — "Try again" could never work); ANY other failure
+// (a rate limit, a 5xx, the network) shows its own line and the press stays available (P10). A number that ARRIVES while the tab
+// is already hidden is ⛔ put on screen at all (R3-P1): the hidden-tab rule hears only a CHANGE of visibility.
 
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { useRevealIdentityCheckMobile } from './hooks.js';
+import { isRevealRefusal, useRevealIdentityCheckMobile } from './hooks.js';
 import { identityCheckEn } from './i18n-en.js';
 
 const t = identityCheckEn.reveal;
@@ -21,7 +23,16 @@ const REVEAL_SHOWN_FOR_MS = 60_000;
 
 type Problem = 'refused' | 'could_not_show' | null;
 
-export function RevealMobile({ pariwarId, memberId }: { pariwarId: string; memberId: string }): ReactElement {
+export function RevealMobile({
+  pariwarId,
+  memberId,
+  onSignedOut,
+}: {
+  pariwarId: string;
+  memberId: string;
+  /** A 401 on the press: send staff to sign in, back to the page they were on. */
+  onSignedOut: () => void;
+}): ReactElement {
   const { mutate, reset, isPending } = useRevealIdentityCheckMobile(pariwarId, memberId);
   // An object, so a SECOND press (a new audited showing) restarts the minute even when the number is the same.
   const [shown, setShown] = useState<{ mobile: string } | null>(null);
@@ -37,6 +48,11 @@ export function RevealMobile({ pariwarId, memberId }: { pariwarId: string; membe
   // or a listener that outlives it).
   useEffect(() => {
     if (shown === null) return undefined;
+    // The backstop of the check in `onSuccess`: a tab hidden between that check and this effect.
+    if (document.visibilityState === 'hidden') {
+      clear();
+      return undefined;
+    }
     const timer = setTimeout(clear, REVEAL_SHOWN_FOR_MS);
     const onVisibility = (): void => {
       if (document.visibilityState === 'hidden') clear();
@@ -52,11 +68,22 @@ export function RevealMobile({ pariwarId, memberId }: { pariwarId: string; membe
     setProblem(null);
     clear(); // the last number is gone the moment a new showing is asked for
     mutate(undefined, {
-      onSuccess: (r) => setShown({ mobile: r.mobile }),
+      onSuccess: (r) => {
+        // The tab was hidden while the showing was awaited: ⛔ onto the screen (and out of the mutation) — the hidden-tab rule.
+        if (document.visibilityState === 'hidden') {
+          clear();
+          return;
+        }
+        setShown({ mobile: r.mobile });
+      },
       onError: (err) => {
         setShown(null);
-        // ONLY the server's own refusal reads "can no longer be shown here"; a 401 / 429 / 5xx / network failure does not.
-        setProblem(err instanceof ApiError && err.status === 409 && err.code.startsWith('identity_validation.') ? 'refused' : 'could_not_show');
+        if (err instanceof ApiError && err.status === 401) {
+          onSignedOut();
+          return;
+        }
+        // ONLY the server's own refusal reads "can no longer be shown here"; a 429 / 5xx / network failure does not.
+        setProblem(isRevealRefusal(err) ? 'refused' : 'could_not_show');
       },
     });
   };

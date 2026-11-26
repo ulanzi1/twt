@@ -72,6 +72,8 @@ export const IDENTITY_CHECK_ERROR_CODES = {
   identityUnreadable: 'identity_validation.identity_unreadable',
   /** 503 (`-504` item 2): the audit line of a disclosure could not be written, so ⛔ the identity or the number is returned. */
   auditUnavailable: 'identity_validation.audit_unavailable',
+  /** 503 (Story 3.13 review R3-P12): the member's number exists but could not be decrypted — ⛔ a number is shown. */
+  mobileUnreadable: 'identity_validation.mobile_unreadable',
 } as const;
 
 const IsoDateTime = z.string().datetime({ offset: true });
@@ -141,12 +143,13 @@ export const IdentityCheckDetailResponse = z
     /**
      * The typed-in identity, decrypted — only while an identity check is AWAITED (`eligible`, no death claim standing;
      * `-504` item 1). `null` for an anonymized member, one without a KYC record, one who needs no check, or one with a
-     * death claim standing.
+     * death claim standing. When present, the name and the date of birth are ALWAYS readable strings (`-504` item 1: a field
+     * that cannot be read is a 503, ⛔ a blank beside a live Confirm).
      */
     identity: z
       .object({
-        name: z.string().nullable(),
-        date_of_birth: z.string().nullable(),
+        name: z.string().min(1),
+        date_of_birth: z.string().min(1),
         /** The photo as stored (a `data:` URI); `null` when none was given. */
         photo: z.string().nullable(),
       })

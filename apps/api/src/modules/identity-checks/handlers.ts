@@ -100,8 +100,11 @@ function isOneLiveViolation(err: unknown): boolean {
 
 /**
  * The REVEAL's refusal (`2026-11-26-504` item 4): a death claim is answered with the SAME generic `not_eligible` as every other
- * member who is not awaiting a check — verifiers and helpline operators are ⛔ told a claim stands. The audit line keeps the
- * real reason (`auditReason` is read off the ORIGINAL error); the DA / PA detail keeps its banner (DL5).
+ * member who is not awaiting a check — verifiers and helpline operators are ⛔ told a claim stands. The audit line's CONTEXT
+ * carries the real reason (`auditReason` is read off the ORIGINAL error); the DA / PA detail keeps its banner (DL5).
+ * ⚠ (`2026-11-26-505` item 2) The house sink persists a context ONLY as `request_payload_hash` (an unsalted sha256 of its
+ * canonical JSON — `audit_log_entries` has ⛔ context column), so the reason is READ BACK by hashing each candidate context over
+ * the closed reason list and matching the stored hash — ⛔ by a plain query. The API spec does exactly that on the persisted row.
  */
 function translateForReveal(err: unknown): never {
   if (err instanceof memberDomain.IdentityValidationRefusedError && err.reason === 'death_reported') {
@@ -187,7 +190,9 @@ export function createIdentityCheckHandlers(deps: AppDeps) {
       } catch (err) {
         throw unreadable(field, err);
       }
-      return value === memberDomain.ANONYMIZED_SENTINEL ? null : value;
+      // An erased or EMPTY value reads as absent — the contract's `name` / `date_of_birth` are non-empty strings (R3-P7), so an
+      // empty one is the same 503 as a missing one, ⛔ a 500 from the response schema.
+      return value === memberDomain.ANONYMIZED_SENTINEL || value.trim() === '' ? null : value;
     };
     const name = await open(kyc.nameCiphertext, 'name');
     const dob = await open(kyc.dobCiphertext, 'dob');
@@ -215,8 +220,11 @@ export function createIdentityCheckHandlers(deps: AppDeps) {
      * too); a district caller's page is pushed into SQL, then EVERY row is kept only if the caller's grant scope contains
      * the member's district target (the per-member gate's predicate). ⛔ PII, ⛔ decrypt — so ⛔ audit line.
      */
-    async getQueue(request: FastifyRequest): Promise<IdentityCheckQueueResponse> {
+    async getQueue(request: FastifyRequest, reply: FastifyReply): Promise<IdentityCheckQueueResponse> {
       const { scopeTx, pariwarId, p } = scopeOf(request);
+      // Staff-only member metadata (ids, districts, dates, outcomes): ⛔ cached by the browser or an intermediary (code review
+      // R3-P11), on every answer — the empty one included.
+      void reply.header('cache-control', 'no-store');
       const q = request.query as IdentityCheckQueueQuery;
       const scope = request.identityCheckScope;
       if (!scope || scope.value === null) return { entries: [], can_check: false, has_more: false };
@@ -462,14 +470,25 @@ export function createIdentityCheckHandlers(deps: AppDeps) {
           await memberDomain.assertIdentityCheckAwaited(scopeTx.client, pariwarId, mid);
           const ct = await waOptIn.getMemberMobileCiphertext(scopeTx.tx, { pariwarId, memberId: mid });
           if (ct === null) throw new ConflictError("This member's number can no longer be shown here.", CODES.mobileUnavailable);
-          const canonical = await decryptMobile(ct, enc);
+          let canonical: string;
+          try {
+            canonical = await decryptMobile(ct, enc);
+          } catch (err) {
+            // A number that EXISTS but cannot be decrypted (KMS outage, a rotated key, a corrupt ciphertext): a typed 503 and a
+            // bounded audit reason (code review R3-P12) — ⛔ an untyped 500, ⛔ the raw error class as the reason. Logged by
+            // class name only (⛔ the ciphertext).
+            request.log.error({ err: err instanceof Error ? err.name : 'unknown' }, 'identity-check: mobile decrypt failed');
+            throw new ServiceUnavailableError('The number could not be read.', CODES.mobileUnreadable);
+          }
           if (canonical === memberDomain.ANONYMIZED_SENTINEL || canonical.trim() === '') {
             throw new ConflictError("This member's number can no longer be shown here.", CODES.mobileUnavailable);
           }
           // ⭐ EVERY press — actor, member, time. ⛔ The number (`-328`'s rule). PERSISTED before the number is returned
           // (`2026-11-26-504` item 2; `-502` item 5: "every showing is recorded") — a line that cannot be written is a 503 and
-          // ⛔ the number. ⭐ Written INSIDE this transaction, so the intake lock taken FIRST is still HELD: a death claim cannot
-          // be filed between the check and the showing (the awaited write would otherwise widen that window).
+          // ⛔ the number. ⭐ Written WHILE this transaction is still open, so the intake lock it took FIRST is still HELD: a death
+          // claim cannot be filed between the check and the showing (the awaited write would otherwise widen that window). ⚠ The
+          // line itself goes through the audit pool on its OWN connection (`deps.servicePool`) and commits on its own — it is ⛔
+          // part of this (read-only, rolled-back) transaction (code review R3-P14).
           await auditDisclosure(request, 'admin_identity_check.member_mobile_shown', {
             actorId,
             pariwarId: p,
@@ -489,13 +508,19 @@ export function createIdentityCheckHandlers(deps: AppDeps) {
           actorId,
           pariwarId: p,
           resourceLocator: locator(memberId),
+          // ⚠ The context is persisted ONLY as its hash (`2026-11-26-505` item 2): `reason` is one of a CLOSED list — the
+          // refusal reasons, `concurrent`, `mobile_unavailable`, `mobile_unreadable`, `audit_unavailable` — or, for an
+          // unexpected failure, its error class name; it is recovered by hashing each candidate `{ member_id, reason }` and
+          // matching the stored `request_payload_hash`.
           context: {
             member_id: memberId.toLowerCase(),
             reason:
               failure instanceof ConflictError
                 ? 'mobile_unavailable'
                 : failure instanceof ServiceUnavailableError
-                  ? 'audit_unavailable'
+                  ? failure.code === CODES.mobileUnreadable
+                    ? 'mobile_unreadable'
+                    : 'audit_unavailable'
                   : auditReason(failure),
           },
         });

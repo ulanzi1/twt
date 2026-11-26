@@ -300,7 +300,8 @@ export const ProfileSection = z
      * staff checked the member's typed-in identity in life: when, the outcome, how the ID was shown, which ID and the closed
      * reason it could not be confirmed. ⛔ The staff NOTE: the Panel was told it "stays with staff" (the told note, 2026-11-25),
      * so it is held out of the download until the Panel / counsel rule on it (`deferred-work.md` `3.13-R1-W6`). ⛔ Staff
-     * attribution AT ALL — a staff name or user id is the staff member's data, ⛔ the member's. Oldest first.
+     * attribution AT ALL — a staff name or user id is the staff member's data, ⛔ the member's — here, AND on the two events a
+     * check writes in `event_stream.json` (their `actorId` is `null`, `2026-11-26-505` item 1). Oldest first.
      */
     identityChecks: z.array(
       z

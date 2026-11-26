@@ -214,10 +214,13 @@ export async function recordIdentityValidation(
   const db = bindScopedDb(client);
   const { state, kyc } = await readEligibility(db, input.pariwarId, input.memberId, refuse);
 
-  // (4) Supersede the live act, insert the new one.
+  // (4) Supersede the live act, insert the new one. ⭐ Both stamps are `clock_timestamp()` — the moment the statement runs, AFTER
+  // the intake lock is held — ⛔ `now()` (the column DEFAULT), which is when this transaction BEGAN: an act that waited on the
+  // lock behind another staff member's act would otherwise be stamped BEFORE the act it supersedes, and the export's "oldest
+  // first" and the queue's latest time would invert (code review R3-P13). It also ends the one-transaction clock tie.
   const superseded = await db
     .update(memberIdentityValidations)
-    .set({ supersededAt: sql`now()`, supersededReason: 're_checked' })
+    .set({ supersededAt: sql`clock_timestamp()`, supersededReason: 're_checked' })
     .where(
       and(
         eq(memberIdentityValidations.pariwarId, input.pariwarId),
@@ -237,6 +240,7 @@ export async function recordIdentityValidation(
       notConfirmedReason: input.notConfirmedReason,
       noteCiphertext: input.noteCiphertext,
       kycProfileUpdatedAt: kyc.updatedAt,
+      decidedAt: sql`clock_timestamp()`,
       decidedByActorId: input.actorId,
       decidedByDisplay: input.actorDisplay.trim(),
     })
@@ -357,6 +361,8 @@ export interface ListIdentityCheckQueueOptions {
 
 /** DL11's page bounds. */
 export const IDENTITY_CHECK_QUEUE_LIMIT = { default: 50, cap: 200 } as const;
+/** The deepest page the queue reads — the contract's own ceiling (`IdentityCheckQueueQuery.offset`), held here too. */
+export const IDENTITY_CHECK_QUEUE_MAX_OFFSET = 1_000_000;
 
 interface QueueSqlRow extends Record<string, unknown> {
   member_id: string;
@@ -395,9 +401,15 @@ export async function listIdentityCheckQueuePage(
   opts: ListIdentityCheckQueueOptions,
 ): Promise<IdentityCheckQueuePage> {
   // Clamped BEFORE interpolation (the forced-pagination invariant applies to a raw-SQL LIMIT too).
-  const limit = clampLimit(opts.limit, IDENTITY_CHECK_QUEUE_LIMIT);
+  // ⚠ A non-finite value (`NaN`, `Infinity`) from an in-process caller would pass `Math.min` / `Math.trunc` straight into SQL
+  // (code review R3-P15): it falls back to the default / the first page, and the offset has the contract's ceiling here too.
+  const limit = Math.trunc(clampLimit(Number.isFinite(opts.limit) ? opts.limit : undefined, IDENTITY_CHECK_QUEUE_LIMIT));
   const probe = limit + 1;
-  const offset = Math.max(0, Math.trunc(opts.offset ?? 0));
+  const rawOffset = opts.offset;
+  const offset =
+    typeof rawOffset === 'number' && Number.isFinite(rawOffset)
+      ? Math.min(IDENTITY_CHECK_QUEUE_MAX_OFFSET, Math.max(0, Math.trunc(rawOffset)))
+      : 0;
   const districtFilter = opts.district === null ? sql`` : sql`AND p.district = ${opts.district}`;
   const result = await db.execute<QueueSqlRow>(sql`
     SELECT m.member_id, m.state::text AS state, m.created_at, p.district,

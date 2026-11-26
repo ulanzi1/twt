@@ -10,6 +10,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { canonicalJsonStringify, claim, encryption, ids, member as memberDomain, rbac } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { authEventToAuditInput, createAuditLogSink } from '../../../src/audit/audit-log-sink.js';
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import * as mobileIndex from '../../../src/modules/auth/shared/mobile-index.js';
@@ -359,6 +360,74 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect(JSON.stringify(td.auditSink.ofType('admin_identity_check.member_mobile_reveal_rejected'))).not.toContain(MOBILE_DIGITS);
   });
 
+  it('⭐ R3-P26 / `-505` item 2 — the real reason of a refused number press is RECOVERED from the PERSISTED row: the captured line is written through the PRODUCTION sink (`createAuditLogSink`) into `audit_log_entries`, its `request_payload_hash` is read back, and hashing each candidate over the CLOSED reason list finds `death_reported` — and only it', async () => {
+    const w = await world();
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    await fileClaim(w);
+    const dead = await da.inject({ method: 'POST', url: revealUrl(w, w.memberId) });
+    expect(errCode(j(dead))).toBe('identity_validation.not_eligible');
+    const [line] = audits('admin_identity_check.member_mobile_reveal_rejected', w.memberId);
+    expect(line).toBeDefined();
+    // The integration harness wires the in-memory `CapturingAuditSink` as `deps.auditSink` (so best-effort lines never reach
+    // the DB in tests). The captured event is therefore emitted AGAIN through the REAL production sink — `createAuditLogSink`
+    // on the test service pool, the same factory `createDeps` (`src/deps.ts`) wires in production — so the row below is written by the
+    // production path (`authEventToAuditInput` → `writeAuditEntry`), ⛔ a re-implementation.
+    const type = 'admin_identity_check.member_mobile_reveal_rejected';
+    expect(await persisted(type, w.memberId)).toHaveLength(0); // the control: nothing persisted before the real sink runs
+    createAuditLogSink(deps.servicePool).emit(line!);
+    // The sink is fire-and-forget (`void writeAuditEntry(…)`): wait for ITS row to land.
+    const rows = await vi.waitFor(
+      async () => {
+        const r = await persisted(type, w.memberId);
+        expect(r).toHaveLength(1);
+        return r;
+      },
+      { timeout: 10_000, interval: 50 },
+    );
+    const row = rows[0]!;
+    expect(row).not.toHaveProperty('context'); // ⛔ context column: the hash is all there is
+    expect(row.resource_locator).toBe(`member:${w.memberId.toLowerCase()}`);
+    const stored = String(row.request_payload_hash);
+    // The stored hash is the one the sink's own mapping computes for this line (the persisted value, ⛔ just our arithmetic).
+    expect(stored).toBe(authEventToAuditInput(line!).requestPayloadHash);
+    const CLOSED = ['not_found', 'invalid_shape', 'not_eligible', 'death_reported', 'concurrent', 'mobile_unavailable', 'mobile_unreadable', 'audit_unavailable'];
+    const recovered = CLOSED.filter((reason) => contextHash({ member_id: w.memberId.toLowerCase(), reason }) === stored);
+    expect(recovered).toEqual(['death_reported']);
+    // The control: the generic answer's reason does NOT match — the stored hash tells the two apart.
+    expect(contextHash({ member_id: w.memberId.toLowerCase(), reason: 'not_eligible' })).not.toBe(stored);
+  });
+
+  it('⭐ R3-P12 — a number that EXISTS but cannot be decrypted is a typed 503 `identity_validation.mobile_unreadable` with ⛔ a number and ⛔ a "shown" row; the rejected line\'s reason is the bounded `mobile_unreadable`; the control press is a 200', async () => {
+    const w = await world();
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const spy = vi.spyOn(mobileIndex, 'decryptMobile').mockRejectedValueOnce(Object.assign(new Error('kms down'), { name: 'KmsError' }));
+    try {
+      const res = await da.inject({ method: 'POST', url: revealUrl(w, w.memberId) });
+      expect(res.statusCode, res.body).toBe(503);
+      expect(errCode(j(res))).toBe('identity_validation.mobile_unreadable');
+      expect(res.body).not.toContain(MOBILE_DIGITS);
+      expect(res.body).not.toContain('kms down');
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await persisted('admin_identity_check.member_mobile_shown', w.memberId)).toHaveLength(0);
+    expect(audits('admin_identity_check.member_mobile_reveal_rejected', w.memberId).map((e) => (e.context as Json).reason)).toEqual(['mobile_unreadable']);
+    const ok = await da.inject({ method: 'POST', url: revealUrl(w, w.memberId) });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(j(ok).mobile).toBe(MOBILE);
+  });
+
+  it('⭐ R3-P11 — the QUEUE is `no-store` too (staff-only member metadata), for a District Admin and for a Pariwar Admin', async () => {
+    const w = await world();
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const full = await da.inject({ method: 'GET', url: queueUrl(w) });
+    expect(full.statusCode, full.body).toBe(200);
+    expect((j(full).entries as Json[]).map((e) => e.member_id)).toContain(w.memberId);
+    expect(full.headers['cache-control']).toBe('no-store');
+    const { client: pa } = await actor(w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId);
+    expect((await pa.inject({ method: 'GET', url: queueUrl(w) })).headers['cache-control']).toBe('no-store');
+  });
+
   it('AC8a — a verifier / helpline operator reads the QUEUE (can_check false) but ⛔ the detail and ⛔ the record (403)', async () => {
     const w = await world();
     for (const [role, dim, value] of [
@@ -607,7 +676,7 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     }
   });
 
-  it('⭐ P6 / family 2 — two staff acts racing on ONE member over two connections: two confirmations ⇒ exactly one 201 and one 409, ONE live row, ONE marker event; two not-confirmed ⇒ both land and the older is superseded; one key twice ⇒ one write', async () => {
+  it('⭐ P6 / family 2 — two staff acts racing on ONE member over two connections: two confirmations ⇒ exactly one 201 and one 409, ONE live row, ONE marker event; two not-confirmed ⇒ BOTH land (the intake key serialises them: two 201s, two rows, two markers) and the older is superseded by the newer; one key twice ⇒ one write', async () => {
     const markers = async (memberId: string) =>
       Number(((await td.pool.query(`SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1 AND event_type = 'member.identity_validation_recorded'`, [memberId])).rows[0] as { n: number }).n);
     const live = async (memberId: string) => (await validations(memberId)).filter((r) => r.superseded_at === null);
@@ -628,12 +697,19 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     const { client: d } = await actor(w2.pariwarId, 'district_admin', 'district', w2.district);
     const nc = { outcome: 'not_confirmed', not_confirmed_reason: 'member_not_reached', note: 'ZZ race' };
     const [p, q] = await Promise.all([post(c, detailUrl(w2, w2.memberId), nc), post(d, detailUrl(w2, w2.memberId), nc)]);
-    expect([p.statusCode, q.statusCode].every((s) => s === 201 || s === 409), `${p.body} ${q.body}`).toBe(true);
-    const landed = [p, q].filter((r) => r.statusCode === 201).length;
-    expect(landed).toBeGreaterThanOrEqual(1);
-    expect(await validations(w2.memberId)).toHaveLength(landed);
-    expect(await live(w2.memberId)).toHaveLength(1);
-    expect(await markers(w2.memberId)).toBe(landed);
+    // ⭐ (code review R3-P21) BOTH land: the claim-intake key taken FIRST serialises the two acts, so neither can lose a race —
+    // ⛔ "201 or 409, at least one landed", which passed if one always failed.
+    expect([p.statusCode, q.statusCode], `${p.body} ${q.body}`).toEqual([201, 201]);
+    const rows = await validations(w2.memberId);
+    expect(rows).toHaveLength(2);
+    const liveRows = rows.filter((r) => r.superseded_at === null);
+    expect(liveRows).toHaveLength(1);
+    const older = rows.find((r) => r.superseded_at !== null)!;
+    // The superseded act is the one the live act replaced (its id is the live act's `superseded_validation_id` in the response).
+    const supersededIds = [j(p), j(q)].map((b) => b.superseded_validation_id).filter((v) => v !== null);
+    expect(supersededIds).toEqual([older.validation_id]);
+    expect([j(p).validation_id, j(q).validation_id]).toContain(liveRows[0]!.validation_id);
+    expect(await markers(w2.memberId)).toBe(2);
 
     const w3 = await world();
     const { client: e } = await actor(w3.pariwarId, 'district_admin', 'district', w3.district);

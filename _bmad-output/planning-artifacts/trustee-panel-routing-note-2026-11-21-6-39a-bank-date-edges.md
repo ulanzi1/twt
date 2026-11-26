@@ -2,18 +2,15 @@
 
 > **Status: WRITTEN 2026-11-21; ⛔ SENT (BigDev sends).** Written from Story 6.39a (its Task 0.3), which builds your 21 November
 > answer to Question 2 — *staff may use the bank's date*. No member uses the system yet. Nothing waits on this note to be built or
-> merged; members' claims going live waits on your answers.
->
-> ⚠ **Before sending (for the author — remove this paragraph when the note goes out):** told lines 1 and 2, and what Q2 and Q4 say
-> "will be built", describe build decisions that are PROPOSED in the story (DL3, DL6, DL8, DL9) and answered by BigDev at its
-> Task 0.2. Re-read them against those answers first, and re-run E4.
+> merged; members' claims going live waits on your answers. Brought into line on 27 November with the build decisions BigDev made
+> that day (Story 6.39a Task 0.2); the four questions are unchanged.
 
 ## §0 — the gate
 
 **It is the Panel's:** Q1, Q2 and Q3 are the three edges your 21 November ruling left open, and each decides whether a particular
 family is helped (what the Trust OWES). Q4 — whether one staff member's reading of the bank statement is enough — decides how much
 one person's word can do to open a drive that members pay for; the record of your ruling notes it was not asked. **Split out and not
-asked — ours, and proposed in the story:** which staff member records the date (the finance officer — told to you below, so you can
+asked — ours, decided by BigDev on 27 November:** which staff member records the date (the finance officer — told to you below, so you can
 object), what is stored, how the screens read for staff, and how the system compares a payment reference. **Stripped of every
 reference, the questions read:** *"If a family has already been refused, can the bank's record still help them? If the payment
 reference the member typed is wrong, can they be helped at all? If the money reached the Trust on the very day the member died, is
@@ -56,7 +53,7 @@ date still help them?
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Only before the claim is refused.** | A family whose claim is still waiting is helped. A family already refused is not, whatever the bank shows. | Nothing makes staff look at the bank first — the District Admin's screen only tells them the finance officer can check. So the order in which staff happen to act decides whether a family is helped. |
+| **A** | **Only before the claim is refused.** | A family whose claim is still waiting is helped. A family already refused is not, whatever the bank shows. | Nothing makes staff look at the bank first — the District Admin's screen tells them to record the check and then, if the member may have paid before the death, to ask the finance officer before refusing; it does not stop them refusing. So the order in which staff happen to act decides whether a family is helped. |
 | **B** | **Also after the family's appeal sends the claim back** (our suggestion). | A refused family that appeals, and whose appeal is allowed, can then be helped by the bank's date. | The first thing we told you on 21 November — *"even an appeal that agrees with the family cannot open a drive"* — stops being true in this one case. The appeal must be allowed **before** the finance officer can record the date (while a claim is refused, the system accepts no bank date), so the people hearing the appeal decide on what they are told, not on a recorded check. If the bank then does not bear it out, the claim is refused again at the final vote — and a claim can be appealed only once. |
 | **C** | **Staff may reopen a refused claim directly**, without an appeal. | A refused family is helped as soon as the bank's record is found, without having to appeal. | A new way to undo a refusal, beside the appeal you already have. It is not designed: someone must decide who may reopen, and on what. New work. |
 
@@ -114,10 +111,11 @@ stands. **Will be built until you rule: A.**
 # Shown for information — not asked (object if you disagree)
 
 1. **Who does it.** The Trust's finance officer — the role that already checks payments against bank statements — records the bank's
-   date. The District Admin then checks the claim again, and the final vote follows as always. The system refuses that re-check from
-   the same person who typed the date, whatever roles they hold. The final voter is kept apart by role only: a person given both the
-   finance officer's and the final voter's role — or the Super Admin, who holds every power — could type the date and later cast the
-   final vote. If the Trust has no finance officer, only the Super Admin can record a bank date.
+   date. The District Admin then checks the claim again, and the approvals follow as always. The system refuses that re-check from
+   the same person who typed the date, whatever roles they hold. The first approver and the final voter are kept apart by role only: a
+   person given both the finance officer's role and an approver's or the final voter's — or the Super Admin, who holds every power —
+   could type the date and later approve the claim or cast the final vote. If the Trust has no finance officer, only the Super Admin can
+   record a bank date — and then someone else must check the claim again, or it waits.
 2. **What is kept.** No copy of the bank statement. The finance officer types the payment reference and the date, picks a reason, and
    writes a note saying which statement and what they saw; all of it is recorded under their name. The typed reference is checked and
    not kept.
@@ -125,11 +123,16 @@ stands. **Will be built until you rule: A.**
    recorded, the amount and the last four characters of the reference — and so they learn that the member died on or before that
    recorded date, and nothing more exact.
 4. **Nothing makes anyone look.** Your word was *"may"*. A District Admin can refuse a claim for a late-recorded fee without the bank
-   statement having been looked at; their screen tells them the finance officer can check first. Q1 is about what happens after that.
+   statement having been looked at. Their screen tells them to record the check and then, if the member may have paid before the
+   death, to ask the finance officer before refusing — the finance officer can act only once that check is recorded. Q1 is about what
+   happens if they refuse first.
 5. **The first thing we told you on 21 November is no longer true.** We said nothing changes the fee date except a new death
    certificate. The bank's date is now a second way — and, under Q1 B, an appeal can lead to a drive in this one case.
 6. **The family is told nothing new.** While the finance officer looks, the family sees what it sees today. The one waiting line you
    ruled on 21 November stays for the identity check only.
+7. **A later bank date never counts against a family.** If the bank's date is later than the recorded date (a bank can show a payment
+   a day or two after it was made), the system keeps the recorded date. Your words let staff use the bank's date when it shows the
+   money arrived *before* the death; a later date shows nothing of the kind, so it is never used to hold a claim.
 
 ---
 
@@ -154,14 +157,17 @@ stands. **Will be built until you rule: A.**
   re-check from the same person, and told line 1 says plainly what is kept apart by role only. (2) Whether a second person must
   confirm the date was first only told to you; it is now Q4. (3) The story first compared the reference character for character; a
   reference a member typed in small letters and a bank prints in capitals would have failed for no reason. Capitals and stray spaces
-  are now ignored.
+  are now ignored. (4) On 27 November, told line 1 was widened: the first approver, not only the final voter, is kept apart by role
+  only, and a claim waits if the only person who could re-check is the one who typed the date. (5) Told line 4 and Q1 A's cost first
+  said the District Admin's screen tells them the finance officer "can check first"; the finance officer can act only after a check
+  is recorded, so the screen says to record the check, then ask. (6) Told line 7 was added.
 - **Still uncertain:** (1) Whether the Trust's bank statement shows a payer's reference in a form that can be matched in practice —
   not traced; the only statement samples we have are made up, so the first real use is the test. (2) Whether the Trust will have a
   finance officer — the list of roles and staff hiring are both still open. (3) How often any of this happens — not measured.
   (4) That a claim refused a second time, after an allowed appeal, cannot be appealed again is our reading of the code, not something
   we ran. (5) The rulebook's joining lock-in is not built and not ratified by you; under it a payment that arrived in the lock-in
-  days before a death would still be outside cover, and this remedy helps such a family. (6) As proposed, recording a bank date
-  needs a second sign-in code, and the system cannot yet deliver that code to staff in production — until it can, the remedy cannot
+  days before a death would still be outside cover, and this remedy helps such a family. (6) Recording a bank date
+  needs a second sign-in code (decided 27 November), and the system cannot yet deliver that code to staff in production — until it can, the remedy cannot
   be used there. It is on our go-live list.
 
 # In plain English
@@ -184,7 +190,8 @@ If this section and the evidence below ever disagree, the **evidence** is the re
 # EVIDENCE — for the record, ⛔ not for the meeting
 
 **Question ↔ story mapping.** Q1 = Story 6.39a PQ1; Q2 = PQ2; Q3 = PQ3; Q4 = PQ4. Told line 1 = TL1; 2 = TL2; 5 = TL3; told line 3
-= the story's N2; 4 = its Policy-meaning note (*"what that sentence deliberately does ⛔ promise"*); 6 = its DL14.
+= the story's N2; 4 = its Policy-meaning note (*"what that sentence deliberately does ⛔ promise"*) and DL11's console note; 6 = its DL14; 7 = TL4
+(its DL6 — the earlier of the two dates).
 
 ## E1 — What is already ratified, verbatim
 
@@ -222,9 +229,12 @@ If this section and the evidence below ever disagree, the **evidence** is the re
 - **The rulebook.** Niyamavali §2.1 (c) and §2.2 speak of the fee's payment, ⛔ of its recording, and §2.2 carries the joining
   lock-in. Cited by section, ⛔ quoted (the rulebook is in the private legal corpus). A rulebook, ⛔ ratified by the Panel
   (`-473`: *"⛔ ratified by this ruling"*).
-- **Every build decision in Story 6.39a** — PROPOSED at its v1.1; ⛔ decision entry yet.
+- **Every build decision in Story 6.39a** — answered by BigDev at its Task 0.2 on 2026-11-27, each as proposed (story v1.4, Debug
+  Log References). An author-commit, ⛔ ratified; its decision entry (Task 0.4) is ⛔ written at 2026-11-27.
+- **The fee-optional question** (`2026-11-21-482` item 5, row `3-17`; the registration note sent alongside) — ⛔ ruled; `-473` Q1
+  stands until it is.
 
-## E3 — What the code actually does (traced at `90535934`), and what Story 6.39a will build
+## E3 — What the code actually does (traced at `90535934`, re-traced at `6536b8bb` on 2026-11-27), and what Story 6.39a will build
 
 **Today (code):**
 - The fee date is the Indian calendar date of the joining payment's `paid_at` — the server's time when the reference was typed
@@ -235,25 +245,30 @@ If this section and the evidence below ever disagree, the **evidence** is the re
   against any bank.
 - The Trust's bank statement is ⛔ in the system. *(The story's trace, G3 — the statement intake that exists is for a nominee's
   account and a pool. A negative claim: ⛔ re-run for this note.)*
-- The states in which the membership check can be recorded include `reversed` (a claim an appeal sent back) and ⛔ `denied`.
+- The states in which the membership check can be recorded include `reversed` (a claim an appeal sent back) and ⛔ `denied`, ⛔ an
+  appeal stage, ⛔ `state_trustee_approved`.
 - A claim has *"exactly one appeal"* journey (`appeal-eligibility.ts`); a fee refusal carries ⛔ time limit to appeal. *(The second
   from a code comment and the 21 November note — a claim, ⛔ a run.)*
 - One user can hold several role grants: `role_grants` has ⛔ uniqueness on user and role. The `finance_officer` role exists.
 - Admin step-up codes are ⛔ delivered in production: `adminStepUpDelivery` is a log stub that reveals the code only outside
-  production.
+  production (deferral R4 keeps the stub in every environment; ⛔ discharged).
+- The check record names the joining payment it compared (`claim_membership_checks.fee_receipt_id`, NOT NULL); row `3-17` would make
+  it optional when the fee-optional switch is on.
 
-**Will be built (Story 6.39a v1.1 — a plan, ⛔ code; every item PROPOSED until BigDev answers its Task 0.2):** one recorded act, the
-bank date, by the finance officer; accepted only in the review window, while the claim is held on its fee, when the typed reference
-equals the recorded one; the claim then waits for the District Admin's re-check, which compares the bank's date by the same rule;
-the re-check refused from the person who recorded the date; ⛔ name and ⛔ date of death shown to the finance officer; ⛔ new
-family-facing words.
+**Will be built (Story 6.39a v1.4 — a plan, ⛔ code; the build decisions answered by BigDev at Task 0.2, 2026-11-27):** one recorded
+act, the bank date, by the finance officer, behind a fresh step-up; accepted only in the review window (⛔ during an appeal), while a
+RECORDED check holds the claim on its fee, when the typed reference equals the recorded one (spaces trimmed, letter case ignored);
+the claim then waits for the District Admin's re-check, which compares the EARLIER of the bank's and the recorded date by the same
+rule; the re-check refused from the person who recorded the date; ⛔ name and ⛔ date of death shown to the finance officer; the
+District Admin's note says to record the check, then ask the finance officer; ⛔ new family-facing words.
 
 ## E4 — Commands to re-verify every claim
 
-Run 2026-11-21 in the story's worktree, after `git fetch origin`; the result follows each `# =>`.
+Run 2026-11-21 in the story's worktree, after `git fetch origin`; RE-RUN 2026-11-27 on the branch rebased onto `6536b8bb` — every
+result below as stated (only the first changed). The result follows each `# =>`.
 
 ```
-git rev-parse --short origin/main                                                          # => 90535934
+git rev-parse --short origin/main                                                          # => 6536b8bb (90535934 on 2026-11-21)
 grep -c '^### Decision 2026-11-21-473' .decision-log.md                                    # => 1
 grep -c 'they record that they did, with a reason, and it is audited' .decision-log.md     # => 1
 grep -c 'whether a second person must agree was ⛔ asked' .decision-log.md                  # => 1
@@ -274,4 +289,13 @@ git grep -c 'fee_bank_date' -- apps packages | wc -l                            
 grep -c "role: 'finance_officer'" packages/domain/src/rbac/roles.ts                        # => 1
 grep -ci 'unique' packages/domain/src/schema/role_grants.ts                                # => 0
 grep -c 'adminStepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd })' apps/api/src/deps.ts   # => 1
+grep -c 'ADMIN step-up OTP-over-SMS' _bmad-output/implementation-artifacts/deferred-work.md   # => 1 (deferral R4 — the stub kept, ⛔ discharged)
+# added 2026-11-27:
+grep -c "'appeal_stage_" packages/domain/src/claim/review-window.ts                        # => 0 (⛔ record during an appeal)
+grep -c "'state_trustee_approved'" packages/domain/src/claim/review-window.ts              # => 0
+grep -cE '\bCLAIM_APPROVE\b[,\]]' packages/domain/src/rbac/roles.ts                        # => 3 (the first approval, held by three roles)
+grep -c '"fee_receipt_id" uuid NOT NULL' packages/domain/migrations/0212_claim-membership-checks.sql   # => 1
+grep -c '^### Decision 2026-11-21-482' .decision-log.md                                    # => 1 (the fee-optional proposal)
+grep -c 'Record the check, then deny the claim with the reason' \
+  apps/admin/src/modules/claim-verification/i18n-en.ts                                     # => 1 (today's note; the amended one is ⛔ built)
 ```

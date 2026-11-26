@@ -61,7 +61,7 @@ note's, `2026-11-27a` the second validation's. A migration's drizzle `when` must
 READ LIVE then, across branches.
 
 LETTERS: **G** = found facts (G1–G14); **DL** = build decisions (DL1–DL14 — ANSWERED by BigDev at Task 0.2, 2026-11-27: every one as proposed); **PQ** = Panel
-questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR14); **AC1–AC13**.
+questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL4); **TR** = traps (TR1–TR14); **AC1–AC13**.
 -->
 
 # Story 6.39a: Staff May Use the Bank's Date for a Joining Fee Recorded After the Death — When the Trust's Own Bank Statement Shows It Arrived Before
@@ -545,6 +545,9 @@ or one user holding both role grants), a bank date that person records leaves th
     it is audited under their name. The system checks the reference; nobody re-checks the date (PQ4).
   - **TL3 — Told line 1 of 21 November is no longer true** (already flagged in `-473`): the fee date now changes in a second way — the
     bank's date — and, under PQ1 B as built, an appeal CAN lead to a drive in this one case.
+  - **TL4 — A later bank date never counts against a family** (DL6, answered 2026-11-27): when the bank's date is later than the
+    recorded one, the recorded date is kept — Q2 B's words let staff use the bank's date when it shows the money arrived *before* the
+    death (a MATCH, ⛔ a narrowing: a later date shows nothing of the kind). The note's told line 7.
 
 ## Acceptance Criteria
 
@@ -669,7 +672,7 @@ or one user holding both role grants), a bank date that person records leaves th
         ACs and the Tasks stand as written; ⛔ amendment was owed. ⚠ Still OWED words (⛔ in DL11's approved list, so ⛔ approved): the
         form's prompts for a missing or malformed field, and the page lines for `fee_bank_date.not_found`, `no_fee_receipt` and
         `missing_display` — put them to BigDev with Task 0.4's entry, ⛔ invent them at build time.
-  - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
+  - [x] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (date = the day written) — PQ1–PQ4
         and TL1–TL3; plain-English question first, THE ONE FACT (*"the bank's date helps only a family whose recorded payment reference is
         on the Trust's statement, and the system cannot see the statement — a person types what it shows"*), options with an honest cost
@@ -686,6 +689,14 @@ or one user holding both role grants), a bank date that person records leaves th
         ⭐ Also bring the note into line with v1.3 (a story edit, ⛔ a 0.2 answer): told line 1 — the first approver is kept apart by
         role only as well as the final voter (TL1); told line 4 and Q1 A's cost — the District Admin's screen now says to record the check
         FIRST and then ask the finance officer (DL11).
+        ⭐ DONE 2026-11-27 (ledger `2026-11-27c`): the note brought into line with the 0.2 answers — its status line says so and the
+        *"Before sending"* paragraph is REMOVED; §0 says "decided by BigDev on 27 November"; Q1 A's cost and told line 4 say record the
+        check, then ask; told line 1 names the first approver and the one-person wait; told line 7 (= TL4, DL6's earlier date) ADDED;
+        *"How much to trust"* lists the three corrections (4)–(6); E2 and E3 re-stated at `6536b8bb` (the answers, `-482`, the appeal
+        stages, R4, `fee_receipt_id`); E4 RE-RUN at `6536b8bb` — every original result as stated but the first (`origin/main`), six
+        commands added. Q1–Q4 and every option UNCHANGED. Status stays WRITTEN, ⛔ sent. ⚠ The sitting agenda points at `06a80355` —
+        a pre-rebase SHA holding the OLD text (now only on `backup/6-39a-pre-rebase-2026-11-27`): BigDev takes the note from this
+        branch's tip, ⛔ that SHA.
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — `-510` at 2026-11-27; READ LIVE): DL1–DL14 as answered; builds `-473` Q2 B under
         `-474` item 1; declares N3 (a narrowing: the reference only — PQ2), DL8 (the finance officer — a MATCH on "staff", ⛔ the
         District Admin `-473` named as the author's reading), PQ1 built B (the widest literal reach); names PQ1–PQ4 open (PQ4 is asked beyond `-474` item 1's three — say so); mints the key and
@@ -895,6 +906,8 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - 2026-11-27 — Task 0.2 DONE (ledger `2026-11-27b`): DL1–DL14 put to BigDev in three question dialogs; every answer the proposed one
   (Debug Log References). ⛔ AC or Task changed meaning. Owed: the words for a missing / malformed field and three refusal codes (Task 0.2's
   note), then Task 0.3 (the note's re-read, before the next sitting) and Task 0.4 (the decision entry, `-510`, READ LIVE). ⛔ Code.
+- 2026-11-27 — Task 0.3 DONE (ledger `2026-11-27c`): the Panel note brought into line with the Task 0.2 answers, its
+  *"Before sending"* paragraph removed, told line 7 (TL4) added, E4 re-run at `6536b8bb`; questions unchanged; WRITTEN, ⛔ sent.
 
 ### File List
 
@@ -907,3 +920,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | 2026-11-21 | v1.2 | The Panel note drafted at BigDev's ask, before Task 0.2 (WRITTEN, ⛔ sent; E4 run). PQ4 added — must a second person confirm the bank's date (`-473`: *"⛔ asked"*); it was told in TL1 / TL2, and is now asked without blocking, built A; one test names it (AC3); DL13 (b), Tasks 0.3–0.5 and the header's §0 line follow. |
 | 2026-11-27 | v1.3 | Validated again (`bmad-create-story validate 6.39a`, BigDev: "all") after REBASING onto `origin/main` `6536b8bb` (253 commits); `baseline_commit` re-pinned to it; ledger `2026-11-21w` relabelled `21ar` (3.13 landed holding `w`). **Critical:** the numbers re-read (catalog v67 / 99 keys — 3.13 took v66 with two keys; migration `0219`; decision `-510`; roster Row 58; 41 CI jobs — NUMBERS, DL1, DL8, DL13, AC8, AC13, Task 0.4); row `3-17` (`-482` item 5) will make `fee_receipt_id` nullable and add a third fee-date source on the same table and guard — G14, TR13, DL1's extensible vocabulary and one-way coherence CHECK, Task 0.1; the amended console note sent the District Admin to the finance officer before a check was stored, when the finance officer can act only on a stored one — DL5's only path stated, DL11 reworded record-first (approval at 0.2), AC3 / AC12 legs, the Policy-meaning note's list line; AC5 / AC13's "exactly two kinds of edit" could not be met — kinds (i)–(v) named file by file; TR5's leak path was wrong (the error handler logs no body; drizzle's query error carries the parameters into the 500 log) — DL3 compares in TypeScript, the insert's errors re-thrown parameter-free; AC4 / AC9's "no log line" could not fail (test servers log nothing) — a captured `logStream` with a positive control. **Added:** a direct-writer leg for the lock-protected token compare (AC5, TR7); PQ1 B's cost — the appeal is decided before any bank date can be recorded, and a failed look leaves the family with no appeal — and an option to record during the appeal (DL5); the earlier of the two dates, so a later bank date cannot hold a passing claim, with the always-replaces option (DL6, AC1, AC5), and corrections stop at `state_trustee_approved` (DL5); the finance list in two sections so a resolved claim never crowds out a held one (DL10, DL11, AC3, AC12); `rtbf-anonymize.test.ts`' three counts (G11, AC11, Task 1.2); the next sitting's agenda would send the note before Task 0.2 is answered (Task 0.3); N7's role pin widened to `claim.approve` and `claim.r9_vote`, TL1 names the first approver; one person alone strands a claim (N7, TR14, AC5, DL13 (c)). **Small:** DL12 audits only the refusals the handler raises; the microcopy gate matches whole words (G8); TR7's heading; `clampLimit`'s wording; AC5's file list separates specs from source; `-482` in the rulings table; Git intelligence and References brought to `6536b8bb`. A fresh-context review of this pass's OWN diff found eight defects, all fixed before commit (DL6's writer token kept the old meaning; DL1's CHECK still read two-way; DL10's flag; Task 4.2's "two kinds"; kind (iii) widened to the contracts / admin preview fixtures; a third erasure count; Task 0.3 brings the note's told lines 1 and 4 into line; N7's wording, the second-section heading, two counts). |
 | 2026-11-27 | v1.4 | Task 0.2 answered by BigDev — every DL as proposed (DL8 the finance officer; DL9 the step-up kept; DL6 the same-person refusal and the earlier of the two dates; DL5 check first, ⛔ record during an appeal; DL11 the amended note and every listed line approved word for word; DL3 trim and ignore letter case; the rest accepted as written). The section and each decision marked ANSWERED, each alternative kept as *"Not chosen at 0.2"*; the answers recorded under Debug Log References; Task 0.2 ticked with the words still owed. |
+| 2026-11-27 | v1.5 | Task 0.3 done: the Panel note re-read against the Task 0.2 answers — status line, §0, Q1 A's cost, told lines 1 and 4 corrected (the first approver; record the check, then ask), told line 7 added (= new TL4, DL6's earlier date), the "Before sending" paragraph removed, E2 / E3 re-stated and E4 re-run at `6536b8bb` (six commands added); the questions and options unchanged; WRITTEN, ⛔ sent. Task 0.3 ticked; the agenda's `06a80355` pointer flagged as stale. |

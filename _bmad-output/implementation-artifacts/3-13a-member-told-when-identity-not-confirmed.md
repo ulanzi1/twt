@@ -375,6 +375,12 @@ own verification. (Part 10 lists a correction right — relevant to PQ1 (b)'s wr
 
 ## Panel question — PROPOSED (one note at Task 0.3)
 
+> ⭐⭐ **2026-11-26 — RULED, [Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508)** (Trustee-ratified, DR + KB;
+> relayed by BigDev: *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*). PQ1 (a) = **A**; PQ1 (b) = **(ii)**; the words
+> table below = **APPROVED as written** (by reading — ⛔ change given; BigDev may object); PQ2 (`3.13-R1-W6`) = **A** (counsel's half
+> open); the three confirms confirmed. ⛔ build change: everything was built-until-ruled on these sides. The text below is kept as
+> written; its "PROPOSED" labels now read APPROVED.
+
 ⭐ It passes §0: the words are what the Trust TELLS a member, and the Panel reserved them (`-502` item 4's cost line; the told note §3).
 It blocks GO-LIVE (Row 57 (b); told note §4), ⛔ the build or the merge. Built on PQ1 (a) A and PQ1 (b) (ii) meanwhile (our
 suggestions, PROPOSED).
@@ -572,7 +578,7 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 (partial, before 0.2): `git fetch origin` — `origin/main` = `f5c559d0`; `ce0737ce` IS an ancestor of HEAD;
         `git diff --name-only ce0737ce..origin/main -- packages apps` EMPTY (⛔ F-fact moved); the branch lacks only `f5c559d0`
         (records-only) — ⛔ rebased (the note cites this branch's SHAs); ⛔ `3-14` / `3-16` branch on any ref. The agenda re-read: ⛔
-        sent; item 9 now MARKED withdrawn (`041889ae`). Still owed in 0.1: the next decision id and ledger letter, re-read just before 0.4.
+        sent; item 9 now MARKED withdrawn (`041889ae`). Still owed in 0.1 (⚠ `-508` is now TAKEN by the Panel's ruling ⇒ 0.4 re-greps from `-509`): the next decision id and ledger letter, re-read just before 0.4.
   - [x] 0.2 Put DL1–DL12 to BigDev (the question dialog; recommended option first): DL1 (where), DL2 + DL3 (when / what), DL4–DL7 (the
         build — one question, naming DL5's OpenAPI choice and DL6's render rule with their options), DL8 (preselect vs unselected),
         DL9 (the staff hint, word for word — "will see" vs "is told"), DL10 (whole card as the button vs a separate button), and WHERE
@@ -582,7 +588,7 @@ suggestions, PROPOSED).
         The peer agenda marked at BigDev's word (*"mark that this file come before"*) — `041889ae` on `governance/panel-sitting-2026-11-26`
         (no peer session was running — ListAgents empty — and the edit is BigDev's ask, so the "⛔ an edit to its branch" line above is
         superseded by BigDev's word, ⛔ reinterpreted).
-  - [ ] 0.3 Write the Panel note from the TEMPLATE (§0 first; PQ1 (a) and (b), each with its one deciding fact and options with an
+  - [x] 0.3 Write the Panel note from the TEMPLATE (§0 first; PQ1 (a) and (b), each with its one deciding fact and options with an
         honest cost; the words table; the two confirm lines; the two info lines; evidence LAST, E4 commands run before commit). ⛔ send it
         while `3.13-R1-W6` is still unasked — it goes in the same sitting unless it was asked earlier (F12):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-3-13a-member-told-identity-not-confirmed.md`. ⚠ The Hindi
@@ -607,9 +613,13 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 (v1.9) — EVERY owed item before sending is DONE: the Hindi read; `3.13-R1-W6` (Q3); the peer agenda marked
         (`041889ae`); the note re-checked against 0.2's answers — ⛔ word changed (a dated line in its status block). The box stays
         unticked until BigDev sends it.
+        ⭐⭐ 2026-11-26 — SENT and RULED: `-508` (DR + KB — *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*); the note's
+        ruling block filled, the rest unedited. That it was sent is INFERRED from the ruling (channel / time ⛔ recorded).
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`, re-grepped on every ref just before writing): DL1–DL12 as answered, the §0
         split, `-502` item 4 quoted byte for byte, the AI-10-1 line (⛔ benefit gate), PQ1 (a) and (b) open + built on PQ1 (a) A and PQ1 (b) (ii); committed ALONE.
         ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
+        ⚠ 2026-11-26 — PQ1 / PQ2 are now RULED (`-508`), ⛔ open: the entry cites `-508` for them instead of "open + built on …"; its
+        id is re-grepped from `-509`.
   - [ ] 0.5 Roster Row 57: a dated line under (b) — *"row `3-13a` started; (b) is MET when it is built AND its words are approved (PQ1)
         AND the device pass (AC9) is recorded"* (⛔ edit to the leg's text — [[feedback_supersede_never_reinterpret]]).
         `deferred-work.md`: a dated line under PQ2 (*"row 3-13a in progress, words PQ1 open"*); a NEW item for row `3-14` — the cover
@@ -752,3 +762,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.7 | 2026-11-26 | BigDev: *"yes add both to the note and commit"* — (1) `how_details`' last sentence *"If a detail you gave was wrong, it cannot be changed at present."* / *"…तो उसे इस समय बदला नहीं जा सकता।"* is REPLACED by *"If a detail you gave was wrong, ask for help here too."* / *"अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें।"* — the old line read as the Trust refusing a correction and gave the member no way to ask; a request made through the help request can be RECORDED by the Pariwar Admin (10.21's `recordCorrection`, `member.data_rights`; `-109` row 2), ⛔ applied (`3.13a-G1`). (2) DPDP Act s.12(2) and s.8(3) quoted beside the Niyamavali Part 10 in PQ1 (b)'s costs and the note's E3; `-109` row 2 added to the note's E1 and E2. PQ1 (b) (ii) / (iii) costs and the note's reading, words-check line, plain English, trust section, status block and E4 updated to match. Microcopy re-run on the new line in both languages (`checkTone`, `checkVocabulary` with the member terms, `checkNumerals`) — clean; note and story `how_details` compared cell by cell — identical. ⚠ BigDev's Hindi read (Task 0.3 item 1) is REOPENED for that one sentence. ⛔ build change beyond the one copy value (the key, the reason → how-key map and every AC stand). The note stays WRITTEN, ⛔ sent. Row stays `ready-for-dev`. |
 | 1.8 | 2026-11-26 | BigDev read v1.7's changed Hindi sentence (*"अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें।"*, shown with the English): *"Hindi is ok"* — ⛔ change. Task 0.3's Hindi read DONE again; a dated line in the note's status block. The words stay PROPOSED until the Panel rules. Still owed before the note is sent: the peer agenda's copy withdrawn or marked (BigDev's) and the re-check after Task 0.2. Row stays `ready-for-dev`. |
 | 1.9 | 2026-11-26 | BigDev: *"mark that this file come before"* ⇒ the peer agenda MARKED on `governance/panel-sitting-2026-11-26` (`041889ae`): a dated status line (this note goes before the sitting), item 9 and Part C's member-message line WITHDRAWN (kept as written), the separate private-note note (`4a48c24d`) marked DO NOT SEND. BigDev: *"Build questions as recommended"* ⇒ Task 0.2 DONE — DL1–DL12 on their recommended sides (DL5 ⛔ OpenAPI entry; DL6 the `isSuccess` render rule; DL8 preselect; DL9 (b) *"The app shows the member this reason."*; DL10 the whole card one button); a dated box under "Build decisions". Task 0.1's drift check run (⛔ F-fact moved; ⛔ rebase — records-only `f5c559d0`). The note re-checked against the answers — ⛔ word changed — and its status block says nothing more is owed before sending; its E3 line updated. Next: Task 0.1's numbers re-read, then 0.4 (the author-commit decision entry) before any code. Row stays `ready-for-dev`. |
+| 1.10 | 2026-11-26 | ⭐⭐ The Panel RULED the note — [Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508) (Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*), committed ALONE (`978c2c11`) before these records. PQ1 (a) A, PQ1 (b) (ii), the words APPROVED as written (by reading — ⛔ change given), PQ2 A (counsel's half open), the three confirms. ⛔ build change. Records: the note's status and ruling block (the rest unedited); Task 0.3 ticked; a ruled box over "Panel question"; roster Row 57 (b) dated line (⛔ MET — built + device pass owed); `deferred-work.md` PQ2 (under `-501`), `3.13-R1-W6` (Panel half ruled A, counsel's half open) and `3.13a-G1` (trigger FIRED; the ruling accepts the gap as a cost, ⛔ rules it unfixable; homing it is BigDev's) dated lines. Next: Task 0.4 from `-509`, then 0.5's remaining items and 0.6, then code. Row stays `ready-for-dev`. |

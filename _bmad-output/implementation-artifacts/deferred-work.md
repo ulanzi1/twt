@@ -31,6 +31,9 @@ and blocks GO-LIVE through roster Row 57 (`identity-validation-live`), ⛔ the b
   a new row for member-facing words (Hindi + English, Panel-approved) ⇒ Row 57 (b).
   - **2026-11-25 — RULED C** (`-502`; ⛔ our suggestion B): the member is told, and told the reason ⇒ NEW row `3-13a` (backlog). Open
     until built.
+  - **2026-11-26 — the words RULED** ([Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508); DR + KB): Q1 A, Q2 (ii),
+    the words as written (by reading), the three confirms confirmed. Row `3-13a` in progress (`ready-for-dev`). Open until built and the
+    device pass is recorded (Row 57 (b)).
 - **PQ3 — may the District Admin and Pariwar Admin see a member's full mobile to arrange the check?** OPEN — the same note, Q3 (BigDev's
   DL8b, 2026-11-21: *"Ask Panel: show full mobile"*). Built: A (masked only — DL8). Trigger: B ⇒ one audited number read on the detail
   route; C ⇒ its own row ⇒ Row 57 (b2).
@@ -14999,6 +15002,9 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
     `trustee-panel-routing-note-2026-11-26-3-13a-member-told-identity-not-confirmed.md` (`c7e9e94b`; WRITTEN, ⛔ sent), its options, costs
     and reading kept as the separate note (`4a48c24d`, on `governance/panel-sitting-2026-11-26`) put them. The item stays OPEN until the
     Panel rules (and counsel answers the legal half).
+  - **2026-11-26 — the Panel half RULED: A** ([Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508) item 4; DR + KB):
+    the note stays OUT of the member's data download, as built. ⛔ discharged: counsel's half stays OPEN — if counsel says the note must
+    be given, that overrides A and B / C go back to the Panel. Trigger unchanged: counsel's answer, before the data export goes live.
 - **3.13-R1-N5 — nothing structurally stops staff typing a document or Aadhaar number into the free-text note. OPEN RESIDUAL, not closed.** The note is Tier-1 encrypted, kept, and read back only by the staff who record the next act (patch P19 on 2026-11-26 also held it out of the member's data export, `3.13-R1-W6`). The only mitigation is the lead copy ("Do not copy…" on the detail), and AC9's grep-test covers columns and request fields, ⛔ note content. No digit-check was built on purpose: a 12-digit run is also a mobile number with the country code (`91…`), so a blocking pattern would refuse honest notes. Aadhaar Act s.8A(4)(b) bars storing the full number *"for any purpose"* ([[project_aadhaar_full_number_storage_barred]]). NOT pre-existing: introduced by 3.13's DL9 free-text note. Owner: BigDev. Trigger: before Row 57's go-live — a staff-training / copy review of the lead line, or a reported instance; any technical screen needs counsel's view first.
 - **3.13-R1-W7 — the awaited disclosure audit write has no timeout.** `auditDisclosure` (`apps/api/src/modules/identity-checks/handlers.ts`) awaits `writeAuditEntry`, which takes the single global audit-chain advisory lock; if the chain writer or the service pool stalls, the detail and the number press wait with it and hold their request-scope connection idle. Pre-existing posture: every other awaited `writeAuditEntry` caller (`adminMemberSearch`, `adminInvalidateValidityCache`) has the same exposure and no timeout. Owner: BigDev. Trigger: the first stall report, or the story that gives the audit chain writer a deadline — add the deadline once, in `writeAuditEntry`, for every caller, so the 503 path runs.
 - **3.13-R1-W8 — the identity-check queue's page is local state, not part of the URL.** Opening a member from page 2 and coming back lands on page 1 (`IdentityChecksPage.tsx` keeps `offset` in `useState`). A convenience, not a correctness gap: every member is reachable and nothing is hidden. NOT pre-existing — introduced by patch P4. Owner: BigDev. Trigger: staff report losing their place; move `offset` into the route's search params (validated, bounded by `IDENTITY_CHECK_QUEUE_MAX_OFFSET`).
@@ -15053,3 +15059,8 @@ Observed and escalated, ⛔ planned here ([[feedback_gap_analysis_observational]
   - **⛔ Panel question yet** on who may correct a typed-in detail, on what evidence, and how a correction is told apart from
     falsification (`-109` row 2 names that question as un-analysed). Owner: BigDev. Trigger: the Panel's ruling on Story 3.13a's note
     (its Q1 / Q2 — the story's PQ1) or roster Row 57's go-live, whichever is first.
+  - **2026-11-26 — TRIGGER FIRED:** the Panel ruled the note ([Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508);
+    Q2 (ii)). The ruling ACCEPTS this gap as a stated cost (*"nothing changes for them until a way to correct it is built"*); it does ⛔
+    rule that a wrong detail is never corrected, and ⛔ rules who may correct one or how. Still OPEN and unhomed; homing it (a Panel
+    question on who corrects, on what evidence, and correction vs falsification — `-109` row 2) is BigDev's. Next trigger: roster Row
+    57's go-live.

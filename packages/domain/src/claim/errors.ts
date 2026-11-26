@@ -705,6 +705,52 @@ export class FeePaidAfterDeathNotShownError extends Error {
   }
 }
 
+// ── Story 6.39a — the finance officer's bank date for a joining fee recorded after the death ──────────────────────
+
+/**
+ * DL5 / DL10 — the reasons recording a bank date is refused (route codes `fee_bank_date.<reason>` — 404 `not_found`,
+ * 400 `invalid_reason`, else 409). ⚠ LOCKSTEP with `@twt/contracts`' `FEE_BANK_DATE_REFUSAL_REASONS`:
+ *   · `not_found`          — no such claim in this Pariwar;
+ *   · `window_closed`      — the claim is outside the review window (a denied claim; or past `state_trustee_approved` —
+ *                            corrections stop there, DL5);
+ *   · `not_held`           — the claim is ⛔ held on its fee: ⛔ live check, or a live check whose fee half passes with ⛔
+ *                            live record (DL5 (b) — the District Admin records the check FIRST);
+ *   · `no_fee_receipt`     — the joining payment cannot be identified, or is ⛔ the one the live check names (fail closed);
+ *   · `reference_mismatch` — the typed statement reference is ⛔ the joining payment's stored one (N3 — PQ2 A);
+ *   · `in_future`          — the bank date is after IST today;
+ *   · `before_joining`     — the bank date is before the member joined (IST) (G10);
+ *   · `invalid_reason`     — the writer's DEFENCE for a malformed field the contract already refuses (an unknown
+ *                            reason, an unreal date, a blank note) — through the route the contract answers 400 first;
+ *   · `stale`              — the live check or the live record is ⛔ the one the finance officer saw;
+ *   · `missing_display`    — the actor has ⛔ display name.
+ * ⛔ A refusal message or detail ever carries the typed reference, the bank date or the note (N6, TR5).
+ */
+export const FEE_BANK_DATE_REFUSAL_REASONS = [
+  'not_found',
+  'window_closed',
+  'not_held',
+  'no_fee_receipt',
+  'reference_mismatch',
+  'in_future',
+  'before_joining',
+  'invalid_reason',
+  'stale',
+  'missing_display',
+] as const;
+export type FeeBankDateRefusalReason = (typeof FEE_BANK_DATE_REFUSAL_REASONS)[number];
+
+/** Recording a bank date is refused (see `FEE_BANK_DATE_REFUSAL_REASONS`). ⛔ Never a denial or an approval (N5). */
+export class FeeBankDateRefusedError extends Error {
+  public readonly name = 'FeeBankDateRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: FeeBankDateRefusalReason,
+    detail: string,
+  ) {
+    super(`[fee-bank-date] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}
+
 // ── Story 6.19a — the claim CONTACT RECORD (D5, D14; W1–W10) ─────────────────────────────────────────
 
 /** D14 — the reasons a claim cannot be APPROVED for want of its contact record, in PRECEDENCE order: when

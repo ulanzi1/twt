@@ -634,6 +634,13 @@ export type AuthAuditEventType =
   | 'admin_claim.membership_checked'
   | 'admin_claim.membership_check_rejected'
   | 'admin_claim.membership_check_read'
+  // ── Story 6.39a (DL12) — the finance officer's bank date for a joining fee recorded after the death. ids, the reason code
+  // and refusal codes ONLY (⛔ the bank date, ⛔ the typed statement reference, ⛔ the note, ⛔ a name — N6), with a
+  // `claim:<uuid>` resourceLocator. ⛔ Read audit for the list (it shows ⛔ Tier-1).
+  //   fee_bank_date_recorded / fee_bank_date_rejected — the record (`claim.record_fee_bank_date`), or a refusal the HANDLER
+  //     raised, with its code (a 400 / 401 / 403 / step-up refusal is answered before the handler runs and is ⛔ audited here).
+  | 'admin_claim.fee_bank_date_recorded'
+  | 'admin_claim.fee_bank_date_rejected'
   // ── Story 3.13 (DL8, DL6a, DL13) — staff check a typed-in identity in life. ids, outcome / reason codes ONLY (⛔ a name, ⛔ a
   // date of birth, ⛔ the note, ⛔ the MOBILE NUMBER — `-328`'s rule), with a `member:<uuid>` resourceLocator.
   //   identity_check_read — the detail was opened (while a check is awaited it decrypts the typed-in name, date of birth and photo; always the live note).

@@ -43,10 +43,17 @@ import { eventsLog } from '../schema/events_log.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
 import { FEE_PAID_AFTER_DEATH_REASON_CODE } from './membership-check-approval.js';
 
-/** The joining receipt, as the comparison needs it. `paidAt` is the SERVER instant of the member's self-attest. */
+/**
+ * The joining receipt, as the comparison needs it. `paidAt` is the SERVER instant of the member's self-attest.
+ * ⭐ Story 6.39a (DL4) widens it — ONE reader, ⛔ a second — with the stored `utr` (plaintext Tier-3, SELF-ATTESTED: the
+ * bank-date writer compares the finance officer's typed statement reference with it, N3) and `amountInr` (shown on the
+ * finance officer's page). ⛔ Neither is ever logged or put in an event.
+ */
 export interface JoiningFeeReceipt {
   readonly receiptId: VyawasthaShulkReceiptId;
   readonly paidAt: Date;
+  readonly utr: string;
+  readonly amountInr: number;
 }
 
 /**
@@ -81,7 +88,12 @@ export async function readJoiningFeeReceipt(
   if (typeof utr !== 'string' || utr.length === 0) return null;
 
   const [receipt] = await db
-    .select({ receiptId: vyawasthaShulkReceipts.receiptId, paidAt: vyawasthaShulkReceipts.paidAt })
+    .select({
+      receiptId: vyawasthaShulkReceipts.receiptId,
+      paidAt: vyawasthaShulkReceipts.paidAt,
+      utr: vyawasthaShulkReceipts.utr,
+      amountInr: vyawasthaShulkReceipts.amountInr,
+    })
     .from(vyawasthaShulkReceipts)
     .where(
       and(
@@ -91,7 +103,9 @@ export async function readJoiningFeeReceipt(
       ),
     )
     .limit(1);
-  return receipt ? { receiptId: receipt.receiptId, paidAt: receipt.paidAt } : null;
+  return receipt
+    ? { receiptId: receipt.receiptId, paidAt: receipt.paidAt, utr: receipt.utr, amountInr: receipt.amountInr }
+    : null;
 }
 
 /** The claim's LIVE membership check, as the staff preview shows it (⛔ the note). */

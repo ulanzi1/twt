@@ -260,9 +260,13 @@ describe('PERMISSION_CATALOG', () => {
     // helpline_operator: the audited number reveal to arrange it, `-502` Q3 B; `2026-11-25-501` DL6 / `-503` DL6a; ONE bump for
     // the two; 96 -> 98 keys. Reuse-check: not claim.check_membership, not member.moderate, not member.view_validity. 65 / 96
     // READ LIVE at 74839891).
-    expect(PERMISSION_CATALOG_VERSION).toBe(66);
+    // 67 at Story 6.39a +1 (claim.record_fee_bank_date — finance_officer ONLY: the bank's date for a joining fee recorded
+    // after the death, the list pariwar and the record district + step-up; `2026-11-27-510` DL8, under `-473` Q2 B; 98 -> 99
+    // keys. Reuse-check: not reconciliation.review (the pool's statement), not claim.check_membership (the decision). 66 / 98
+    // READ LIVE at 6536b8bb).
+    expect(PERMISSION_CATALOG_VERSION).toBe(67);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(98);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(99);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

@@ -129,6 +129,10 @@ const CLAIM_FLAG_FRAUD = permissionKey('claim.flag_fraud');
 const CLAIM_RECORD_FRAUD_FINDING = permissionKey('claim.record_fraud_finding');
 // Story 6.39 (`2026-11-21-472` DL7) — the District Admin's membership check before any drive (district).
 const CLAIM_CHECK_MEMBERSHIP = permissionKey('claim.check_membership');
+// Story 6.39a (`2026-11-27-510` DL8) — the finance officer's bank date for a joining fee recorded after the death (the list
+// pariwar, the record district + step-up). ⛔ Granted to any role holding the check, an approval, the final vote or the R9
+// vote (N7 — pinned from the bundles in roles.test.ts).
+const CLAIM_RECORD_FEE_BANK_DATE = permissionKey('claim.record_fee_bank_date');
 // Story 3.13 (`2026-11-25-501` DL6; `-503` DL6a) — staff check a typed-in identity in life (district_admin at the member's
 // current posting district, pariwar_admin at any), and the audited number reveal to arrange it (those two + verifier +
 // helpline_operator). See permissions.ts. ⛔ field_worker (no login yet) / block_admin (a member has no block) — an inert
@@ -722,7 +726,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
     // Other finance keys land later; this is the FR-50 reviewer capability, not an adjudication grant.
     // Story 10.4 — HELPDESK_RESPOND: the default routing target for `utr-mismatch` tickets is
     // finance_officer, so it responds to the helpdesk queue (pariwar-dimension; the `pariwar` ceiling satisfies it).
-    permissions: [RECONCILIATION_REVIEW, HELPDESK_RESPOND],
+    // Story 6.39a (`2026-11-27-510` DL8) — CLAIM_RECORD_FEE_BANK_DATE: the finance officer holds the Trust's bank statements,
+    // so they record the date a joining fee arrived (`-473` Q2 B). Per-claim routes gate at the deceased's district — the
+    // `pariwar` ceiling satisfies it. ⛔ An adjudication grant: the record decides nothing (N2).
+    permissions: [RECONCILIATION_REVIEW, HELPDESK_RESPOND, CLAIM_RECORD_FEE_BANK_DATE],
     scopeCeiling: 'pariwar',
   },
   {

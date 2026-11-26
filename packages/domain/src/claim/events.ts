@@ -38,6 +38,7 @@ import {
   MEMBERSHIP_CHECK_IDENTITY_OUTCOMES,
   MEMBERSHIP_CHECK_IDENTITY_REASONS,
 } from '../schema/claim_membership_checks.js';
+import { FEE_BANK_DATE_REASON_CODES } from '../schema/claim_fee_bank_dates.js';
 import { SHEPHERD_ASSIGNMENT_REASONS } from '../schema/claim_shepherd_assignments.js';
 import { CLAIM_INTAKE_CHANNELS, CLAIM_LIFECYCLE_STATES } from '../schema/claims.js';
 // ⚠ VALUE imports (the claim-time consent-type tuples), ⛔ not types — `schema/consent_records.ts`
@@ -834,7 +835,26 @@ export const ClaimMembershipCheckedPayloadSchema = requireIdentityTransition({
   identity_reason: z.enum(MEMBERSHIP_CHECK_IDENTITY_REASONS).nullable(),
 });
 
-// ── The 40-event vocabulary + the type→schema map (single source) ─────────────
+// ── Story 6.39a — the finance officer's bank date for a joining fee recorded after the death ─────────────────────
+
+/**
+ * The finance officer RECORDED the date the Trust's own bank statement shows the claim's joining fee arrived
+ * (`2026-11-21-473` Q2 B; built `2026-11-27-510` DL12). The 41st claim event. An IDENTITY annotation (the 6.39 shape): the
+ * row in `claim_fee_bank_dates` and this event are written in ONE transaction, and the reducer is a no-op.
+ *
+ * ⛔ It decides nothing (N2): the District Admin's next membership check compares the dates; the gate waits on
+ * `bank_date_recorded` until then (N4).
+ * ⛔ PII discipline (N6): ids and the reason CODE only — ⛔ the bank date, ⛔ the typed reference, ⛔ the note, ⛔ a name.
+ */
+export const ClaimFeeBankDateRecordedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  record_id: z.string().uuid(),
+  fee_receipt_id: z.string().uuid(),
+  reason_code: z.enum(FEE_BANK_DATE_REASON_CODES),
+  superseded_record_id: z.string().uuid().nullable(),
+});
+
+// ── The 41-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -872,7 +892,9 @@ export const ClaimMembershipCheckedPayloadSchema = requireIdentityTransition({
 // event.
 // Story 6.39 adds the 40th — `claim.membership_checked` (DL11), an IDENTITY annotation with a no-op reducer recording
 // the District Admin's membership check before any drive. The approval gates read the check ROW, ⛔ the event; a
-// failing check is ⛔ a denial (N5).)
+// failing check is ⛔ a denial (N5).
+// Story 6.39a adds the 41st — `claim.fee_bank_date_recorded` (DL12), an IDENTITY annotation with a no-op reducer recording
+// the finance officer's bank date for a joining fee recorded after the death. The gate reads the record ROW, ⛔ the event.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -891,6 +913,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.member_found_guilty',
   'claim.death_certificate_reviewed',
   'claim.membership_checked',
+  'claim.fee_bank_date_recorded',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
@@ -943,6 +966,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.member_found_guilty': ClaimMemberFoundGuiltyPayloadSchema,
   'claim.death_certificate_reviewed': ClaimDeathCertificateReviewedPayloadSchema,
   'claim.membership_checked': ClaimMembershipCheckedPayloadSchema,
+  'claim.fee_bank_date_recorded': ClaimFeeBankDateRecordedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,

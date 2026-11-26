@@ -275,6 +275,16 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     owner: 'Story 6.39',
     expectedMethods: ['get', 'post'],
   },
+  {
+    // Story 6.39a (DL10) — the finance officer's BANK DATE for a joining fee recorded after the death (`-473` Q2 B): the
+    // LIST of claims held on their fee and the RECORD (behind a fresh step-up). Both need the authenticated-HUMAN chain —
+    // the Panel ruled "staff … record that they did, with a reason": ⛔ no job ever records one. `fee-bank-date` matches both
+    // paths (`/admin/fee-bank-dates` and `/admin/claims/:claimCaseId/fee-bank-date`).
+    file: 'apps/api/src/modules/claims/claims.fee-bank-date.routes.ts',
+    pathSubstrings: ['fee-bank-date'],
+    owner: 'Story 6.39a',
+    expectedMethods: ['get', 'post'],
+  },
 ];
 
 /**
@@ -367,7 +377,7 @@ function main(): void {
 
   // ⭐ ANTI-VACUITY FLOOR. Without it, deleting an entry shrinks the gate's scope in silence and it
   // still reports success. Raise this DELIBERATELY when enrolling, ⛔ never to make the gate quiet.
-  const COVERAGE_FLOOR = 20; // Story 6.39 raised it 19 → 20 (claims.membership-check.routes.ts). Story 6.22 raised it 16 → 19 — to the set's LIVE length (claims.fraud-investigation.routes.ts; the set held 18 at `91ea2c81` while the floor lagged at 16 — two earlier enrolments never raised it). Story 6.19d raised it 15 → 16 (claims.certificate-reminder.routes.ts). Story 6.19c raised it 12 → 15 (claims.correction-closure / claims.correction-escalation / claims.refile-confirmation .routes.ts). Story 6.19b raised it 11 → 12 (claims.correction-chase.routes.ts). Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
+  const COVERAGE_FLOOR = 21; // Story 6.39a raised it 20 → 21 (claims.fee-bank-date.routes.ts). Story 6.39 raised it 19 → 20 (claims.membership-check.routes.ts). Story 6.22 raised it 16 → 19 — to the set's LIVE length (claims.fraud-investigation.routes.ts; the set held 18 at `91ea2c81` while the floor lagged at 16 — two earlier enrolments never raised it). Story 6.19d raised it 15 → 16 (claims.certificate-reminder.routes.ts). Story 6.19c raised it 12 → 15 (claims.correction-closure / claims.correction-escalation / claims.refile-confirmation .routes.ts). Story 6.19b raised it 11 → 12 (claims.correction-chase.routes.ts). Story 6.19a raised it 10 → 11 (claims.contact.routes.ts). Story 6.21a raised it 9 → 10 (claims.death-certificate.routes.ts). Story 6.20 raised it 8 → 9 (claims.nominee-declaration.routes.ts). ⚠ The count was 8 at 2026-09-21 — a first draft guessed 9 and the floor caught it.
   if (COVERAGE_SET.length < COVERAGE_FLOOR) {
     missingCoverage.push(
       `COVERAGE_SET has ${COVERAGE_SET.length} entries but the floor is ${COVERAGE_FLOOR} — an entry was ` +

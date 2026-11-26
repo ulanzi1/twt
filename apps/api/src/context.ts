@@ -284,6 +284,14 @@ export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = encryptionRuntime.CLAIM_FRA
 export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = encryptionRuntime.CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS;
 
 /**
+ * Field-class namespace for the bank-date record's Tier-1 note (Story 6.39a, DL1) — the finance officer's REQUIRED note
+ * (which statement, which line, what was seen — `claim_fee_bank_dates.note_ciphertext`). Declared ONCE in `@twt/domain`
+ * `encryption` (the erasure scrub binds the same value); re-exported here. ⛔ NEVER in an event, a log line or an audit
+ * context.
+ */
+export const CLAIM_FEE_BANK_DATE_FIELD_CLASS = encryptionRuntime.CLAIM_FEE_BANK_DATE_FIELD_CLASS;
+
+/**
  * Field-class namespace for the identity check's Tier-1 note (Story 3.13, DL1 / DL14) — the staff member's note on checking a
  * typed-in identity in life (`member_identity_validations.note_ciphertext`). Declared ONCE in `@twt/domain` `encryption` (the
  * erasure scrub binds the same value); re-exported here. ⛔ NEVER in an event, a log line or an audit context.

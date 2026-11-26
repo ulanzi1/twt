@@ -737,24 +737,24 @@ or one user holding both role grants), a bank date that person records leaves th
         RLS policy file + `policies/index.ts`, the branded id, the field class.
   - [x] 1.2 Live-DB tests (AC1) — copy 6.39's `claim_membership_checks` spec; the anonymize leg (AC11) + `member/anonymize.ts` + the three
         counts in `rtbf-anonymize.test.ts`.
-- [ ] **Task 2 — The rule and the reads (AC2)**
-  - [ ] 2.1 `compareFeeCalendarDateWithDeathDate` + the delegation (DL2) + unit tests.
-  - [ ] 2.2 `readJoiningFeeReceipt` widened (DL4) — update its callers' types only; `getLiveFeeBankDate`, `listClaimsHeldOnFee` in a NEW
+- [x] **Task 2 — The rule and the reads (AC2)**
+  - [x] 2.1 `compareFeeCalendarDateWithDeathDate` + the delegation (DL2) + unit tests.
+  - [x] 2.2 `readJoiningFeeReceipt` widened (DL4) — update its callers' types only; `getLiveFeeBankDate`, `listClaimsHeldOnFee` in a NEW
         `claim/fee-bank-date-read.ts` (⛔ decrypt; the list joins the payment by the live check's `fee_receipt_id`; TWO section reads,
         each `clampLimit` inline with its own `*_truncated` — DL10).
-- [ ] **Task 3 — The finance officer's act (AC3, AC4, AC8, AC9)**
-  - [ ] 3.1 Domain vocabulary (reasons, sources) + `claim/errors.ts` (`FeeBankDateRefusedError`) + contracts `fee-bank-date.ts` + export +
+- [x] **Task 3 — The finance officer's act (AC3, AC4, AC8, AC9)**
+  - [x] 3.1 Domain vocabulary (reasons, sources) + `claim/errors.ts` (`FeeBankDateRefusedError`) + contracts `fee-bank-date.ts` + export +
         lockstep test.
-  - [ ] 3.2 Writer `recordFeeBankDate` in `claim/fee-bank-date-persist.ts` (the claim-row lock FIRST; DL5's order: shape → lock → window →
+  - [x] 3.2 Writer `recordFeeBankDate` in `claim/fee-bank-date-persist.ts` (the claim-row lock FIRST; DL5's order: shape → lock → window →
         held → receipt → reference → bounds → tokens → supersede + insert + event) — ⛔ decrypt; the reference compared in TypeScript on
         the re-read `utr`, ⛔ passed to any query (DL3, TR5).
-  - [ ] 3.3 Event `claim.fee_bank_date_recorded` (registry, `claim/events.ts` tuple + payload map, reducer no-op arm, count 41, the frozen
+  - [x] 3.3 Event `claim.fee_bank_date_recorded` (registry, `claim/events.ts` tuple + payload map, reducer no-op arm, count 41, the frozen
         literal — G11).
-  - [ ] 3.4 The key (permissions doc block + bump block citing Task 0.4's decision + REUSE CHECK paragraph, `SEED_PERMISSION_KEYS`, version;
+  - [x] 3.4 The key (permissions doc block + bump block citing Task 0.4's decision + REUSE CHECK paragraph, `SEED_PERMISSION_KEYS`, version;
         `roles.ts` grant; `permissions.test.ts` / `roles.test.ts` incl. N7's pin).
-  - [ ] 3.5 Handlers + routes (DL10 — permission hook, then step-up on the POST; ⛔ decrypt; the note encrypted), registration, the
+  - [x] 3.5 Handlers + routes (DL10 — permission hook, then step-up on the POST; ⛔ decrypt; the note encrypted), registration, the
         human-actor gate entry + floor, audit types in `audit-sink.ts`.
-  - [ ] 3.6 Tests: AC3, AC4, the AC8 positive and 403 legs, AC9's planted values.
+  - [x] 3.6 Tests: AC3, AC4, the AC8 positive and 403 legs, AC9's planted values.
 - [ ] **Task 4 — The check and the gate (AC5, AC6, AC7, AC10)**
   - [ ] 4.1 The gate leaf (DL7): facts + the new reason + precedence; `MEMBERSHIP_CHECK_WAIT_REASONS` + contracts mirror + the API message +
         ALL THREE admin maps + the two lists in `claims-verifier-console.test.ts` (DL7); the facts read stays ONE statement (36 reads).

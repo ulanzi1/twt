@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { compareFeeDateWithDeathDate } from '../../src/claim/fee-death-date.js';
+import { compareFeeCalendarDateWithDeathDate, compareFeeDateWithDeathDate } from '../../src/claim/fee-death-date.js';
 
 const DEATH = '2026-03-10';
 
@@ -51,5 +51,35 @@ describe('compareFeeDateWithDeathDate (Story 6.39 DL2)', () => {
 
   it('⛔ an invalid paidAt throws rather than comparing "Invalid Date"', () => {
     expect(() => compareFeeDateWithDeathDate(new Date(Number.NaN), DEATH)).toThrow(/paid/i);
+  });
+});
+
+describe('compareFeeCalendarDateWithDeathDate (Story 6.39a DL2 — the bank date fed to the SAME rule, N1)', () => {
+  it('the day before / of / after ⇒ before_death / same_day / after_death', () => {
+    expect(compareFeeCalendarDateWithDeathDate('2026-03-09', '2026-03-10')).toBe('before_death');
+    expect(compareFeeCalendarDateWithDeathDate('2026-03-10', '2026-03-10')).toBe('same_day');
+    expect(compareFeeCalendarDateWithDeathDate('2026-03-11', '2026-03-10')).toBe('after_death');
+  });
+
+  it('handles a year boundary and a leap day', () => {
+    expect(compareFeeCalendarDateWithDeathDate('2025-12-31', '2026-01-01')).toBe('before_death');
+    expect(compareFeeCalendarDateWithDeathDate('2028-02-29', '2028-03-01')).toBe('before_death');
+  });
+
+  it('⛔ a malformed or unreal date on EITHER side throws', () => {
+    for (const [fee, death] of [
+      ['2026-02-30', '2026-03-10'],
+      ['2026-3-9', '2026-03-10'],
+      ['', '2026-03-10'],
+      ['2026-03-09', '2026-13-01'],
+      ['2026-03-09', 'not-a-date'],
+    ] as const) {
+      expect(() => compareFeeCalendarDateWithDeathDate(fee, death), `${fee} / ${death}`).toThrow();
+    }
+  });
+
+  it('⭐ the instant entry DELEGATES to it: an IST date and the instant that falls on it give the same answer', () => {
+    const paidAt = new Date('2026-03-09T18:30:00Z'); // the 10th in India
+    expect(compareFeeDateWithDeathDate(paidAt, '2026-03-10')).toBe(compareFeeCalendarDateWithDeathDate('2026-03-10', '2026-03-10'));
   });
 });

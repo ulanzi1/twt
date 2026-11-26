@@ -219,6 +219,11 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.membership_checked':
       return state;
 
+    // ANNOTATION: the finance officer RECORDED the bank's date for the joining fee (Story 6.39a — the 41st event;
+    // `2026-11-21-473` Q2 B). ⛔ It decides nothing (N2) — identity from any state; the gate READS the record ROW.
+    case 'claim.fee_bank_date_recorded':
+      return state;
+
     // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
     // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
     // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.

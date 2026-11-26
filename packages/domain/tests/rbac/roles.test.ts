@@ -324,6 +324,32 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     }
   });
 
+  it('Story 6.39a (DL8) — claim.record_fee_bank_date has ONE holder, finance_officer at its pariwar ceiling (+ derived super_admin)', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('claim.record_fee_bank_date'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['finance_officer', 'super_admin']);
+    expect(defaultRoleBundles.find((b) => b.role === 'finance_officer')!.scopeCeiling).toBe('pariwar');
+    for (const role of ['district_admin', 'pariwar_admin', 'verifier', 'helpline_operator', 'state_trustee'] as const) {
+      expect(holds(role, 'claim.record_fee_bank_date'), role).toBe(false);
+    }
+  });
+
+  it('⭐ Story 6.39a (N7) — ⛔ role that holds the membership check, a P1 approval, the final vote or the R9 vote holds the bank-date key, except super_admin — computed from the bundles, ⛔ a hand-typed list', () => {
+    const DECIDING = ['claim.check_membership', 'claim.approve', 'cycle.freeze', 'claim.r9_vote'];
+    // Each deciding key has a holder (else the pin is vacuous).
+    for (const key of DECIDING) {
+      expect(defaultRoleBundles.some((b) => b.role !== 'super_admin' && (b.permissions as readonly string[]).includes(key)), key).toBe(true);
+    }
+    const both = defaultRoleBundles
+      .filter((b) => b.role !== 'super_admin')
+      .filter((b) => (b.permissions as readonly string[]).includes('claim.record_fee_bank_date'))
+      .filter((b) => DECIDING.some((k) => (b.permissions as readonly string[]).includes(k)))
+      .map((b) => b.role);
+    expect(both).toEqual([]);
+  });
+
   it('Story 3.13 (DL6) — member.validate_identity: district_admin + pariwar_admin (+ derived super_admin); ⛔ any other role', () => {
     const holders = defaultRoleBundles
       .filter((b) => (b.permissions as readonly string[]).includes('member.validate_identity'))

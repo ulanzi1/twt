@@ -113,3 +113,6 @@ export * from './fraud-investigation.js';
 // Story 6.39 — the staff membership check before any drive: its request (⛔ a date), write response, preview, the
 // console packet's gate section and the domain-mirrored vocabularies (pinned by `claims-membership-check.test.ts`).
 export * from './membership-check.js';
+// Story 6.39a — the finance officer's bank date for a joining fee recorded after the death: the POST (behind
+// FEE_BANK_DATE_STEP_UP_CONTEXT), the two-section list and the domain-mirrored vocabularies (pinned by `claims-fee-bank-date.test.ts`).
+export * from './fee-bank-date.js';

@@ -288,6 +288,12 @@ export const EVENT_TYPE_REGISTRY = {
       "The District Admin RECORDED the claim's membership check before any drive (2026-10-31-424 Q1 (a) C: an identity nobody has checked is checked first, by staff; 2026-10-31-430 Q1 B: staff compare the certificate's date of death with the date the joining fee was paid, and no drive opens if the fee was paid after the death) — annotation event (the 40th claim event); identity transition (state unchanged — a failing check is NEVER a denial, the claim waits); carries check_id + death_certificate_review_id + fee_outcome + identity_required + identity_outcome + identity_reason (a code, or null), NO PII (no date of death, no fee date, no note, no name — the Tier-1 note lives in claim_membership_checks and neither date is stored there). The approval gates read the check row, not this event (Story 6.39).",
     schema: claim.ClaimMembershipCheckedPayloadSchema,
   },
+  'claim.fee_bank_date_recorded': {
+    type: 'claim.fee_bank_date_recorded',
+    description:
+      "The Trust's finance officer RECORDED the date the Trust's own bank statement shows the claim's joining fee arrived, matched to the joining payment by its reference (2026-11-21-473 Q2 B: staff may use the bank's date when the Trust's own bank statement shows the money arrived before the death; they record that they did, with a reason, and it is audited — built 2026-11-27-510) — annotation event (the 41st claim event); identity transition (state unchanged — it decides nothing; the District Admin's next membership check compares the dates); carries record_id + fee_receipt_id + reason_code + superseded_record_id, NO PII (no bank date, no payment reference, no note, no name — the Tier-1 note lives in claim_fee_bank_dates). The approval gate reads the record row, not this event (Story 6.39a).",
+    schema: claim.ClaimFeeBankDateRecordedPayloadSchema,
+  },
   'claim.dpdpa_consent_recorded': {
     type: 'claim.dpdpa_consent_recorded',
     description:

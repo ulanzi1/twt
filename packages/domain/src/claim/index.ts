@@ -143,6 +143,9 @@ export * from './fee-death-date.js';
 export * from './membership-check-approval.js';
 export * from './membership-check-read.js';
 export * from './membership-check-persist.js';
+// Story 6.39a — the finance officer's bank date: the reads (live record, the two-section list) and the writer.
+export * from './fee-bank-date-read.js';
+export * from './fee-bank-date-persist.js';
 // Story 6.24b (`2026-10-08-295` RB8, RB10) — the SUSPICION NOTICES' domain half: the three selectors, the claim-row lock and
 // its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
 // module (⛔ an NW1 entry); ⛔ nothing here decrypts.

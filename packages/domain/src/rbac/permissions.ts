@@ -941,7 +941,23 @@ export function permissionKey(value: string): PermissionKey {
 // cl. 2 authorises no key and is not relied on. REUSE CHECK — ⛔ `claim.check_membership` (death-time, claim-keyed), ⛔
 // `member.moderate` (a sanction), ⛔ `member.view_validity` (a read of coverage — and it shows a MASKED mobile only). 65 / 96
 // READ LIVE at `74839891`. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 66 as const;
+//
+// ⭐ Story 6.39a (author-commit `2026-11-27-510` DL8) — 66 → 67, ONE key (98 → 99): `claim.record_fee_bank_date` — the
+// Trust's finance officer RECORDS the date the Trust's own bank statement shows a claim's joining fee arrived, matched to the
+// joining payment by its reference (`2026-11-21-473` Q2 B: *"Staff may use the bank's date when the Trust's own bank
+// statement shows the money arrived before the death"*; the edges ruled `2026-11-27-511`). Gates the finance officer's list
+// (`GET …/admin/fee-bank-dates`, PARIWAR-dimension) and the record (`POST …/admin/claims/:claimCaseId/fee-bank-date`,
+// DISTRICT-dimension against the deceased's server-derived posting district — a `pariwar` grant satisfies it, `scopeContains`
+// rule 5 — and behind a FRESH step-up, `FEE_BANK_DATE_STEP_UP_CONTEXT`). `finance_officer` ONLY (ceiling `pariwar`)
+// (+ derived super_admin). "Staff" is the Panel's word; WHICH staff is the author's (`-474` item 1; `-510` DL8 — a MATCH: the
+// role that already reviews payment references against bank statements, FR-50). ⭐ N7: ⛔ granted to any role holding
+// `claim.check_membership`, `claim.approve`, `cycle.freeze` or `claim.r9_vote` (pinned from the bundles in `roles.test.ts`);
+// the membership-check writer also refuses the PERSON who recorded the date (`membership_check.same_person`). `-210` cl. 2
+// authorises no key and is not relied on. REUSE CHECK — ⛔ `reconciliation.review` (the POOL's nominee-account statement
+// review, 9.8 — a different statement and a different act), ⛔ `claim.check_membership` (the District Admin's DECISION — the
+// same hand would type the date AND decide), ⛔ `helpdesk.respond` (a ticket reply). 66 / 98 READ LIVE at `6536b8bb`.
+// `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 67 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1636,6 +1652,10 @@ export const SEED_PERMISSION_KEYS = [
   // at a time, only while the check is awaited; also reads the queue. `district_admin`, `pariwar_admin`, `verifier`,
   // `helpline_operator` (+ derived super_admin). ⛔ `field_worker` / `block_admin` (deferred — an inert grant is refused).
   'member.reveal_mobile_for_identity_check',
+  // Story 6.39a (`2026-11-27-510` DL8) — the finance officer records the BANK's date for a joining fee recorded after the death,
+  // matched to the joining payment by its reference (`-473` Q2 B). The list (pariwar) and the record (district, step-up).
+  // `finance_officer` ONLY (+ derived super_admin); ⛔ any role that decides the claim (N7).
+  'claim.record_fee_bank_date',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

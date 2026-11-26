@@ -36,7 +36,28 @@ export function compareFeeDateWithDeathDate(paidAt: Date, deathDate: CalendarDat
   if (!(paidAt instanceof Date) || Number.isNaN(paidAt.getTime())) {
     throw new Error('compareFeeDateWithDeathDate: paidAt is not a valid instant');
   }
-  const feeDate = istDateOf(paidAt);
+  return compareFeeCalendarDateWithDeathDate(istDateOf(paidAt), deathDate);
+}
+
+/**
+ * ⭐ Story 6.39a (DL2, N1) — THE rule, on two calendar dates. The recorded fee date (`istDateOf(paidAt)`, through
+ * `compareFeeDateWithDeathDate`) and the finance officer's BANK date (a `YYYY-MM-DD` from the Trust's statement) are both
+ * fed HERE — ⛔ a second definition of "before the death" anywhere. A bank date ON the day of death is `same_day` and holds
+ * the claim (`2026-11-27-511` Q3 A, as `-473` Q1 B for the recorded date). Two `YYYY-MM-DD` strings compare as strings.
+ *
+ * @throws when either side is not a real `YYYY-MM-DD` calendar date — a programming error (the contract and the writer
+ *   refuse an unreal bank date first; the handler refuses an unreadable death date first).
+ */
+export function compareFeeCalendarDateWithDeathDate(
+  feeDate: CalendarDateString,
+  deathDate: CalendarDateString,
+): FeeDeathDateOutcome {
+  if (!isRealCalendarDate(feeDate)) {
+    throw new Error('compareFeeCalendarDateWithDeathDate: the fee date is not a real YYYY-MM-DD calendar date');
+  }
+  if (!isRealCalendarDate(deathDate)) {
+    throw new Error('compareFeeCalendarDateWithDeathDate: the death date is not a real YYYY-MM-DD calendar date');
+  }
   if (feeDate < deathDate) return 'before_death';
   if (feeDate > deathDate) return 'after_death';
   return 'same_day';

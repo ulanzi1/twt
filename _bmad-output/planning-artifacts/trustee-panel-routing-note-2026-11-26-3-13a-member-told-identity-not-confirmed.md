@@ -23,6 +23,12 @@
 > before the note is sent; the other Hindi lines are unchanged.
 > **2026-11-26 — (1) DONE again:** BigDev read the changed Hindi sentence (shown in the session with the English beside it) —
 > *"Hindi is ok"*. ⛔ change. BigDev's read of the draft, ⛔ the Panel's approval of the words. (2) is done; (3) is still owed.
+> **2026-11-26 — (3) DONE, and the agenda reconciled:** BigDev answered the story's build questions — *"Build questions as
+> recommended"* — and every answer matches this note as written: the app only, a card on the home screen (Confirm 2); a line per reason
+> (Q2 (ii)); "Ask for help" opens the help request with "KYC or verification help" already chosen (Q1 A); the card re-checked on
+> return and never stored on the phone (E3). ⛔ word changed. The sitting agenda is MARKED, at BigDev's word (*"mark that this file
+> come before"*; `041889ae` on `governance/panel-sitting-2026-11-26`): its item 9 and its line placing this message at a later sitting
+> are withdrawn, and the separate private-note note is marked do-not-send. ⭐ **Nothing more is owed before this note is sent.**
 
 ## §0 — the gate
 
@@ -324,7 +330,7 @@ If this section and the evidence below ever disagree, the evidence is the record
   Fiduciary shall, upon receiving a request for correction, completion or updating from a Data Principal,— (a) correct the inaccurate
   or misleading personal data"*; and s.8(3): data *"likely to be— (a) used to make a decision that affects the Data Principal"* must be
   kept complete, accurate and consistent (`docs/legal/DPDP Act.pdf`; whether and from when they bind the Trust is counsel's).
-- **Story 3.13a will build** (v1.2, proposed until BigDev answers its build questions): a card on the app's home screen, shown only
+- **Story 3.13a will build** (v1.2; its build questions answered by BigDev on 26 November, *"as recommended"*): a card on the app's home screen, shown only
   while the member's live record is "could not confirm", they are still waiting for a check and no death is reported; the reason and one
   "how" line chosen by the reason; the "Ask for help" button; the card re-checked whenever the member returns to the home screen or the
   app, and never stored on the phone. Q1 A and Q2 (ii) until you rule.

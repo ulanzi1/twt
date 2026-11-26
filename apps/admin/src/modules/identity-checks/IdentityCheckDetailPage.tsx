@@ -9,11 +9,16 @@
 // ONCE, before the refetch answers. A refetch that fails keeps the page on its data and says so; it never swaps the page away —
 // EXCEPT a 403 / 404, which means the viewer may no longer see this member: the data leaves the SCREEN (R3-P4; the query keeps it
 // until the page unmounts — `gcTime: 0`, and the console has ⛔ persister). A 403 / 404 on a save or a number press re-reads the
-// page, so that branch is reached (R4-P3). A REFUSAL — of a save, or of a number press (R4-P1) — moves focus to the banner /
-// not-needed line, which sits in an always-mounted region (R3-P5). An awaited check whose name or date of birth is missing shows
+// page, so that branch is reached (R4-P3), and focus moves to its no-access / not-found line (R5-P2). A REFUSED SAVE moves focus
+// to the banner / not-needed line, which sits in an always-mounted region (R3-P5). A REFUSED NUMBER PRESS hides the identity and
+// the forms at once WITHOUT choosing a line — the press answers the generic code for a death claim too (`-504` item 4), so the
+// re-read's data picks the banner or the not-needed line (R5-P5); focus moves to that region when the press goes. Every control
+// a render takes away hands focus to the page's own target, ⛔ `<body>`, and focus staff have moved elsewhere is ⛔ touched
+// (`useFocusRescue`, R5-P1 / R5-P2). An awaited check whose name or date of birth is missing shows
 // the load error and ⛔ the forms (`-504` item 1, R3-P7). The load error has a "Try again" button (`-505`): ONE re-read per press,
 // `aria-disabled` while it runs (⛔ `disabled`, which drops the focus it holds), the error view kept on screen meanwhile (⛔ a
-// "Loading…" swap that unmounts the pressed button), and focus to the page heading when the re-read lands (R4-P4).
+// "Loading…" swap that unmounts the pressed button), and focus to the page heading when the re-read lands (R4-P4) — only if
+// focus is still on the button or lost (R5-P3: ⛔ out of a form field staff moved into meanwhile).
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { IdentityCheckDetailResponse, IdentityCheckRecordRequest } from '@twt/contracts';
@@ -23,6 +28,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import { type AttemptKey, attemptKey, useSession } from '../../api/hooks.js';
 import { identityCheckPath } from '../../routes/login-next.js';
+import { useFocusRescue } from './focus-rescue.js';
 import { formatDateOfBirth, formatIstDate } from './format.js';
 import { useIdentityCheckDetail, useRecordIdentityCheck } from './hooks.js';
 import { fill, identityCheckEn } from './i18n-en.js';
@@ -69,6 +75,13 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   const savedRef = useRef<HTMLDivElement>(null);
   const standingRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const lostLineRef = useRef<HTMLParagraphElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+  // A focused control taken away by a render ⇒ the no-access / not-found line, else the standing region, else the heading (R5-P2).
+  const rescue = useFocusRescue(rootRef, () => lostLineRef.current ?? standingRef.current ?? headingRef.current);
+  // A number press was REFUSED (R5-P5): the identity and the forms go at once, and the re-read's data says why.
+  const [pressRefused, setPressRefused] = useState(false);
   // A "Try again" re-read in flight (the error view stays while it runs), and whether the one that landed should take the focus.
   const [retrying, setRetrying] = useState(false);
   const [focusHeading, setFocusHeading] = useState(false);
@@ -81,7 +94,9 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   // ⛔ the banner and the hidden forms until a reload.
   const awaitingNow = detail.data !== undefined && detail.data.eligible && !detail.data.death_reported;
   useEffect(() => {
-    if (awaitingNow) setRefusal(null);
+    if (!awaitingNow) return;
+    setRefusal(null);
+    setPressRefused(false);
   }, [awaitingNow, detail.dataUpdatedAt]);
   // After a save the focus moves to the acknowledgement: on a confirmation the button that was pressed is gone with the forms,
   // and focus would otherwise fall to the page.
@@ -107,14 +122,21 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
     if (retryOff || retryInFlight.current) return;
     retryInFlight.current = true;
     setRetrying(true);
-    void detail.refetch().then((r) => {
-      retryInFlight.current = false;
-      setRetrying(false);
-      if (!r.isError) setFocusHeading(true);
-    });
+    void detail
+      .refetch()
+      .then((r) => {
+        // The heading takes focus only if it is still on this button or lost — ⛔ out of a field staff moved into (R5-P3).
+        if (!r.isError && (document.activeElement === retryRef.current || rescue.isAdrift())) setFocusHeading(true);
+      })
+      .finally(() => {
+        // ⛔ A guard left set by a re-read that rejected (R5-P6).
+        retryInFlight.current = false;
+        setRetrying(false);
+      });
   };
   const retry = (
     <button
+      ref={retryRef}
       type="button"
       className={`mt-2 rounded border px-3 py-1 text-sm${retryOff ? ' cursor-not-allowed opacity-50' : ''}`}
       data-testid="identity-check-retry"
@@ -140,7 +162,7 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   // unmount the pressed button (R4-P4) — the error view below stays instead.
   if (detail.isLoading && !retrying) {
     return (
-      <main className="mx-auto max-w-3xl p-4">
+      <main ref={rootRef} className="mx-auto max-w-3xl p-4">
         <p role="status" data-testid="identity-check-loading">
           {t.detail.loading}
         </p>
@@ -156,9 +178,15 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   if (!detail.data || lost || identityMissing(detail.data)) {
     const line = status === 403 ? t.detail.forbidden : status === 404 ? t.detail.notFound : t.detail.loadError;
     return (
-      <main className="mx-auto max-w-3xl p-4">
+      <main ref={rootRef} className="mx-auto max-w-3xl p-4">
         {back}
-        <p role="alert" className="mt-4 text-sm" data-testid="identity-check-load-error">
+        <p
+          ref={lost ? lostLineRef : undefined}
+          role="alert"
+          tabIndex={lost ? -1 : undefined}
+          className="mt-4 text-sm outline-none"
+          data-testid="identity-check-load-error"
+        >
           {line}
         </p>
         {lost ? null : retry}
@@ -173,10 +201,10 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   const notEligible = !deathReported && (!d.eligible || refusal === 'not_eligible' || confirmedNow);
   // ... but "does not need an identity check" would mislead right after staff confirmed; the history says who confirmed and when.
   const showNotEligibleLine = notEligible && !confirmedNow;
-  const awaiting = !deathReported && !notEligible;
+  const awaiting = !deathReported && !notEligible && !pressRefused;
 
   return (
-    <main className="mx-auto max-w-3xl p-4">
+    <main ref={rootRef} className="mx-auto max-w-3xl p-4">
       {back}
       {detail.isError ? (
         <div className="mt-2">
@@ -212,7 +240,7 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
         </div>
       </div>
 
-      <IdentityFacts d={d} pariwarId={pariwarId} awaiting={awaiting} onSignedOut={signIn} onPressRefused={() => setRefusal('not_eligible')} />
+      <IdentityFacts d={d} pariwarId={pariwarId} awaiting={awaiting} onSignedOut={signIn} onPressRefused={() => setPressRefused(true)} />
       <History d={d} />
 
       {/* ALWAYS mounted (a live region inserted already populated is often ignored); the text is what arrives. `tabIndex` so a save can focus it. */}

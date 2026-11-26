@@ -10,13 +10,15 @@
 // is already hidden is ⛔ put on screen at all (R3-P1): the hidden-tab rule hears only a CHANGE of visibility — and the press says
 // why, in the words `2026-11-26-506` item 1 approved (R4-D1; ⛔ a press that seems to have done nothing). Only a STANDING refusal
 // (409 `identity_validation.not_eligible`) re-reads the page and tells it (`onRefused`, R4-P1 / R4-P2): the re-read takes this
-// press away, so the PAGE says why and takes the focus; `mobile_unavailable` shows the refused line and re-reads nothing.
+// press away, so the PAGE says why and takes the focus; `mobile_unavailable` shows the refused line and re-reads nothing. A 403 /
+// 404 (the viewer may no longer see this member) shows the SAME refused line — ⛔ "Try again", which could never work — re-reads
+// and tells the page too (`2026-11-26-507`, R5-P4).
 
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { isRevealRefusal, isRevealStandingRefusal, useRevealIdentityCheckMobile } from './hooks.js';
+import { isAccessLost, isRevealRefusal, isRevealStandingRefusal, useRevealIdentityCheckMobile } from './hooks.js';
 import { identityCheckEn } from './i18n-en.js';
 
 const t = identityCheckEn.reveal;
@@ -36,7 +38,7 @@ export function RevealMobile({
   memberId: string;
   /** A 401 on the press: send staff to sign in, back to the page they were on. */
   onSignedOut: () => void;
-  /** A STANDING refusal (the member no longer awaits a check): the page re-reads and this press goes — the page takes the focus. */
+  /** A STANDING refusal (the member no longer awaits a check) or a 403 / 404: the page re-reads and this press goes. */
   onRefused?: () => void;
 }): ReactElement {
   const { mutate, reset, isPending } = useRevealIdentityCheckMobile(pariwarId, memberId);
@@ -90,9 +92,11 @@ export function RevealMobile({
           onSignedOut();
           return;
         }
-        // ONLY the server's own refusal reads "can no longer be shown here"; a 429 / 5xx / network failure does not.
-        setProblem(isRevealRefusal(err) ? 'refused' : 'could_not_show');
-        if (isRevealStandingRefusal(err)) onRefused?.();
+        // The server's own refusal, or a refusal of ACCESS (403 / 404), reads "can no longer be shown here" (`-507`); a 429 / 5xx /
+        // network failure does not.
+        const lostAccess = isAccessLost(err);
+        setProblem(isRevealRefusal(err) || lostAccess ? 'refused' : 'could_not_show');
+        if (isRevealStandingRefusal(err) || lostAccess) onRefused?.();
       },
     });
   };

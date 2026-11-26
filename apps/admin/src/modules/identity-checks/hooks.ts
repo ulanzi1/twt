@@ -96,7 +96,7 @@ export function useRecordIdentityCheck(pariwarId: string, memberId: string, { on
 }
 
 /** A 403 / 404: the server now refuses this viewer this member — whatever the page still shows was read before. */
-function isAccessLost(err: unknown): boolean {
+export function isAccessLost(err: unknown): boolean {
   return err instanceof api.ApiError && (err.status === 403 || err.status === 404);
 }
 

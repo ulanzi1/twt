@@ -371,9 +371,19 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
   it('⭐ Story 3.13 (DL14 as amended by `-504` item 5, AC13) — the staff identity checks: the strict-parsed profile lists each act, oldest first; ⛔ the staff note (it stays with staff), ⛔ staff attribution', async () => {
     const enc = fakeEncryption();
     const { memberId, pariwarId, exportId } = await seedPendingExport();
+    const NOTE_PLAINTEXT = 'ZZ came without an ID';
     const note = await encryption.serializeEnvelope(
-      await encryption.encryptTier1(Buffer.from('ZZ came without an ID', 'utf-8'), { pariwarId, fieldClass: 'member_identity_validation' }, enc.kms, enc.kekRef),
+      await encryption.encryptTier1(Buffer.from(NOTE_PLAINTEXT, 'utf-8'), { pariwarId, fieldClass: 'member_identity_validation' }, enc.kms, enc.kekRef),
     );
+    // ⭐ (code review R5-P9) Positive control: the stored note DECRYPTS to exactly the string the whole-profile check looks for, so
+    // `not.toContain(NOTE_PLAINTEXT)` below cannot pass because of a typo or a different seed.
+    expect(
+      Buffer.from(
+        await encryption.decryptTier1(encryption.parseEnvelope(note), { pariwarId, fieldClass: 'member_identity_validation' }, enc.kms, enc.kekRef),
+      ).toString('utf-8'),
+    ).toBe(NOTE_PLAINTEXT);
+    // The staff member who recorded the two acts — captured, so its VALUE can be proven absent from the download (R5-P9).
+    const decidedByActor = randomUUID();
     // The two events a check writes, by a STAFF actor (`-505` item 1), and the controls: the same `kyc_completed` type from
     // another trigger, and another staff-written event, keep their actor (⛔ a blanket blanking of every actor).
     const staffActor = randomUUID();
@@ -399,7 +409,7 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
              kyc_profile_updated_at, decided_by_actor_id, decided_by_display, decided_at, superseded_at, superseded_reason)
            VALUES ($1, $2, 'not_confirmed', 'photo_id_in_person', NULL, 'no_document_shown', $3, now(), $4, 'ZZ-STAFF-NAME', '2026-11-01T09:00:00Z', now(), 're_checked'),
                   ($1, $2, 'confirmed', 'photo_id_video_call', 'passport', NULL, NULL, now(), $4, 'ZZ-STAFF-NAME', '2026-11-02T09:00:00Z', NULL, NULL)`,
-          [pariwarId, memberId, note, randomUUID()],
+          [pariwarId, memberId, note, decidedByActor],
         );
       });
       // the build STRICT-parses every section against its contract — `ProfileSection.identityChecks` included (TR12)
@@ -421,7 +431,7 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       expect(all).not.toContain(note); // ⛔ the stored ciphertext, anywhere in the profile
       // ⭐ (code review R4-P8) BESIDE the key set, over the WHOLE profile: a decrypted note or a staff-attribution key leaking
       // into ANY other key of the profile is caught too (the row HAS a decryptable note, seeded above).
-      expect(all).not.toContain('ZZ came without an ID');
+      expect(all).not.toContain(NOTE_PLAINTEXT);
       expect(all).not.toMatch(/decidedBy|decided_by/);
       // ⭐ `-505` item 1: the two events a staff check writes carry ⛔ staff user id; the controls keep theirs.
       const stream = JSON.parse(await zip.file('event_stream.json')!.async('string')) as {
@@ -436,6 +446,13 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
         [5, 'member.moderation.suspended', controlActor],
       ]);
       expect(JSON.stringify(stream)).not.toContain(staffActor);
+      // ⭐ (code review R5-P9) The staff user-id VALUES — the acts' `decided_by_actor_id` and the events' staff actor — appear in
+      // ⛔ file of the download a check touches: `profile.json` and `event_stream.json` (DL14, `-505` item 1).
+      for (const file of ['profile.json', 'event_stream.json']) {
+        const text = await zip.file(file)!.async('string');
+        expect(text, file).not.toContain(decidedByActor);
+        expect(text, file).not.toContain(staffActor);
+      }
     } finally {
       await cleanup(memberId);
     }

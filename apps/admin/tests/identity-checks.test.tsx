@@ -1663,7 +1663,7 @@ describe('⭐ R4 — the number press', () => {
     expect(screen.queryByTestId(`reveal-mobile-hidden-away-${M}`)).toBeNull();
   });
 
-  it('⭐ R4-P1 — on the DETAIL, a press refused because the member no longer awaits a check tells the PAGE at once: the not-needed line, the press gone, focus on the standing region — before the re-read answers', async () => {
+  it('⭐ R4-P1 / R5-P5 — on the DETAIL, a refused press tells the PAGE at once: the identity, the press and the forms go and focus is on the standing region — but ⛔ a line is chosen before the re-read answers; the re-read picks the not-needed line', async () => {
     let answerReread: ((v: unknown) => void) | undefined;
     getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockImplementationOnce(() => new Promise((resolve) => (answerReread = resolve)));
     revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
@@ -1671,14 +1671,16 @@ describe('⭐ R4 — the number press', () => {
     const press = await screen.findByTestId(PRESS(M));
     press.focus();
     fireEvent.click(press);
-    expect(await screen.findByTestId('identity-check-not-eligible')).toBeInTheDocument();
-    expect(press.isConnected).toBe(false);
+    await waitFor(() => expect(press.isConnected).toBe(false));
     expect(screen.queryByTestId('identity-check-forms')).toBeNull();
     expect(screen.queryByTestId('identity-check-name')).toBeNull();
+    expect(screen.queryByTestId('identity-check-not-eligible')).toBeNull();
+    expect(screen.queryByTestId('identity-check-death-banner')).toBeNull();
     expect(document.activeElement).toBe(screen.getByTestId('identity-check-standing'));
     expect(getIdentityCheckDetail).toHaveBeenCalledTimes(2); // the re-read was asked (and is still open)
     await act(async () => answerReread?.(detail({ eligible: false, identity: null, masked_mobile: null })));
-    expect(screen.getByTestId('identity-check-not-eligible')).toBeInTheDocument();
+    expect(await screen.findByTestId('identity-check-not-eligible')).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByTestId('identity-check-standing'));
   });
 
   it('⭐ R4-P1 — on the QUEUE, a refused row that the re-read takes away moves focus to the list (and to the heading when the list is now empty)', async () => {
@@ -1763,5 +1765,183 @@ describe('⭐ R4 — saving', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: identityCheckQueueKey(PARIWAR) });
     expect(screen.queryByTestId('identity-check-name')).toBeNull();
     expect(screen.queryByTestId('identity-check-forms')).toBeNull();
+  });
+});
+
+describe('⭐ R5 — focus stays where staff can use it (one rule keyed to where focus IS)', () => {
+  const entryB = { ...entry, member_id: '22222222-2222-4222-8222-222222222222', short_member_id: '22222222' };
+
+  it('⭐ R5-P5 — a press refused for a member with a claim filed for the death (the press answers the GENERIC code) shows ⛔ "does not need an identity check" — the re-read shows the banner', async () => {
+    let answerReread: ((v: unknown) => void) | undefined;
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockImplementationOnce(() => new Promise((resolve) => (answerReread = resolve)));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.click(await screen.findByTestId(PRESS(M)));
+    await waitFor(() => expect(screen.queryByTestId('identity-check-forms')).toBeNull());
+    expect(screen.queryByTestId('identity-check-not-eligible')).toBeNull();
+    await act(async () => answerReread?.(detail({ eligible: false, death_reported: true, identity: null, masked_mobile: null })));
+    expect(await screen.findByTestId('identity-check-death-banner')).toBeInTheDocument();
+    expect(screen.queryByTestId('identity-check-not-eligible')).toBeNull();
+  });
+
+  it('R5-P5 — a refused press whose re-read FAILS shows the refresh error and "Try again", ⛔ the not-needed line, ⛔ the identity or the forms', async () => {
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockRejectedValueOnce(new ApiError(503, 'identity_validation.audit_unavailable', 'no'));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.click(await screen.findByTestId(PRESS(M)));
+    expect(await screen.findByTestId('identity-check-refresh-error')).toBeInTheDocument();
+    expect(screen.getByTestId('identity-check-retry')).toBeInTheDocument();
+    expect(screen.queryByTestId('identity-check-not-eligible')).toBeNull();
+    expect(screen.queryByTestId('identity-check-name')).toBeNull();
+    expect(screen.queryByTestId('identity-check-forms')).toBeNull();
+  });
+
+  it.each([
+    [403, 'rbac.forbidden'],
+    [404, 'identity_validation.not_found'],
+  ] as const)('⭐ R5-P4 — a %s on the press shows "can no longer be shown here" (`-507`), ⛔ "Try again"', async (status, code) => {
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(status, code, 'no'));
+    renderWithClient(<RevealMobile pariwarId={PARIWAR} memberId={M} onSignedOut={signedOut} />);
+    fireEvent.click(screen.getByTestId(PRESS(M)));
+    expect(await screen.findByTestId(`reveal-mobile-refused-${M}`)).toHaveTextContent(/^This member's number can no longer be shown here\.$/);
+    expect(screen.queryByTestId(`reveal-mobile-could-not-show-${M}`)).toBeNull();
+  });
+
+  it('⭐ R5-P2 — a press answered 403 whose re-read drops the page moves focus to the no-access line (⛔ `<body>`)', async () => {
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockRejectedValue(new ApiError(403, 'rbac.forbidden', 'no'));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(403, 'rbac.forbidden', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    const line = await screen.findByTestId('identity-check-load-error');
+    expect(line).toHaveTextContent(t.detail.forbidden);
+    await waitFor(() => expect(document.activeElement).toBe(line));
+  });
+
+  it('R5-P2 — a SAVE answered 404 whose re-read drops the page moves focus to the not-found line', async () => {
+    getIdentityCheckDetail.mockResolvedValueOnce(detail()).mockRejectedValue(new ApiError(404, 'identity_validation.not_found', 'no'));
+    recordIdentityCheck.mockRejectedValue(new ApiError(404, 'identity_validation.not_found', 'no'));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.change(await screen.findByTestId('confirm-evidence'), { target: { value: 'photo_id_in_person' } });
+    fireEvent.change(screen.getByTestId('confirm-document'), { target: { value: 'voter_id' } });
+    const confirm = screen.getByTestId('identity-check-confirm');
+    confirm.focus();
+    fireEvent.click(confirm);
+    const line = await screen.findByTestId('identity-check-load-error');
+    expect(line).toHaveTextContent(t.detail.notFound);
+    await waitFor(() => expect(document.activeElement).toBe(line));
+  });
+
+  it('⭐ R5-P3 — with the data on screen, a "Try again" that lands while staff are typing in the note leaves the focus IN the note', async () => {
+    let answer: ((v: unknown) => void) | undefined;
+    getIdentityCheckDetail
+      .mockResolvedValueOnce(detail())
+      .mockRejectedValueOnce(new ApiError(503, 'identity_validation.audit_unavailable', 'no'))
+      .mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)));
+    recordIdentityCheck.mockResolvedValue({ validation_id: M, outcome: 'not_confirmed', superseded_validation_id: null, state: 'lock-in', kyc_completed: false });
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.change(await screen.findByTestId('not-confirmed-reason'), { target: { value: 'member_not_reached' } });
+    fireEvent.change(screen.getByTestId('not-confirmed-note'), { target: { value: 'Phoned twice' } });
+    fireEvent.click(screen.getByTestId('identity-check-could-not-confirm'));
+    const retry = await screen.findByTestId('identity-check-retry');
+    retry.focus();
+    fireEvent.click(retry);
+    await waitFor(() => expect(getIdentityCheckDetail).toHaveBeenCalledTimes(3));
+    const note = screen.getByTestId('not-confirmed-note');
+    note.focus();
+    await act(async () => answer?.(detail()));
+    await waitFor(() => expect(screen.queryByTestId('identity-check-refresh-error')).toBeNull());
+    await sleep(10);
+    expect(document.activeElement).toBe(note);
+  });
+
+  it('⭐ R5-P1 — on the QUEUE, a refused row whose re-read FAILS (the list swapped for its error line) moves focus to that line', async () => {
+    getIdentityCheckQueue
+      .mockResolvedValueOnce({ entries: [entry, entryB], can_check: false, has_more: false })
+      .mockRejectedValue(new ApiError(503, 'internal', 'no'));
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    const line = await screen.findByTestId('identity-checks-error');
+    await waitFor(() => expect(document.activeElement).toBe(line));
+  });
+
+  it.each([
+    [403, 'rbac.forbidden', 'identity-checks-forbidden'],
+    [404, 'identity_validation.not_found', 'identity-checks-list'],
+  ] as const)('⭐ R5-P1 — on the QUEUE, a press answered %s that the re-read takes away hands focus to the page (%s)', async (status, code, target) => {
+    const second =
+      status === 403
+        ? Promise.reject(new ApiError(403, 'rbac.forbidden', 'no'))
+        : Promise.resolve({ entries: [entryB], can_check: false, has_more: false });
+    second.catch(() => undefined);
+    getIdentityCheckQueue.mockResolvedValueOnce({ entries: [entry, entryB], can_check: false, has_more: false }).mockImplementation(() => second);
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(status, code, 'no'));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    const el = await screen.findByTestId(target);
+    await waitFor(() => expect(document.activeElement).toBe(el));
+  });
+
+  it('⭐ R5-P1 — a queue read that lands WHILE the press is in flight (still holding the row) does not stop the rescue when the refusal\'s own re-read takes the row', async () => {
+    const reads = gateAnswers(getIdentityCheckQueue);
+    const pressAnswer: { reject?: (e: unknown) => void } = {};
+    revealIdentityCheckMobile.mockImplementation(() => new Promise((_resolve, reject) => (pressAnswer.reject = reject)));
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <IdentityChecksView pariwarId={PARIWAR} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(reads).toHaveLength(1));
+    await act(async () => reads[0]!.resolve({ entries: [entry, entryB], can_check: false, has_more: false }));
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    // An unrelated read lands mid-press and still holds the row.
+    await act(async () => {
+      void client.invalidateQueries({ queryKey: identityCheckQueueKey(PARIWAR) });
+    });
+    await waitFor(() => expect(reads).toHaveLength(2));
+    await act(async () => reads[1]!.resolve({ entries: [entry, entryB], can_check: false, has_more: false }));
+    await act(async () => pressAnswer.reject?.(new ApiError(409, 'identity_validation.not_eligible', 'no')));
+    await waitFor(() => expect(reads).toHaveLength(3));
+    await act(async () => reads[2]!.resolve({ entries: [entryB], can_check: false, has_more: false }));
+    await waitFor(() => expect(screen.queryByTestId(`identity-checks-item-${M}`)).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('identity-checks-list')));
+  });
+
+  it('⭐ R5-P1 — staff who moved to ANOTHER row\'s press (or to Previous) before the re-read lands keep their focus there', async () => {
+    const entryC = { ...entry, member_id: '33333333-3333-4333-8333-333333333333', short_member_id: '33333333' };
+    const reads = gateAnswers(getIdentityCheckQueue);
+    revealIdentityCheckMobile.mockRejectedValue(new ApiError(409, 'identity_validation.not_eligible', 'no'));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    await waitFor(() => expect(reads).toHaveLength(1));
+    await act(async () => reads[0]!.resolve({ entries: [entry, entryB, entryC], can_check: false, has_more: false }));
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    await waitFor(() => expect(reads).toHaveLength(2));
+    const other = screen.getByTestId(PRESS(entryB.member_id));
+    other.focus();
+    await act(async () => reads[1]!.resolve({ entries: [entryB, entryC], can_check: false, has_more: false }));
+    await waitFor(() => expect(screen.queryByTestId(`identity-checks-item-${M}`)).toBeNull());
+    await sleep(10);
+    expect(document.activeElement).toBe(other);
+  });
+
+  it('⭐ R5-P10 — the list that takes focus is NAMED by the page heading', async () => {
+    getIdentityCheckQueue.mockResolvedValue({ entries: [entry], can_check: false, has_more: false });
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const list = await screen.findByTestId('identity-checks-list');
+    const heading = screen.getByTestId('identity-checks-heading');
+    expect(heading.id).not.toBe('');
+    expect(list).toHaveAttribute('aria-labelledby', heading.id);
+    expect(screen.getByRole('list', { name: 'Identity checks' })).toBe(list);
   });
 });

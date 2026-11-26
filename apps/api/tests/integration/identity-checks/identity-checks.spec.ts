@@ -478,6 +478,33 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect(recovered[0]).toMatchObject({ identity_opened: false, death_reported: true });
   });
 
+  it('⭐ R5-P8 / `-505` item 2 — the read line of an AWAITED member is recovered too: `identity_opened: true`, `eligible: true`, `death_reported: false`, and the live act\'s id — exactly one candidate', async () => {
+    const w = await world();
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    // One not-confirmed act first, so the member is still awaiting a check AND has a live act whose id the line carries.
+    const act = await post(da, detailUrl(w, w.memberId), { outcome: 'not_confirmed', not_confirmed_reason: 'member_not_reached', note: 'ZZ R5-P8' });
+    expect(act.statusCode, act.body).toBe(201);
+    const liveId = String(j(act).validation_id);
+    const res = await da.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(j(res).identity).not.toBeNull();
+    const rows = await persisted('admin_identity_check.identity_check_read', w.memberId);
+    expect(rows).toHaveLength(1);
+    const stored = String(rows[0]!.request_payload_hash);
+    const liveIds: (string | null)[] = [null, ...(await validations(w.memberId)).map((r) => String(r.validation_id))];
+    const bools = [true, false];
+    const candidates = liveIds.flatMap((live_validation_id) =>
+      bools.flatMap((identity_opened) =>
+        bools.flatMap((eligible) =>
+          bools.map((death_reported) => ({ member_id: w.memberId.toLowerCase(), identity_opened, live_validation_id, eligible, death_reported })),
+        ),
+      ),
+    );
+    const recovered = candidates.filter((c) => contextHash(c) === stored);
+    expect(recovered).toHaveLength(1);
+    expect(recovered[0]).toEqual({ member_id: w.memberId.toLowerCase(), identity_opened: true, live_validation_id: liveId, eligible: true, death_reported: false });
+  });
+
   it('AC8a — a verifier / helpline operator reads the QUEUE (can_check false) but ⛔ the detail and ⛔ the record (403)', async () => {
     const w = await world();
     for (const [role, dim, value] of [
@@ -762,10 +789,19 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     // ⭐ (code review R4-P12) R3-P13 across TWO connections: the act that waited on the intake key is stamped when it RAN, so the
     // live act is strictly LATER than the act it superseded, and the supersession falls between them (⛔ `now()` = BEGIN, which
     // would stamp the waiting act first).
-    const t = (v: unknown) => new Date(v as string | Date).getTime();
-    expect(t(liveRows[0]!.decided_at)).toBeGreaterThan(t(older.decided_at));
-    expect(t(older.superseded_at)).toBeGreaterThanOrEqual(t(older.decided_at));
-    expect(t(liveRows[0]!.decided_at)).toBeGreaterThanOrEqual(t(older.superseded_at));
+    // ⭐ (code review R5-P7) Compared IN SQL at the stamps' own microsecond precision — ⛔ on JS `Date`s, whose milliseconds can
+    // tie two serialised acts and give a false red on a correct build.
+    const order = (
+      await td.pool.query(
+        `SELECT l.decided_at > o.decided_at AS live_after_older,
+                o.superseded_at >= o.decided_at AS superseded_after_decided,
+                l.decided_at >= o.superseded_at AS live_after_superseded
+           FROM member_identity_validations l, member_identity_validations o
+          WHERE l.validation_id = $1 AND o.validation_id = $2`,
+        [liveRows[0]!.validation_id, older.validation_id],
+      )
+    ).rows[0] as { live_after_older: boolean; superseded_after_decided: boolean; live_after_superseded: boolean };
+    expect(order).toEqual({ live_after_older: true, superseded_after_decided: true, live_after_superseded: true });
     expect(await markers(w2.memberId)).toBe(2);
 
     const w3 = await world();

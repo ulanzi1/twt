@@ -398,13 +398,20 @@ function RecordForms({
   const asksEvidence = reason !== 'member_not_reached';
   const asksDocument = WITH_DOCUMENT.has(reason);
 
+  // ⭐ The two submit buttons say `aria-disabled` while a save runs and a second submit is ignored here — ⛔ native `disabled`, which
+  // in a real browser drops the focus it holds to the page (after a FAILED save it never comes back; Row 57 (c) browser pass,
+  // 2026-11-26). A REF beside the pending flag: Enter in a field and a click in one moment both see the last render.
+  const saving = useRef(false);
   const send = (body: IdentityCheckRecordRequest): void => {
+    if (record.isPending || saving.current) return;
+    saving.current = true;
     setSaveError(null);
     onSaved(null);
     record.mutate(
       { body, idempotencyKey: attemptKey(keyRef, body) },
       {
         onSuccess: () => {
+          saving.current = false; // released by the call's OWN outcome (⛔ an effect on `isPending`, which an instant answer never commits as true)
           keyRef.current = null;
           setCEvidence('');
           setCDocument('');
@@ -415,6 +422,7 @@ function RecordForms({
           setNote('');
         },
         onError: (err) => {
+          saving.current = false;
           if (err instanceof ApiError && err.status === 401) onSignedOut();
           else if (err instanceof ApiError && err.status === 409 && err.code === 'admin.display_name_missing') setSaveError('display_name');
           else setSaveError('retry');
@@ -518,7 +526,7 @@ function RecordForms({
           {t.form.noteOptional}
           <textarea id="confirm-note" data-testid="confirm-note" className="mt-1 rounded border p-1" maxLength={1000} value={cNote} onChange={(e) => setCNote(e.target.value)} />
         </label>
-        <button type="submit" className="self-start rounded border px-3 py-1" data-testid="identity-check-confirm" disabled={record.isPending}>
+        <button type="submit" className={`self-start rounded border px-3 py-1${record.isPending ? ' cursor-not-allowed opacity-50' : ''}`} data-testid="identity-check-confirm" aria-disabled={record.isPending}>
           {record.isPending ? t.form.saving : t.form.confirm}
         </button>
       </form>
@@ -549,7 +557,7 @@ function RecordForms({
             {t.form.noteRequired}
           </p>
         ) : null}
-        <button type="submit" className="self-start rounded border px-3 py-1" data-testid="identity-check-could-not-confirm" disabled={record.isPending}>
+        <button type="submit" className={`self-start rounded border px-3 py-1${record.isPending ? ' cursor-not-allowed opacity-50' : ''}`} data-testid="identity-check-could-not-confirm" aria-disabled={record.isPending}>
           {record.isPending ? t.form.saving : t.form.couldNotConfirm}
         </button>
       </form>

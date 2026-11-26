@@ -15,7 +15,7 @@
 // and tells the page too (`2026-11-26-507`, R5-P4).
 
 import type { ReactElement } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { isAccessLost, isRevealRefusal, isRevealStandingRefusal, useRevealIdentityCheckMobile } from './hooks.js';
@@ -73,11 +73,18 @@ export function RevealMobile({
     };
   }, [shown, clear]);
 
+  // ⭐ While a press runs the button says `aria-disabled` and ignores a second press — ⛔ native `disabled`, which in a real browser
+  // drops the focus it holds to the page on EVERY press (Row 57 (c) browser pass, 2026-11-26). The guard is a REF as well as the
+  // pending flag: two presses in one moment both see the last render.
+  const inFlight = useRef(false);
   const press = (): void => {
+    if (isPending || inFlight.current) return;
+    inFlight.current = true;
     setProblem(null);
     clear(); // the last number is gone the moment a new showing is asked for
     mutate(undefined, {
       onSuccess: (r) => {
+        inFlight.current = false; // released by the call's OWN outcome (⛔ an effect on `isPending`, which an instant answer never commits as true)
         // The tab was hidden while the showing was awaited: ⛔ onto the screen (and out of the mutation) — the hidden-tab rule.
         if (document.visibilityState === 'hidden') {
           clear();
@@ -87,6 +94,7 @@ export function RevealMobile({
         setShown({ mobile: r.mobile });
       },
       onError: (err) => {
+        inFlight.current = false;
         setShown(null);
         if (err instanceof ApiError && err.status === 401) {
           onSignedOut();
@@ -105,9 +113,9 @@ export function RevealMobile({
     <div className="mt-1 text-sm" data-testid={`reveal-mobile-${memberId}`}>
       <button
         type="button"
-        className="rounded border px-2 py-0.5 text-xs"
+        className={`rounded border px-2 py-0.5 text-xs${isPending ? ' cursor-not-allowed opacity-50' : ''}`}
         data-testid={`reveal-mobile-button-${memberId}`}
-        disabled={isPending}
+        aria-disabled={isPending}
         onClick={press}
       >
         {t.button}

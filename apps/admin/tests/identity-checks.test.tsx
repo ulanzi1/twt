@@ -1945,3 +1945,57 @@ describe('⭐ R5 — focus stays where staff can use it (one rule keyed to where
     expect(screen.getByRole('list', { name: 'Identity checks' })).toBe(list);
   });
 });
+
+describe('⭐ Row 57 (c) browser pass (2026-11-26) — the press and the two saves keep the focus they hold: `aria-disabled` + a guard, ⛔ native `disabled`', () => {
+  // In a REAL browser a natively disabled button drops its focus to the page: the pass logged `<body>` on every number press and
+  // after a failed save (jsdom keeps focus on a disabled button, so these legs prove the ATTRIBUTE and the guard; the focus itself
+  // was observed in Chrome).
+  it('the number press: `aria-disabled` while it runs, ⛔ `disabled`; a second press meanwhile sends nothing; focus stays on it', async () => {
+    let answer: ((v: { mobile: string }) => void) | undefined;
+    getIdentityCheckQueue.mockResolvedValue({ entries: [entry], can_check: false, has_more: false });
+    revealIdentityCheckMobile.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    renderWithClient(<IdentityChecksView pariwarId={PARIWAR} />);
+    const press = await screen.findByTestId(PRESS(M));
+    press.focus();
+    fireEvent.click(press);
+    await waitFor(() => expect(press).toHaveAttribute('aria-disabled', 'true'));
+    expect(press).not.toHaveAttribute('disabled');
+    fireEvent.click(press);
+    fireEvent.click(press);
+    expect(revealIdentityCheckMobile).toHaveBeenCalledTimes(1);
+    await act(async () => answer!({ mobile: '+919876543210' }));
+    await waitFor(() => expect(press).toHaveAttribute('aria-disabled', 'false'));
+    expect(screen.getByTestId(`reveal-mobile-shown-${M}`)).toBeInTheDocument();
+    expect(document.activeElement).toBe(press);
+    // The guard is released: a press after the answer is sent.
+    fireEvent.click(press);
+    await waitFor(() => expect(revealIdentityCheckMobile).toHaveBeenCalledTimes(2));
+  });
+
+  it('the two saves: both submit buttons `aria-disabled` while a save runs, ⛔ `disabled`; a second submit sends nothing; after a FAILED save focus is still on the button pressed', async () => {
+    let fail: ((e: unknown) => void) | undefined;
+    getIdentityCheckDetail.mockResolvedValue(detail());
+    recordIdentityCheck.mockImplementation(() => new Promise((_resolve, reject) => (fail = reject)));
+    renderWithClient(<IdentityCheckDetailView pariwarId={PARIWAR} memberId={M} />);
+    fireEvent.change(await screen.findByTestId('confirm-evidence'), { target: { value: 'photo_id_in_person' } });
+    fireEvent.change(screen.getByTestId('confirm-document'), { target: { value: 'voter_id' } });
+    const confirm = screen.getByTestId('identity-check-confirm');
+    const other = screen.getByTestId('identity-check-could-not-confirm');
+    confirm.focus();
+    fireEvent.click(confirm);
+    await waitFor(() => expect(confirm).toHaveAttribute('aria-disabled', 'true'));
+    expect(other).toHaveAttribute('aria-disabled', 'true');
+    expect(confirm).not.toHaveAttribute('disabled');
+    expect(other).not.toHaveAttribute('disabled');
+    fireEvent.click(confirm);
+    fireEvent.submit(screen.getByTestId('identity-check-confirm-form'));
+    expect(recordIdentityCheck).toHaveBeenCalledTimes(1);
+    await act(async () => fail!(new ApiError(500, 'http.500', 'no')));
+    expect(await screen.findByTestId('identity-check-save-error')).toHaveTextContent(t.form.saveError);
+    expect(confirm).toHaveAttribute('aria-disabled', 'false');
+    expect(document.activeElement).toBe(confirm);
+    // The guard is released: a save after the failure is sent.
+    fireEvent.click(confirm);
+    await waitFor(() => expect(recordIdentityCheck).toHaveBeenCalledTimes(2));
+  });
+});

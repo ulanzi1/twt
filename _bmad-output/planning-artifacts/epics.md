@@ -2086,6 +2086,11 @@ on the list; ⛔ undo, ⛔ member-facing words (PQ2), ⛔ change to 6.39's gate 
 > the Panel's to approve — one note at the story's Task 0.3; they block go-live (roster Row 57 (b)), ⛔ the build. AI-10-1: ⛔ benefit
 > gate is introduced or changed.
 
+> 📝 **2026-11-26 — Story 3.13a v1.2 (validate):** leaving out a phone notification (push) is OUR reading, ⛔ the ruling's words — the
+> Panel note asks it as a non-blocking confirm; the "how to arrange it" line is PROPOSED per reason (PQ1 (b) (ii), the Panel's — ⛔ route corrects
+> a wrong typed-in detail); the card re-reads when the home tab gains focus and when the app returns to the foreground; the staff hint's words
+> are BigDev's at Task 0.2. The story file is the authority. Text below not rewritten.
+
 As a member who typed in my own identity details and whose identity staff could not confirm, I want the app to tell me — in my
 language — that it could not be confirmed yet, why, and how to arrange it, so that I can put it right before it matters.
 

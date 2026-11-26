@@ -366,7 +366,36 @@ describe.skipIf(!hasDatabase)('Story 3.13a — readMemberIdentityCheckNotice (li
     expect(kycReads.length).toBeGreaterThanOrEqual(1);
     expect(kycReads.filter((t) => /ciphertext/.test(t))).toEqual([]);
     expect(texts.filter((t) => /^\s*(insert|update|delete)\b/i.test(t))).toEqual([]);
-    expect(texts.filter((t) => /advisory/i.test(t))).toEqual([]);
+    // N4 — ⛔ lock: neither an advisory lock, a table lock (`LOCK TABLE`) nor a row lock (`FOR UPDATE` / `FOR SHARE` / `FOR NO KEY
+    // UPDATE` / `FOR KEY SHARE`) — R2-P2, R3-P4.
+    // Read by hand: no helper this read calls (`getCurrentMemberState`, `getCurrentMemberModerationOverlay`, `readDeceasedKycStanding`,
+    // `isDeathReportStanding`) contains a row lock. The control below proves the pattern matches each kind of lock statement and ⛔ a
+    // look-alike word; and a live mutation — `.for('share')` added to the live-row select — turned the last line of this block RED
+    // (code review round 2, 2026-11-26), so a statement that really locks IS caught.
+    const LOCK_SQL = /advisory|\block\s+table\b|\bfor\s+(update|share|no\s+key\s+update|key\s+share)\b/i;
+    for (const sql of [
+      'select pg_advisory_xact_lock($1)',
+      'LOCK TABLE members IN SHARE MODE',
+      'select 1 from members for update',
+      'SELECT 1 FROM members FOR SHARE',
+      'select 1 from members for no key update',
+      'select 1 from members for key share',
+    ]) {
+      expect(LOCK_SQL.test(sql)).toBe(true);
+    }
+    // Each NEGATIVE is chosen to fail ONE anchor: `xfor update` has no leading `\b`; `for updated_at` has no trailing `\b`;
+    // `unlock table_x` has no leading `\b` on lock; `lock tables_count` has no trailing `\b` on table. The first two are plain look-alikes.
+    for (const sql of [
+      'select 1 from members where information = $1',
+      'select format_for_display from members',
+      'select 1 from members xfor update',
+      'select 1 from members for updated_at',
+      'select unlock table_x from members',
+      'select 1 from members where lock tables_count = 1',
+    ]) {
+      expect(LOCK_SQL.test(sql)).toBe(false);
+    }
+    expect(texts.filter((t) => LOCK_SQL.test(t))).toEqual([]);
 
     // The control: the same scanner over the ADMIN detail read sees the note and the identity ciphertext.
     const spy2 = vi.spyOn(client, 'query');
@@ -382,7 +411,12 @@ describe.skipIf(!hasDatabase)('Story 3.13a — readMemberIdentityCheckNotice (li
     expect(adminTexts.filter((t) => /member_kyc_profiles/.test(t) && /ciphertext/.test(t)).length).toBeGreaterThan(0);
   });
 
-  it('N4 — ⛔ row, event or audit line written by the read (counts before = after; the control that the writer moved them)', async () => {
+  it('N4 — ⛔ row or event written by the read (counts before = after; the control that the writer moved them)', async () => {
+    // ⚠ An AUDIT line is ⛔ counted here (R2-P2, R3-P6; AC2's audit-line clause carries a dated amendment in the story) — by
+    // construction it cannot come from this read: it takes only a `Db`, `identity-validation.ts` imports no audit writer (grep `audit`
+    // there finds two comments), and an audit INSERT through that `Db` would also trip N3's statement scan above (`insert|update|delete`).
+    // The route's silence is the handler's (it calls none). Counting an audit table needs a control from an audited write (3.13's
+    // number reveal) — not built.
     const { tx, client } = getTx();
     const memberId = await seedTypedInMember(tx);
     await enterAppScope(client, PARIWAR_A);

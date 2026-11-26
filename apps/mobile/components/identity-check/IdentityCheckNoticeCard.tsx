@@ -8,6 +8,10 @@
 // ⭐ DL10 — the WHOLE card is ONE button (the `PeerRequestEntry` / `KnownPeopleRequestEntry` shape): its `accessibilityLabel` =
 // title + reason + how + the action words REPLACES the children for TalkBack, so the text is read ONCE. The text is the card's own
 // `Text` children (⛔ a Tamagui button text prop), so it wraps. ⛔ live region, ⛔ announcement (static content).
+// Family 13 (a) — the labelled container is EXPLICITLY `accessible={true}` (R2-P1): a label on a container that is not an
+// accessibility element is never announced. Tamagui 2.1.0's native default already supplies it for a `Button` (`tabIndex: 0`), so
+// this names what a library default currently does. The test asserts only that the card PASSES the prop (to a stub of `Button`),
+// ⛔ what Tamagui does with it; only AC9's TalkBack pass proves the reading on a device.
 // ⭐ DL8 — pressing it opens the help form with `kyc-trouble` PRESELECTED (`new.tsx` applies it once its list has loaded).
 
 import { useRouter } from 'expo-router'
@@ -34,6 +38,7 @@ export function IdentityCheckNoticeCard(): React.ReactElement | null {
     <Button
       unstyled
       onPress={() => router.push(IDENTITY_CHECK_HELP_HREF)}
+      accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${reasonLine} ${how} ${action}`}
       px={16}

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // Story 3.13a (Task 3; AC4, DL1, DL3, DL6, DL7, DL10) — "We could not confirm your identity yet": the home card and its read,
-// EXECUTED against a REAL `QueryClient` (production `retry: 1`; ⛔ refetch on window focus / reconnect) and the REAL
+// EXECUTED against a REAL `QueryClient` (production `retry: 1`, with a 10 ms `retryDelay` so a retry costs no wall-clock time —
+// production waits ~1 s; ⛔ refetch on window focus / reconnect) and the REAL
 // `t()` in BOTH locales ([[feedback_stub_must_call_not_transcribe]]). Stubbed: the transport, the session, the AppState listener,
-// the navigator's focus and the tamagui primitives (the mock FORWARDS `accessibilityLabel` / `accessibilityRole` — #71 (d)).
+// the navigator's focus and the tamagui primitives (the mock FORWARDS `accessible` / `accessibilityLabel` / `accessibilityRole` — #71 (d)).
 // Native layout, Hindi wrapping and a real TalkBack still need the device pass (AC9 — a go-live leg).
 import '@testing-library/jest-dom/vitest'
 import { createElement, useEffect } from 'react'
@@ -52,8 +53,18 @@ vi.mock('tamagui', async () => {
   return {
     Text: ({ children }: { children?: React.ReactNode }) => createElement('p', null, children),
     YStack: container,
-    Button: (p: { children: React.ReactNode; onPress?: () => void; testID?: string; accessibilityLabel?: string; accessibilityRole?: string }) =>
-      createElement('button', { onClick: p.onPress, 'data-testid': p.testID, 'aria-label': p.accessibilityLabel, 'data-role': p.accessibilityRole }, p.children),
+    Button: (p: { children: React.ReactNode; onPress?: () => void; testID?: string; accessible?: boolean; accessibilityLabel?: string; accessibilityRole?: string }) =>
+      createElement(
+        'button',
+        {
+          onClick: p.onPress,
+          'data-testid': p.testID,
+          'data-accessible': p.accessible === undefined ? undefined : String(p.accessible),
+          'aria-label': p.accessibilityLabel,
+          'data-role': p.accessibilityRole,
+        },
+        p.children,
+      ),
   }
 })
 
@@ -97,7 +108,7 @@ const app = () =>
 const card = () => screen.queryByTestId('identity-check-notice-card')
 
 beforeEach(() => {
-  client = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, refetchOnReconnect: false } } })
+  client = new QueryClient({ defaultOptions: { queries: { retry: 1, retryDelay: 10, refetchOnWindowFocus: false, refetchOnReconnect: false } } })
   mock.session = { memberId: 'm-1', pariwarId: 'p-1' }
   mock.get.mockReset()
   mock.appState.clear()
@@ -121,12 +132,27 @@ describe('<IdentityCheckNoticeCard> renders NOTHING unless a SUCCESSFUL read car
     await waitFor(() => expect(card()).not.toBeNull())
   })
 
-  it('on an error, and on `notice: null`', async () => {
-    mock.get.mockRejectedValueOnce(new Error('503'))
+  it('⭐ a FAILED FIRST read — no notice held — is retried ONCE: a cold-start blip still shows the card (R2-D2; mutation: `retry: false`)', async () => {
+    const retry = held()
+    mock.get.mockRejectedValueOnce(new Error('network')).mockReturnValueOnce(retry.p)
+    const { container } = app()
+    expect(container).toBeEmptyDOMElement() // the first read is in flight
+    await waitFor(() => expect(mock.get).toHaveBeenCalledTimes(2)) // the first read FAILED; its one retry is now out (held open)
+    expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.fetchFailureCount).toBe(1)
+    expect(container).toBeEmptyDOMElement() // ⛔ shown after the failure, while the retry is out: `isSuccess` is false, no notice held
+    await act(async () => retry.settle(notice('details_do_not_match')))
+    await waitFor(() => expect(card()).not.toBeNull())
+    expect(mock.get).toHaveBeenCalledTimes(2) // the first read + its one retry, ⛔ a third
+  })
+
+  it('on an error (after the ONE first-read retry — ⛔ a third attempt), and on `notice: null`', async () => {
+    mock.get.mockRejectedValue(new Error('503'))
     const a = app()
     await waitFor(() => expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.status).toBe('error'))
+    expect(mock.get).toHaveBeenCalledTimes(2)
     expect(a.container).toBeEmptyDOMElement()
     a.unmount()
+    mock.get.mockReset()
     mock.get.mockResolvedValueOnce(NONE)
     const b = app()
     await waitFor(() => expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.status).toBe('success'))
@@ -145,6 +171,24 @@ describe('<IdentityCheckNoticeCard> renders NOTHING unless a SUCCESSFUL read car
     await waitFor(() => expect(card()).toBeNull())
     expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.status).toBe('error')
     expect(client.getQueryData(identityCheckNoticeKey('p-1', 'm-1'))).toEqual(notice('details_do_not_match')) // the data is KEPT
+    // ⭐ and it is NOT retried while a notice is held (AC4 — a retry would keep `isSuccess` true past the deadline): well past the
+    // 10 ms `retryDelay`, still exactly two reads (mutation: retry whatever is held — a third read appears).
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 120))
+    })
+    expect(mock.get).toHaveBeenCalledTimes(2)
+    expect(card()).toBeNull()
+  })
+
+  it('⭐ a re-read that FAILS while `notice: null` is held IS retried once (nothing is showing): a notice recorded meanwhile appears (R3-P1; mutation: retry only when nothing is held at all)', async () => {
+    mock.get.mockResolvedValueOnce(NONE)
+    app()
+    await waitFor(() => expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.status).toBe('success'))
+    expect(card()).toBeNull()
+    mock.get.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(notice('member_not_reached'))
+    await focus()
+    await waitFor(() => expect(card()).not.toBeNull())
+    expect(mock.get).toHaveBeenCalledTimes(3) // mount + the failed re-read + its one retry
   })
 
   it('⭐ a re-read that HANGS past `CALL_TIMEOUT_MS` hides it despite the production client default `retry: 1`', async () => {
@@ -210,10 +254,18 @@ describe('the words — the REAL `t()`, each reason, both locales (DL3, DL7)', (
         const buttons = screen.getAllByRole('button')
         expect(buttons).toHaveLength(1)
         expect(buttons[0]).toHaveAttribute('data-role', 'button')
+        expect(buttons[0]).toHaveAttribute('data-accessible', 'true') // family 13 (a) — the labelled container is an accessibility element (R2-P1)
         expect(buttons[0]).toHaveAttribute('aria-label', `${title}. ${reasonLine} ${how} ${action}`)
       })
     }
   }
+
+  it('the mock reports `accessible` honestly — a Button WITHOUT the prop carries no `data-accessible` (the control for the card\'s assertion)', async () => {
+    const { Button } = await import('tamagui')
+    const { container } = render(createElement(Button, { testID: 'plain' }))
+    expect(container.querySelector('[data-testid="plain"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="plain"]')).not.toHaveAttribute('data-accessible')
+  })
 
   it('the two locales are DISTINCT (the real `t()` is called — a key stub would make them equal)', () => {
     for (const key of ['identity_check.notice.title', ...HOW_KEYS]) expect(tr(key, 'hi')).not.toBe(tr(key, 'en'))

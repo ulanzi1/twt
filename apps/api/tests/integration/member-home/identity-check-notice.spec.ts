@@ -85,7 +85,10 @@ function token(t: TestApp, memberId: string, pariwarId: string): string {
   return signAccessToken(t.app, { memberId, pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS);
 }
 
-async function get(t: TestApp, opts: { token?: string } = {}): Promise<{ status: number; body: Json; raw: string }> {
+async function get(
+  t: TestApp,
+  opts: { token?: string } = {},
+): Promise<{ status: number; body: Json; raw: string; headers: Record<string, unknown> }> {
   const res = await t.app.inject({
     method: 'GET',
     url: URL,
@@ -97,7 +100,7 @@ async function get(t: TestApp, opts: { token?: string } = {}): Promise<{ status:
   } catch {
     body = {};
   }
-  return { status: res.statusCode, body, raw: res.body };
+  return { status: res.statusCode, body, raw: res.body, headers: res.headers };
 }
 
 /** Every key in a parsed JSON value, recursively (the key-set assertion). */
@@ -129,10 +132,12 @@ describe.skipIf(!hasDatabase)('Story 3.13a — GET /api/v1/member/identity-check
       const mine = await get(t, { token: token(t, told, pariwarId) });
       expect(mine.status).toBe(200);
       expect(mine.body).toEqual({ notice: { reason: 'details_do_not_match' } });
+      expect(mine.headers['cache-control']).toBe('no-store'); // R2-P4 — the reason is personal data: ⛔ an HTTP cache
 
       const theirs = await get(t, { token: token(t, neighbour, pariwarId) });
       expect(theirs.status).toBe(200);
       expect(theirs.body).toEqual({ notice: null });
+      expect(theirs.headers['cache-control']).toBe('no-store'); // set on `null` too — ⛔ a header only when there is a notice
 
       // Each member sees their OWN reason once both have one.
       await recordNotConfirmed(t, pariwarId, neighbour, 'member_not_reached');

@@ -18,7 +18,7 @@
 
 import { ids, member as memberDomain } from '@twt/domain';
 import type { MemberIdentityCheckNoticeResponse, MemberLockInStatusResponse } from '@twt/contracts';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { UnauthorizedError } from '../../http-errors.js';
@@ -98,8 +98,11 @@ export function createMemberHomeHandlers(deps: AppDeps) {
      * Pariwar scope (0218's RLS is Pariwar-wide; the domain read filters `member_id`). `{ notice: { reason } }` while staff
      * could ⛔ confirm them and they still await a check; else `{ notice: null }`. A read failure THROWS (⇒ 500) — ⛔
      * fail-soft to `null`: a silent `null` would hide a real message (the app hides the card on an error, DL6). ⛔ write.
+     * `Cache-Control: no-store` (R2-P4) — the reason is the member's own data and must not sit in a device or proxy HTTP cache
+     * (the other personal-data member reads set the same header; the app's own query cache is kept clear by `gcTime: 0`).
      */
-    async identityCheckNotice(request: FastifyRequest): Promise<MemberIdentityCheckNoticeResponse> {
+    async identityCheckNotice(request: FastifyRequest, reply: FastifyReply): Promise<MemberIdentityCheckNoticeResponse> {
+      void reply.header('cache-control', 'no-store');
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;

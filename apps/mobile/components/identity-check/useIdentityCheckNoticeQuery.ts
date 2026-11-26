@@ -13,13 +13,16 @@
 // ⭐ The render rule lives in `identityCheckNoticeReason` below: the card shows ONLY on a SUCCESSFUL read carrying a notice ⇒ a
 // FAILED re-read hides it (TanStack keeps the old data and sets `status: 'error'`). The OPPOSITE of the known-people rule
 // (`requestEntryVisible`: only the denial hides it) — chosen because here a stale card is the worse error; its cost is a card that
-// flickers off on a network blip and back on the next good read (DL6, as answered).
+// flickers off on a network blip and back on the next good read (DL6, as answered). A read that fails while NO notice is held (the first
+// read, or a re-read after `notice: null`) is retried once, as the app client's `retry: 1` would — nothing is showing, so it costs AC4
+// nothing and spares a blip; a re-read that fails while a notice IS held is not retried, because it must hide that notice within
+// CALL_TIMEOUT_MS (R2-D2, R3-P1).
 
 import { useCallback, useEffect } from 'react'
 import { AppState } from 'react-native'
 
 import type { QueryClient } from '@tanstack/react-query'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { IdentityCheckNotConfirmedReason, MemberIdentityCheckNoticeResponse } from '@twt/contracts'
 import { useFocusEffect } from 'expo-router'
 
@@ -53,14 +56,19 @@ export function useIdentityCheckNoticeQuery() {
   const pariwarId = session?.pariwarId
   const memberId = session?.memberId
   const enabled = pariwarId !== undefined && memberId !== undefined
+  const client = useQueryClient()
+  const key = identityCheckNoticeKey(pariwarId, memberId)
   const q = useQuery<MemberIdentityCheckNoticeResponse>({
     ...IDENTITY_CHECK_NOTICE_CACHE_OPTIONS,
-    queryKey: identityCheckNoticeKey(pariwarId, memberId),
+    queryKey: key,
     queryFn: () => withTimeout(memberAuth.memberIdentityCheckNotice(), CALL_TIMEOUT_MS),
     enabled,
-    // A failed attempt must hide the retained notice within CALL_TIMEOUT_MS (AC4 / N6).
-    // The client's retry keeps `isSuccess` true during backoff and another attempt, beyond that deadline.
-    retry: false,
+    // AC4 / N6 — a failed or hung RE-read must hide the notice it holds within CALL_TIMEOUT_MS. While TanStack retries, the query
+    // keeps `isSuccess: true` and the old data, past that deadline ⇒ no retry while a notice is held. With NO notice held (the first
+    // read, or a re-read after `notice: null`) the card is not showing, so one retry costs AC4 nothing and spares a blip (R2-D2, R3-P1).
+    // The limit of one mirrors the app client's `retry: 1`; it is written here, ⛔ read from the client.
+    retry: (failureCount: number) =>
+      failureCount < 1 && (client.getQueryData<MemberIdentityCheckNoticeResponse>(key)?.notice ?? null) === null,
   })
   const { refetch } = q
   const reread = useCallback(() => {

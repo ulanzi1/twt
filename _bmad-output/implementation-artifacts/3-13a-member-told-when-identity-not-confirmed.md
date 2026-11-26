@@ -44,7 +44,7 @@ the deferred item's id, the row KEY.
 
 # Story 3.13a: A Member Is Told When Staff Could Not Confirm Their Identity — and Why
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -564,8 +564,8 @@ suggestions, PROPOSED).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST (AC1).** Touch an `apps/` or `packages/` file only AFTER 0.4 is committed.
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor ce0737ce HEAD`; `git diff --name-only ce0737ce..origin/main -- packages apps`
+- [x] **Task 0 — Governance FIRST (AC1).** Touch an `apps/` or `packages/` file only AFTER 0.4 is committed.
+  - [x] 0.1 `git fetch origin`; `git merge-base --is-ancestor ce0737ce HEAD`; `git diff --name-only ce0737ce..origin/main -- packages apps`
         (EMPTY at v1.2, `origin/main` = `f5c559d0`) — re-read every F-fact whose file moved; rebase the story branch onto `origin/main`
         first if it is behind (the ledger conflict recipe: [[project_rebase_ledger_conflict_separator]]). Re-read across EVERY ref (local +
         remote) and worktree (`git branch -a`, `git worktree list`, `git for-each-ref`): the next decision id (`-508` at v1.2), the next
@@ -578,7 +578,7 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 (partial, before 0.2): `git fetch origin` — `origin/main` = `f5c559d0`; `ce0737ce` IS an ancestor of HEAD;
         `git diff --name-only ce0737ce..origin/main -- packages apps` EMPTY (⛔ F-fact moved); the branch lacks only `f5c559d0`
         (records-only) — ⛔ rebased (the note cites this branch's SHAs); ⛔ `3-14` / `3-16` branch on any ref. The agenda re-read: ⛔
-        sent; item 9 now MARKED withdrawn (`041889ae`). Still owed in 0.1 (⚠ `-508` is now TAKEN by the Panel's ruling ⇒ 0.4 re-greps from `-509`): the next decision id and ledger letter, re-read just before 0.4.
+        sent; item 9 now MARKED withdrawn (`041889ae`). Still owed in 0.1 (⚠ `-508` is now TAKEN by the Panel's ruling ⇒ 0.4 re-greps from `-509`): the next decision id and ledger letter (⭐ DONE 2026-11-26: re-grepped every ref + worktree before `-509` — `-508` highest — and before ledger `m` — `l` highest), re-read just before 0.4.
   - [x] 0.2 Put DL1–DL12 to BigDev (the question dialog; recommended option first): DL1 (where), DL2 + DL3 (when / what), DL4–DL7 (the
         build — one question, naming DL5's OpenAPI choice and DL6's render rule with their options), DL8 (preselect vs unselected),
         DL9 (the staff hint, word for word — "will see" vs "is told"), DL10 (whole card as the button vs a separate button), and WHERE
@@ -623,7 +623,7 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 — WRITTEN: [Decision 2026-11-26-509](../../.decision-log.md#decision-2026-11-26-509) (`659d9829`, committed ALONE;
         `-508` the highest id on every ref and worktree after `git fetch origin`) — DL1–DL12 on their recommended sides, the §0 split,
         `-502` item 4 copied byte for byte from the log, the AI-10-1 line (⛔ benefit gate), PQ1 / PQ2 cited as ruled by `-508`.
-  - [ ] 0.5 Roster Row 57: a dated line under (b) — *"row `3-13a` started; (b) is MET when it is built AND its words are approved (PQ1)
+  - [x] 0.5 Roster Row 57: a dated line under (b) — *"row `3-13a` started; (b) is MET when it is built AND its words are approved (PQ1)
         AND the device pass (AC9) is recorded"* (⛔ edit to the leg's text — [[feedback_supersede_never_reinterpret]]).
         `deferred-work.md`: a dated line under PQ2 (*"row 3-13a in progress, words PQ1 open"*); a NEW item for row `3-14` — the cover
         promise in BOTH `lock_in.rationale` and `lock_in.unlock_date_label` (F9), trigger: 3-14's create-story; a NEW item for row `3-16`
@@ -631,7 +631,14 @@ suggestions, PROPOSED).
         3-16's create-story; a NEW item, OPEN and unhomed — ⛔ route corrects a wrong typed-in detail for anyone (F10 (d); the 21 November
         note's info line 6; Niyamavali Part 10's correction right is counsel's to read), owner BigDev, trigger: PQ1's ruling or Row 57's
         go-live, whichever is first (observed and escalated — ⛔ planned here) (⭐ WRITTEN 2026-11-26 with v1.6 as `3.13a-G1`); a dated line on `3.13-R1-W6` naming PQ1's sitting (⭐ WRITTEN 2026-11-26 with v1.5 — it is the note's Q3).
-  - [ ] 0.6 Sprint row `3-13a-…` `ready-for-dev → in-progress` (map only; the ONE ledger entry is written at the end).
+        ⭐ 2026-11-26 — DONE: the Row 57 (b) line and the PQ2 line were written with `-508`'s records (`798e1493` — the words now RULED,
+        so (b) is MET when built AND the device pass is recorded); `3.13-R1-W6` (`798e1493`) and `3.13a-G1` (`3499ed0e`, its trigger
+        line `798e1493`); NEW `3.13a-G2` (the cover promise in BOTH `lock_in.rationale` and `lock_in.unlock_date_label` → row `3-14`) and
+        `3.13a-G3` (a new `not_confirmed` reason → row `3-16`) — both re-verified on the code.
+  - [x] 0.6 Sprint row `3-13a-…` `ready-for-dev → in-progress` (map only; the ONE ledger entry is written at the end).
+        ⭐ 2026-11-26 — DONE: the row flipped `ready-for-dev → in-progress` with a dated comment above it; ledger `2026-11-26m` (the
+        highest letter on every ref was `l`; prepended with the size-guarded write; plain `yaml.safe_load` passes, 327 rows). ⚠ Earlier
+        steps of this story also wrote ledger lines (`g`, `i`–`l`), so "the ONE ledger entry" is ⛔ how it went; dev-story adds its own.
 - [ ] **Task 1 — Domain (AC2).** `readMemberIdentityCheckNotice` in `packages/domain/src/member/identity-validation.ts` (DL4: the narrow
       live-row select; `getCurrentMemberState(db, memberId)`, `getCurrentMemberModerationOverlay(db, memberId)`, the two-column KYC
       standing (`readDeceasedKycStanding` or a same-shape local read if the import cycles — ⛔ `getMemberKycProfile`);
@@ -767,3 +774,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.9 | 2026-11-26 | BigDev: *"mark that this file come before"* ⇒ the peer agenda MARKED on `governance/panel-sitting-2026-11-26` (`041889ae`): a dated status line (this note goes before the sitting), item 9 and Part C's member-message line WITHDRAWN (kept as written), the separate private-note note (`4a48c24d`) marked DO NOT SEND. BigDev: *"Build questions as recommended"* ⇒ Task 0.2 DONE — DL1–DL12 on their recommended sides (DL5 ⛔ OpenAPI entry; DL6 the `isSuccess` render rule; DL8 preselect; DL9 (b) *"The app shows the member this reason."*; DL10 the whole card one button); a dated box under "Build decisions". Task 0.1's drift check run (⛔ F-fact moved; ⛔ rebase — records-only `f5c559d0`). The note re-checked against the answers — ⛔ word changed — and its status block says nothing more is owed before sending; its E3 line updated. Next: Task 0.1's numbers re-read, then 0.4 (the author-commit decision entry) before any code. Row stays `ready-for-dev`. |
 | 1.10 | 2026-11-26 | ⭐⭐ The Panel RULED the note — [Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508) (Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*), committed ALONE (`978c2c11`) before these records. PQ1 (a) A, PQ1 (b) (ii), the words APPROVED as written (by reading — ⛔ change given), PQ2 A (counsel's half open), the three confirms. ⛔ build change. Records: the note's status and ruling block (the rest unedited); Task 0.3 ticked; a ruled box over "Panel question"; roster Row 57 (b) dated line (⛔ MET — built + device pass owed); `deferred-work.md` PQ2 (under `-501`), `3.13-R1-W6` (Panel half ruled A, counsel's half open) and `3.13a-G1` (trigger FIRED; the ruling accepts the gap as a cost, ⛔ rules it unfixable; homing it is BigDev's) dated lines. Next: Task 0.4 from `-509`, then 0.5's remaining items and 0.6, then code. Row stays `ready-for-dev`. |
 | 1.11 | 2026-11-26 | BigDev: *"yes, write the 0.4 entry"* — Task 0.4 DONE: [Decision 2026-11-26-509](../../.decision-log.md#decision-2026-11-26-509) (author-commit, `659d9829`, committed ALONE before any `apps/` / `packages/` change; `-508` the highest id everywhere). DL1–DL12 as answered (DL5 ⛔ OpenAPI entry; DL6 the `isSuccess` render rule; DL8 preselect; DL9 (b); DL10 one button), built on `-508`; `-502` item 4 copied byte for byte; every other quote checked against its source. Next: Task 0.5's remaining items (Row 57 line, PQ2 line, the `3-14` and `3-16` items), 0.6 (the sprint row + the ONE ledger entry), then code. Row stays `ready-for-dev`. |
+| 1.12 | 2026-11-26 | BigDev: *"yes, finish 0.5 and 0.6"* — Task 0.5 DONE (`3.13a-G2` → row `3-14`, `3.13a-G3` → row `3-16`, both re-verified on the code; the Row 57, PQ2, R1-W6 and G1 lines already written with `-508`'s records). Task 0.6 DONE: sprint row `ready-for-dev → in-progress`, ledger `2026-11-26m`, YAML parses. **Task 0 — Governance FIRST — is complete**: every `apps/` / `packages/` file may now be touched. Status → `in-progress`. Next: `bmad-dev-story 3.13a` (Task 1). |

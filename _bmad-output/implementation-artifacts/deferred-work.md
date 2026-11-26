@@ -15064,3 +15064,20 @@ Observed and escalated, ⛔ planned here ([[feedback_gap_analysis_observational]
     rule that a wrong detail is never corrected, and ⛔ rules who may correct one or how. Still OPEN and unhomed; homing it (a Panel
     question on who corrects, on what evidence, and correction vs falsification — `-109` row 2) is BigDev's. Next trigger: roster Row
     57's go-live.
+- **3.13a-G2 — the home screen's lock-in lines promise cover to a member staff may never confirm. OPEN — routed to row `3-14`.**
+  `packages/i18n/locales/{en,hi}/common.json` `lock_in.rationale` (*"… You'll be eligible for claim cover once the lock-in ends."* /
+  *"… लॉक-इन अवधि समाप्त होने पर आप दावा कवरेज के पात्र हो जाएँगे।"*) and `lock_in.unlock_date_label` (*"Cover begins on"* / *"कवरेज
+  प्रारंभ होने की तिथि"*), both shown by `apps/mobile/components/lock-in/LockInClockWidget.tsx`. Once row `3-14` builds the lock-in
+  expiry, a member staff never confirmed goes to `pending-valid`, ⛔ a covered state — so BOTH lines become false for them. ⚠ Story
+  3.13a's card sits directly ABOVE this widget ([Decision 2026-11-26-509](../../.decision-log.md#decision-2026-11-26-509) DL1), which
+  makes the contradiction more visible. ⛔ reworded by 3.13a: these are member words (Panel-approved) and the consequence is 3-14's.
+  Re-verified 2026-11-26 on `story/3-13a-…`. Owner: row `3-14`. Trigger: 3-14's create-story — reword BOTH keys in both languages and
+  put the words to the Panel in 3-14's own note.
+- **3.13a-G3 — a NEW "could not confirm" reason would silently hide 3.13a's card on every installed app. OPEN — routed to row `3-16`.**
+  The member route's contract reuses 3.13's closed enum (`IdentityCheckNotConfirmedReason`, `packages/contracts/src/members/identity-check.ts`
+  — today `details_do_not_match`, `photo_does_not_match`, `no_document_shown`, `member_not_reached`), and the app's api-client
+  `schema.parse`s the body; an installed app that receives a reason it does not know throws a ZodError and the card HIDES (the render rule,
+  `-509` DL6), and there is ⛔ words key for it. Row `3-16` (uploaded documents, [Decision 2026-11-25-502](../../.decision-log.md#decision-2026-11-25-502)
+  item 2) is the likely first to add one. Owner: row `3-16`. Trigger: 3-16's create-story — a new reason needs the contract, its
+  member words in both languages (Panel-approved, as `-508` approved the four), the how-line map (`IDENTITY_CHECK_HOW_KEY_BY_REASON`)
+  and a decision on what an older installed app does.

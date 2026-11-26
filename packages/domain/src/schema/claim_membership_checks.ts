@@ -28,6 +28,7 @@ import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'dri
 import { piiColumn } from '../encryption/column.js';
 import { CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS } from '../encryption/field-classes.js';
 import type {
+  ClaimFeeBankDateId,
   ClaimId,
   ClaimMembershipCheckId,
   DeathCertificateReviewId,
@@ -36,6 +37,7 @@ import type {
   VyawasthaShulkReceiptId,
 } from '../ids/index.js';
 import { claimDeathCertificateReviews } from './claim_death_certificate_reviews.js';
+import { claimFeeBankDates } from './claim_fee_bank_dates.js';
 import { claims } from './claims.js';
 import { vyawasthaShulkReceipts } from './vyawastha_shulk_receipts.js';
 
@@ -49,6 +51,20 @@ import { vyawasthaShulkReceipts } from './vyawastha_shulk_receipts.js';
  */
 export const MEMBERSHIP_CHECK_FEE_OUTCOMES = ['before_death', 'same_day', 'after_death'] as const;
 export type MembershipCheckFeeOutcome = (typeof MEMBERSHIP_CHECK_FEE_OUTCOMES)[number];
+
+/**
+ * ⭐ Story 6.39a (DL1 / DL6) — WHICH fee date the check compared with the date of death:
+ *   · `recorded` — the joining payment's recorded date (`istDateOf(paid_at)`) — every check before 6.39a, by the column
+ *     DEFAULT;
+ *   · `bank`     — the claim's live bank-date record's `bank_credit_date`, used only when it is STRICTLY EARLIER than the
+ *     recorded date (a later bank date never counts against a family — TL4).
+ * ⚠ Row `3-17-joining-and-renewal-fee-optional-switch` (G14 / TR13) EXTENDS this vocabulary with a third source (a member
+ * with ⛔ payment, judged by submission) — the coherence CHECK (`'bank'` ⇒ an id) is one-way so that needs ⛔ rewrite of it.
+ * ⚠ LOCKSTEP with migration 0219's `claim_membership_checks_fee_date_source_check` and `@twt/contracts`'
+ * `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` (pinned by `claims-membership-check.test.ts`).
+ */
+export const MEMBERSHIP_CHECK_FEE_DATE_SOURCES = ['recorded', 'bank'] as const;
+export type MembershipCheckFeeDateSource = (typeof MEMBERSHIP_CHECK_FEE_DATE_SOURCES)[number];
 
 /**
  * The identity half's result (DL8). `not_required` iff the deceased's identity was already checked (DL4);
@@ -100,6 +116,13 @@ export const claimMembershipChecks = pgTable(
 
     feeOutcome: text('fee_outcome').notNull().$type<MembershipCheckFeeOutcome>(),
 
+    // Story 6.39a (0219, DL6) — which fee date `fee_outcome` was computed from, and the live bank-date record the check
+    // CONSIDERED, whichever date won (the gate's second currency token — DL7). `'bank'` ⇒ an id (one-way CHECK).
+    feeDateSource: text('fee_date_source').notNull().default('recorded').$type<MembershipCheckFeeDateSource>(),
+    feeBankDateId: uuid('fee_bank_date_id')
+      .$type<ClaimFeeBankDateId>()
+      .references(() => claimFeeBankDates.recordId, { onDelete: 'cascade' }),
+
     // N2 at the time of the check. The GATE re-reads the KYC record each time — this column is the record of
     // what the staff member was asked, ⛔ the gate's source.
     identityRequired: boolean('identity_required').notNull(),
@@ -124,6 +147,7 @@ export const claimMembershipChecks = pgTable(
     index('claim_membership_checks_review_id_idx').on(t.deathCertificateReviewId),
     index('claim_membership_checks_fee_receipt_id_idx').on(t.feeReceiptId),
     index('claim_membership_checks_deceased_member_idx').on(t.pariwarId, t.deceasedMemberId),
+    index('claim_membership_checks_fee_bank_date_id_idx').on(t.feeBankDateId),
     // DL1 — at most ONE live check per claim (the supersession backstop).
     uniqueIndex('claim_membership_checks_one_live_per_claim_uq')
       .on(t.claimCaseId)

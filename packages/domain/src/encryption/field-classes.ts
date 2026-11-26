@@ -127,6 +127,14 @@ export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = 'claim_fraud_investigation'
 export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = 'claim_membership_check';
 
 /**
+ * ⭐ NEW (Story 6.39a, DL1) — the bank-date record's Tier-1 field class: the finance officer's REQUIRED note (which
+ * statement, which line, what was seen — `claim_fee_bank_dates.note_ciphertext`). Keys on the claim's REAL `pariwarId`;
+ * matches `piiColumn(1, CLAIM_FEE_BANK_DATE_FIELD_CLASS)`. Declared ONCE here — the API's handlers (through
+ * `apps/api/src/context.ts`'s re-export) and `anonymizeMember`'s scrub both bind it. ⛔ Never re-declare it.
+ */
+export const CLAIM_FEE_BANK_DATE_FIELD_CLASS = 'claim_fee_bank_date';
+
+/**
  * ⭐ NEW (Story 3.13, DL1 / DL14) — the identity check's Tier-1 field class: the staff member's note on checking a
  * typed-in identity in life (`member_identity_validations.note_ciphertext`; required when `not_confirmed`). Keys on the
  * member's REAL `pariwarId`; matches `piiColumn(1, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS)`. Declared ONCE here — the

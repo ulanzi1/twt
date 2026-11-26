@@ -238,6 +238,9 @@ export * from './claim-fraud-investigation-rls.js';
 // Story 6.39 (0212) — the membership checks. SELECT + INSERT + a tenant-scoped UPDATE leg that 0212's column grants
 // narrow to the supersession pair and the RTBF scrub of `note_ciphertext`. ⛔ No DELETE leg, ⛔ no `FOR ALL`.
 export * from './claim-membership-check-rls.js';
+// Story 6.39a (0219) — the bank-date records. SELECT + INSERT + a tenant-scoped UPDATE leg that 0219's column grants
+// narrow to the supersession pair and the RTBF scrub of `note_ciphertext`. ⛔ No DELETE leg, ⛔ no `FOR ALL`.
+export * from './claim-fee-bank-date-rls.js';
 // Story 3.13 (0218) — the identity checks in life. SELECT + INSERT + a tenant-scoped UPDATE leg that 0218's column grants
 // narrow to the supersession pair and the RTBF scrub of `note_ciphertext`. ⛔ No DELETE leg, ⛔ no `FOR ALL`.
 export * from './member-identity-validation-rls.js';

@@ -830,6 +830,15 @@ export type ClaimMembershipCheckId = Brand<'ClaimMembershipCheckId'>;
 export const claimMembershipCheckId = uuidBrand('ClaimMembershipCheckId');
 
 /**
+ * Per-row address of one bank-date record (`claim_fee_bank_dates.record_id` — Story 6.39a, DL1): the finance officer's
+ * record of the date the Trust's own bank statement shows a claim's joining fee arrived, matched to the joining payment
+ * by its reference. At most one live per claim.
+ */
+export type ClaimFeeBankDateId = Brand<'ClaimFeeBankDateId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClaimFeeBankDateId`. */
+export const claimFeeBankDateId = uuidBrand('ClaimFeeBankDateId');
+
+/**
  * Per-row address of one identity check in life (`member_identity_validations.validation_id` — Story 3.13, DL1): a
  * staff member's recorded act — confirmed or not confirmed — on a typed-in identity. At most one live per member.
  */

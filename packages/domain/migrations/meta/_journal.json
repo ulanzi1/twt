@@ -1527,6 +1527,13 @@
       "when": 1797998880000,
       "tag": "0218_member-identity-validations",
       "breakpoints": true
+    },
+    {
+      "idx": 219,
+      "version": "7",
+      "when": 1797998940000,
+      "tag": "0219_claim-fee-bank-dates",
+      "breakpoints": true
     }
   ]
 }

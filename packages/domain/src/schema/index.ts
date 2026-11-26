@@ -220,6 +220,9 @@ export * from './claim_fraud_investigation_steps.js';
 // append-only, tenant-isolated. It stores the OUTCOME of the fee-date / death-date comparison and of the identity
 // judgment — ⛔ either date.
 export * from './claim_membership_checks.js';
+// Story 6.39a (0219) — the finance officer's record of the date the Trust's bank statement shows a joining fee arrived:
+// one LIVE row per claim (a new record supersedes), append-only, tenant-isolated. ⛔ The typed reference (N3).
+export * from './claim_fee_bank_dates.js';
 // Story 3.13 (0218) — staff checking a typed-in identity in life: one LIVE row per member (a later check supersedes),
 // append-only, tenant-isolated. ⛔ Document number, ⛔ copy (N5).
 export * from './member_identity_validations.js';

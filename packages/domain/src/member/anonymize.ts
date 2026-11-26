@@ -57,6 +57,7 @@ import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimFraudInvestigationSteps } from '../schema/claim_fraud_investigation_steps.js';
+import { claimFeeBankDates } from '../schema/claim_fee_bank_dates.js';
 import { claimMembershipChecks } from '../schema/claim_membership_checks.js';
 import { memberIdentityValidations } from '../schema/member_identity_validations.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
@@ -73,6 +74,7 @@ import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
 import {
   CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
   CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS,
+  CLAIM_FEE_BANK_DATE_FIELD_CLASS,
   MEMBER_IDENTITY_VALIDATION_FIELD_CLASS,
   MEMORIAL_FIELD_CLASS,
 } from '../encryption/field-classes.js';
@@ -361,6 +363,18 @@ export async function anonymizeMember(
     .update(claimMembershipChecks)
     .set({ noteCiphertext: await encSentinel(pariwarId, CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS, enc) })
     .where(and(eq(claimMembershipChecks.deceasedMemberId, memberId), isNotNull(claimMembershipChecks.noteCiphertext)));
+
+  // ── ⭐ Story 6.39a (DL1 / AC11) — the finance officer's BANK-DATE record's note, keyed on the DECEASED member (the 6.39
+  // shape): which statement, which line and what was seen → sentinel. The note is REQUIRED (NOT NULL + a non-blank
+  // CHECK), so every row carries one and ⛔ row filter is needed — the sentinel is non-blank ciphertext, so 0219's CHECK
+  // still holds. The record itself — the bank date (payment metadata, as the payment's own `paid_at`, retained — FR-1),
+  // the reason, the payment it names, the attribution and the supersession — is governance history, kept. The column-level
+  // UPDATE grant + the per-command UPDATE policy exist for exactly this (0219, at birth; the guard leaves `note_ciphertext`
+  // out of its frozen list). Run whatever the member's claims (⛔ inside the has-claims block — the 6.39 shape).
+  await client
+    .update(claimFeeBankDates)
+    .set({ noteCiphertext: await encSentinel(pariwarId, CLAIM_FEE_BANK_DATE_FIELD_CLASS, enc) })
+    .where(eq(claimFeeBankDates.deceasedMemberId, memberId));
 
   // ── ⭐ Story 3.13 (DL14) — the staff IDENTITY CHECK in life, keyed on the member: the staff note (Tier-1) → sentinel,
   // where present (a `confirmed` may carry none). The sentinel is ciphertext, so 0218's "`not_confirmed` ⇒ a note" CHECK

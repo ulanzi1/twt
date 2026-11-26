@@ -665,14 +665,17 @@ or one user holding both role grants), a bank date that person records leaves th
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `6536b8bb` is an ancestor of HEAD — if `origin/main` moved, REBASE (backup branch; a ledger conflict
+- [x] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
+  - [x] 0.1 `git fetch origin`; confirm `6536b8bb` is an ancestor of HEAD — if `origin/main` moved, REBASE (backup branch; a ledger conflict
         at most — branch lines on top; a ledger letter a landed sibling took is RELABELLED, as `21w` → `21ar` was); `git diff --name-only
         6536b8bb origin/main -- apps packages scripts` — re-derive G1–G14 if anything moved; `git log 6536b8bb..origin/main --
         .decision-log.md _bmad-output docs/launch-gate-inventory` — read any new entry; re-read the NUMBERS block across EVERY branch and
         worktree. ⭐ Re-read row `3-17-…`'s status and story file (G14): if it is past `backlog`, reconcile DL1's fee-date sources, the
         coherence CHECK and the guard REPLACE with it BEFORE Task 1 (TR13). Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
+        ⭐ DONE 2026-11-27 (dev-story): `git fetch origin` — `origin/main` = `6536b8bb`, an ancestor of HEAD; ⛔ rebase owed,
+        ⛔ file under `apps` / `packages` / `scripts` moved. Numbers re-read on every ref: decision `-511` the top, migration
+        `0218` the top (⇒ `0219`), catalog v66 (⇒ v67). Row `3-17` still `backlog` (G14 — DL1 stands). `ListAgents`: ⛔ peer.
   - [x] 0.2 Put DL1–DL14 to BigDev (DL11's English verbatim, with its amended console note and the no-amendment option; DL8's rejected
         District Admin named; DL9's step-up WITH its go-live cost and the no-step-up option; DL6's same-person check and the roles-only
         option; DL3's letter-case rule; DL6's earlier-of-the-two-dates rule and the always-replaces option; DL5's record-the-check-first
@@ -728,11 +731,11 @@ or one user holding both role grants), a bank date that person records leaves th
         section *"Story 6.39a Task 0.5 — four edges open with the Panel"* (PQ1–PQ4, each with its trigger), a dated *"Not addressed by
         6.39a"* note under the corrected-UTR item (its text kept), and a dated line under 6.39's PQ1 (b); the row comment; the row
         `ready-for-dev → in-progress`. Governance is DONE — Task 1 is next.
-- [ ] **Task 1 — The record (AC1, AC11)**
-  - [ ] 1.1 The migration (HAND-WRITTEN like `0212`; the guard REPLACE in the same file), `schema/claim_fee_bank_dates.ts` + barrel, the two
+- [x] **Task 1 — The record (AC1, AC11)**
+  - [x] 1.1 The migration (HAND-WRITTEN like `0212`; the guard REPLACE in the same file), `schema/claim_fee_bank_dates.ts` + barrel, the two
         columns in `schema/claim_membership_checks.ts` (+ `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` — LOCKSTEP with the CHECK and the contract), the
         RLS policy file + `policies/index.ts`, the branded id, the field class.
-  - [ ] 1.2 Live-DB tests (AC1) — copy 6.39's `claim_membership_checks` spec; the anonymize leg (AC11) + `member/anonymize.ts` + the three
+  - [x] 1.2 Live-DB tests (AC1) — copy 6.39's `claim_membership_checks` spec; the anonymize leg (AC11) + `member/anonymize.ts` + the three
         counts in `rtbf-anonymize.test.ts`.
 - [ ] **Task 2 — The rule and the reads (AC2)**
   - [ ] 2.1 `compareFeeCalendarDateWithDeathDate` + the delegation (DL2) + unit tests.

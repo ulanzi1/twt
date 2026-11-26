@@ -31,6 +31,7 @@ import type pg from 'pg';
 
 import { lockAndReadDeathReport } from '../claim/death-report-lock.js';
 import { isDeathReportStanding, noStandingDeathReportSql } from '../claim/death-report.js';
+import { readDeceasedKycStanding } from '../claim/membership-check-approval.js';
 import { bindScopedDb, type Db } from '../db.js';
 import type { MemberId, MemberIdentityValidationId, PariwarId } from '../ids/index.js';
 import {
@@ -53,7 +54,11 @@ import {
   type IdentityValidationOutcome,
   memberIdentityValidations,
 } from '../schema/member_identity_validations.js';
-import type { MemberKycProfileRow } from '../schema/member_kyc_profiles.js';
+import {
+  MEMBER_KYC_VERIFICATION_STRENGTHS,
+  type MemberKycProfileRow,
+  type MemberKycVerificationStrength,
+} from '../schema/member_kyc_profiles.js';
 import { memberPostings } from '../schema/member_postings.js';
 import { members } from '../schema/members.js';
 import { workplaces } from '../schema/workplaces.js';
@@ -568,4 +573,70 @@ export async function readIdentityCheckDetail(
     deathReported: await isDeathReportStanding(db, pariwarId, memberId),
     ineligibility: identityValidationIneligibility({ state, moderationStatus: overlay.status, kyc }),
   };
+}
+
+// ── The member's own notice (Story 3.13a — DL4; N1–N4) ─────────────────────────────────────────────────────────────
+
+/** What the member's app is told (`2026-11-25-502` item 4, Q2 C): the closed reason ONLY (N3 — ⛔ note, ⛔ recorder, ⛔ date). */
+export interface MemberIdentityCheckNotice {
+  readonly reason: IdentityValidationNotConfirmedReason;
+}
+
+/**
+ * ⭐ Story 3.13a DL4 — the notice a member's app shows when staff could ⛔ confirm their typed-in identity, or `null`.
+ *
+ * `{ reason }` ONLY when ALL hold (DL2):
+ *   · the member's LIVE act (`superseded_at IS NULL` — the partial-unique index is the authority, ⛔ "latest by
+ *     `decided_at`", N2) is `not_confirmed`;
+ *   · 3.13's OWN eligibility rule says they still await a check (`identityValidationIneligibility` — N1, ⛔ a copy);
+ *   · ⛔ death report stands (`isDeathReportStanding` CALLED — ⛔ its SQL copied).
+ *
+ * N3 — the live-row select names `outcome` + `not_confirmed_reason` ONLY (⛔ note ciphertext, ⛔ `decided_by_*`, ⛔
+ * evidence / document kind, ⛔ `validation_id`); the KYC standing is the two plaintext columns (`readDeceasedKycStanding` —
+ * despite its name it takes any member id), ⛔ `getMemberKycProfile` (its select loads the identity ciphertext).
+ * N4 — ⛔ lock, ⛔ write. The `member_id` predicate is load-bearing: 0218's RLS is Pariwar-wide (⛔ member-self policy).
+ * MUST run inside the member's Pariwar-scoped transaction. Transport-free.
+ *
+ * @throws Error when a live `not_confirmed` row carries ⛔ reason (0218's coherence CHECK forbids it — fail loud, ⛔ guess),
+ *   or the KYC strength is outside the enum.
+ */
+export async function readMemberIdentityCheckNotice(
+  db: Db,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<MemberIdentityCheckNotice | null> {
+  const [live] = await db
+    .select({
+      outcome: memberIdentityValidations.outcome,
+      notConfirmedReason: memberIdentityValidations.notConfirmedReason,
+    })
+    .from(memberIdentityValidations)
+    .where(
+      and(
+        eq(memberIdentityValidations.pariwarId, pariwarId),
+        eq(memberIdentityValidations.memberId, memberId),
+        isNull(memberIdentityValidations.supersededAt),
+      ),
+    )
+    .limit(1);
+  if (live === undefined || live.outcome !== 'not_confirmed') return null;
+  if (live.notConfirmedReason === null) {
+    throw new Error(`[identity-validation] member ${memberId}: a live not_confirmed act carries no reason`);
+  }
+  const state = await getCurrentMemberState(db, memberId);
+  const overlay = await getCurrentMemberModerationOverlay(db, memberId);
+  const standing = await readDeceasedKycStanding(db, pariwarId, memberId);
+  let kyc: Pick<MemberKycProfileRow, 'verificationStrength' | 'trusteeVerified'> | null = null;
+  if (standing !== null) {
+    if (!(MEMBER_KYC_VERIFICATION_STRENGTHS as readonly string[]).includes(standing.verificationStrength)) {
+      throw new Error(`[identity-validation] member ${memberId}: unknown KYC strength ${standing.verificationStrength}`);
+    }
+    kyc = {
+      verificationStrength: standing.verificationStrength as MemberKycVerificationStrength,
+      trusteeVerified: standing.trusteeVerified,
+    };
+  }
+  if (identityValidationIneligibility({ state, moderationStatus: overlay.status, kyc }) !== null) return null;
+  if (await isDeathReportStanding(db, pariwarId, memberId)) return null;
+  return { reason: live.notConfirmedReason };
 }

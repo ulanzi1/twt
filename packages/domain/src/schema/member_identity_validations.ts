@@ -18,8 +18,9 @@
 // ── PII discipline ───────────────────────────────────────────────────────────────────────────────────────────────
 //   · note_ciphertext → Tier-1 — REQUIRED when `not_confirmed`, optional otherwise (the coherence CHECK). Column-level
 //     UPDATE grant + UPDATE policy at birth for the DPDPA-RTBF scrub (DL14).
-//   · not_confirmed_reason → a PLAINTEXT closed enum (N6): row `3-13a` tells the member the reason (`-502` Q2 C) and
-//     reads it without a decrypt. ⛔ Fold the reason into the note.
+//   · not_confirmed_reason → a PLAINTEXT closed enum (N6): row `3-13a` (built 2026-11-26 — `member/identity-validation.ts`
+//     `readMemberIdentityCheckNotice`) tells the member the reason (`-502` Q2 C) and reads it without a decrypt. ⛔ Fold the
+//     reason into the note.
 //   · decided_by_display → controlled STAFF data, snapshotted at decision time, ⛔ never email-derived.
 //   · ⛔ Never in an event, a log line or an audit context: the note, the reason, the document kind, a name (DL3).
 
@@ -63,7 +64,8 @@ export type IdentityValidationDocumentKind = (typeof IDENTITY_VALIDATION_DOCUMEN
  * Why staff could not confirm (DL9) — set iff `not_confirmed`. What was seen follows the reason (0218's coherence
  * CHECK): a mismatch was judged FROM a document (evidence + document kind set); `no_document_shown` had a meeting
  * (evidence kind) but ⛔ document; `member_not_reached` had ⛔ meeting at all (neither).
- * ⚠ LOCKSTEP with 0218 and the contract. Row `3-13a` tells the member this reason (`-502` Q2 C).
+ * ⚠ LOCKSTEP with 0218 and the contract. Row `3-13a` (built 2026-11-26) tells the member this reason (`-502` Q2 C) — a NEW
+ * value also needs the member contract, Panel-approved words and a decision for older installed apps (`3.13a-G3`).
  */
 export const IDENTITY_VALIDATION_NOT_CONFIRMED_REASONS = [
   'details_do_not_match',

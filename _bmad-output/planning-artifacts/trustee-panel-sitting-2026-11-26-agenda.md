@@ -27,6 +27,9 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Note:** `trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`. ⚠ It is on branch
   `story/6-39a-bank-date-for-a-fee-recorded-after-the-death` only, not on `main`. Take it from there (`06a80355`) and remove its
   "before sending" author paragraph.
+- ⭐ **2026-11-27 — ANSWERED: Q1 B, Q2 A, Q3 A, Q4 A** (Decision `2026-11-27-511`, DR + KB — every one as suggested — on branch
+  `story/6-39a-bank-date-for-a-fee-recorded-after-the-death` until it lands). The note was sent as brought into line on 27 November
+  (`f01b7c24` — its "before sending" paragraph already removed), ⛔ the `06a80355` named above (a pre-rebase SHA).
 
 **2. Registration: may the joining fee and yearly renewal be optional for now?**
 - **Question:** may the ₹110 joining fee and the yearly ₹110 renewal be optional until you decide to make them required; if a member

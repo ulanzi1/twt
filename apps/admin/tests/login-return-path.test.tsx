@@ -1,5 +1,6 @@
 // Story 6.25 (Task 4.4; AC3; `2026-10-09-299` RE9 A) — the sign-in RETURN PATH for the staff email's link.
 //
+//   · (Story 3.13, code review P5) the identity-check queue and one member's identity check are the FOURTH and FIFTH returns;
 //   · the allowlist: ONLY `/p/<uuid>/nominee-refusals` is followed; an absolute URL, `//evil`, another route, a query, a trailing
 //     segment, an upper-cased or malformed id ⇒ the default landing page (⛔ an open redirect);
 //   · the round trip: a signed-out admin on `/login?next=/p/<P>/nominee-refusals` completes sign-in and is taken to THAT list; a
@@ -17,7 +18,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultParseSearch, defaultStringifySearch } from '@tanstack/react-router';
 
-import { allowedNextPariwarId, allowedNextReturn, fieldWorkerRequestsPath, fraudInvestigationsPath, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
+import {
+  allowedNextPariwarId,
+  allowedNextReturn,
+  fieldWorkerRequestsPath,
+  fraudInvestigationsPath,
+  identityCheckPath,
+  identityChecksPath,
+  nomineeRefusalsPath,
+  validateLoginSearch,
+} from '../src/routes/login-next.js';
 import { renderWithClient } from './_helpers.js';
 
 const P = '2b7c0a4e-5d1f-4e8a-9c3b-1f2e3d4c5b6a';
@@ -106,7 +116,7 @@ describe('⭐ Story 6.22 (code review RC10) — the fraud work-list is the SECON
   });
 
   it('the SAME hostile inputs are refused for the new path as for the old one', () => {
-    for (const route of ['nominee-refusals', 'fraud-investigations', 'field-workers/requests']) {
+    for (const route of ['nominee-refusals', 'fraud-investigations', 'field-workers/requests', 'identity-checks']) {
       for (const bad of [
         undefined,
         null,
@@ -164,6 +174,73 @@ describe('⭐ Story 13.1g (AD10) — the field worker Move requests page is the 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login', search: { next: `/p/${P}/field-workers/requests` } }));
     const search = navigate.mock.calls.at(-1)![0].search as { next: string };
     expect(allowedNextReturn(validateLoginSearch(defaultParseSearch(defaultStringifySearch(search))).next)).toEqual({ to: '/p/$pariwarId/field-workers/requests', pariwarId: P });
+  });
+});
+
+describe('⭐ Story 3.13 (code review P5) — the identity-check queue and a member\'s identity check are the FOURTH and FIFTH allowlisted returns (⛔ an open redirect)', () => {
+  const MEMBER = 'a1b2c3d4-1111-4222-8333-444455556666';
+
+  it('each returns its destination, the Pariwar and (the member\'s check) the member; the three earlier returns are unchanged', () => {
+    expect(identityChecksPath(P.toUpperCase())).toBe(`/p/${P}/identity-checks`);
+    expect(identityCheckPath(P.toUpperCase(), MEMBER.toUpperCase())).toBe(`/p/${P}/identity-checks/${MEMBER}`);
+    expect(allowedNextReturn(identityChecksPath(P))).toEqual({ to: '/p/$pariwarId/identity-checks', pariwarId: P });
+    expect(allowedNextReturn(identityCheckPath(P, MEMBER))).toEqual({ to: '/p/$pariwarId/identity-checks/$memberId', pariwarId: P, memberId: MEMBER });
+    expect(allowedNextReturn(nomineeRefusalsPath(P))).toEqual({ to: '/p/$pariwarId/nominee-refusals', pariwarId: P });
+    expect(allowedNextReturn(fraudInvestigationsPath(P))).toEqual({ to: '/p/$pariwarId/fraud-investigations', pariwarId: P });
+    expect(allowedNextReturn(fieldWorkerRequestsPath(P))).toEqual({ to: '/p/$pariwarId/field-workers/requests', pariwarId: P });
+    expect(allowedNextPariwarId(identityChecksPath(P))).toBeNull(); // the old function still knows ONLY the refusal list
+  });
+
+  it('a wrong-case, trailing-segment, query-carrying or absolute variant is refused — for the queue and for a member\'s check', () => {
+    for (const bad of [
+      `/p/${P.toUpperCase()}/identity-checks`, // wrong case — the allowlist stays strict (the page lower-cases its own `next`)
+      `/p/${P}/identity-checks/`,
+      `/p/${P}/identity-checks/extra`,
+      `/p/${P}/identity-checks?x=1`,
+      `/p/${P}/identity-checks#top`,
+      `/p/${P}/identity-checks-extra`,
+      `https://evil.example/p/${P}/identity-checks`,
+      `//evil.example/p/${P}/identity-checks`,
+      `/p/${P}/identity-check`, // the API's singular segment is ⛔ a console route
+    ]) {
+      expect(allowedNextReturn(bad), bad).toBeNull();
+    }
+    for (const bad of [
+      `/p/${P}/identity-checks/${MEMBER.toUpperCase()}`, // a re-cased member id
+      `/p/${P.toUpperCase()}/identity-checks/${MEMBER}`, // a re-cased Pariwar id
+      `/p/${P}/identity-checks/${MEMBER}/`,
+      `/p/${P}/identity-checks/${MEMBER}/mobile`,
+      `/p/${P}/identity-checks/${MEMBER}?next=/audit/integrity`,
+      `/p/${P}/identity-checks/${MEMBER}#x`,
+      `/p/${P}/identity-checks/${MEMBER}x`,
+      `/p/${P}/identity-checks/not-a-uuid`,
+      `/p/${P}/identity-checks/${MEMBER}/../../audit`,
+      `https://evil.example/p/${P}/identity-checks/${MEMBER}`,
+      `//evil.example/p/${P}/identity-checks/${MEMBER}`,
+      `\\/p/${P}/identity-checks/${MEMBER}`,
+    ]) {
+      expect(allowedNextReturn(bad), bad).toBeNull();
+    }
+  });
+
+  it('⭐ a signed-out District Admin who opened the queue signs in and lands ON it', async () => {
+    window.history.replaceState(null, '', `/login?next=${encodeURIComponent(identityChecksPath(P))}`);
+    expect(await signIn()).toEqual({ to: '/p/$pariwarId/identity-checks', params: { pariwarId: P } });
+  });
+
+  it('⭐ a signed-out District Admin who opened ONE member\'s check signs in and lands ON it — both route params typed through', async () => {
+    window.history.replaceState(null, '', `/login?next=${encodeURIComponent(identityCheckPath(P, MEMBER))}`);
+    expect(await signIn()).toEqual({ to: '/p/$pariwarId/identity-checks/$memberId', params: { pariwarId: P, memberId: MEMBER } });
+  });
+
+  it('⭐ both pages\' `next` survives the router\'s OWN serialise → parse → validate → allowlist (a re-cased id lower-cased on the way)', () => {
+    const through = (next: string) => allowedNextReturn(validateLoginSearch(defaultParseSearch(defaultStringifySearch({ next }))).next);
+    expect(through(identityChecksPath(P.toUpperCase()))).toEqual({ to: '/p/$pariwarId/identity-checks', pariwarId: P });
+    expect(through(identityCheckPath(P.toUpperCase(), MEMBER.toUpperCase()))).toEqual({
+      to: '/p/$pariwarId/identity-checks/$memberId',
+      pariwarId: P,
+      memberId: MEMBER,
+    });
   });
 });
 

@@ -8,6 +8,9 @@
 // Story 6.22 (code review 2026-11-02, RC10) adds ONE more allowlisted route: the District Admin's fraud work-list, which already
 // redirected here with a `next` that was silently dropped.
 // Story 13.1g (decision `2026-11-12-463` AD10) adds a THIRD: the field worker Move requests page, which the move-notice email links to.
+// Story 3.13 (code review 2026-11-26, P5) adds a FOURTH and a FIFTH: the identity-check queue and ONE member's identity check. Their
+// pages already redirected here with a `next` that was silently dropped (the defect RC10 fixed for the fraud work-list); the
+// detail's return carries the member id too, so `LoginReturn` is a union by route.
 
 const NOMINEE_REFUSALS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/nominee-refusals$/;
 
@@ -38,11 +41,21 @@ const FRAUD_INVESTIGATIONS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 // ⚠ Its OWN one-line literal (⛔ a shared fragment): the jobs template test reads each route's literal from this file as text.
 const FIELD_WORKER_REQUESTS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/field-workers\/requests$/;
 
-/** Where sign-in returns to: one of the THREE allowlisted routes and the Pariwar it is for. */
-export interface LoginReturn {
-  readonly to: '/p/$pariwarId/nominee-refusals' | '/p/$pariwarId/fraud-investigations' | '/p/$pariwarId/field-workers/requests';
-  readonly pariwarId: string;
-}
+// ⚠ Each of the two identity-check literals is its OWN one-line literal too (⛔ a shared fragment, ⛔ a wrapped line). Lower-case ids only.
+const IDENTITY_CHECKS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/identity-checks$/;
+const IDENTITY_CHECK_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/identity-checks\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
+/** Where sign-in returns to: one of the FIVE allowlisted routes, the Pariwar it is for, and (a member's identity check only) the member. */
+export type LoginReturn =
+  | {
+      readonly to:
+        | '/p/$pariwarId/nominee-refusals'
+        | '/p/$pariwarId/fraud-investigations'
+        | '/p/$pariwarId/field-workers/requests'
+        | '/p/$pariwarId/identity-checks';
+      readonly pariwarId: string;
+    }
+  | { readonly to: '/p/$pariwarId/identity-checks/$memberId'; readonly pariwarId: string; readonly memberId: string };
 
 /** The ALLOWLISTED destination of `next`, or `null` (⇒ the default landing page). ⭐ What `LoginPage` follows. */
 export function allowedNextReturn(next: unknown): LoginReturn | null {
@@ -53,6 +66,10 @@ export function allowedNextReturn(next: unknown): LoginReturn | null {
   if (fraud) return { to: '/p/$pariwarId/fraud-investigations', pariwarId: fraud[1]! };
   const requests = FIELD_WORKER_REQUESTS_PATH.exec(next);
   if (requests) return { to: '/p/$pariwarId/field-workers/requests', pariwarId: requests[1]! };
+  const checks = IDENTITY_CHECKS_PATH.exec(next);
+  if (checks) return { to: '/p/$pariwarId/identity-checks', pariwarId: checks[1]! };
+  const check = IDENTITY_CHECK_PATH.exec(next);
+  if (check) return { to: '/p/$pariwarId/identity-checks/$memberId', pariwarId: check[1]!, memberId: check[2]! };
   return null;
 }
 

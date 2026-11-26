@@ -55,6 +55,8 @@ export const IDENTITY_CHECK_QUEUE_STATES = ['lock-in', 'pending-valid'] as const
 export const IDENTITY_CHECK_NOTE_MAX_CODE_POINTS = 1000;
 /** The queue's page cap (DL11; mirrors the domain's `IDENTITY_CHECK_QUEUE_LIMIT.cap`). */
 export const IDENTITY_CHECK_QUEUE_MAX_LIMIT = 200;
+/** The queue's `offset` ceiling (`-504` item 3) — far beyond any real list, well inside Postgres' integer range, so a huge value is a 400 and ⛔ a 500. */
+export const IDENTITY_CHECK_QUEUE_MAX_OFFSET = 1_000_000;
 
 /** The refusal codes the four routes answer with (DL4, DL5, DL13). */
 export const IDENTITY_CHECK_ERROR_CODES = {
@@ -66,15 +68,19 @@ export const IDENTITY_CHECK_ERROR_CODES = {
   idempotencyInProgress: 'identity_validation.idempotency_in_progress',
   concurrent: 'identity_validation.concurrent',
   mobileUnavailable: 'identity_validation.mobile_unavailable',
+  /** 503 (`-504` item 1): a typed-in field that exists could not be decrypted — staff are ⛔ shown a blank beside a live Confirm. */
+  identityUnreadable: 'identity_validation.identity_unreadable',
+  /** 503 (`-504` item 2): the audit line of a disclosure could not be written, so ⛔ the identity or the number is returned. */
+  auditUnavailable: 'identity_validation.audit_unavailable',
 } as const;
 
 const IsoDateTime = z.string().datetime({ offset: true });
 
-/** `GET …/admin/members/identity-checks` querystring — a BOUNDED `limit` (forced pagination). */
+/** `GET …/admin/members/identity-checks` querystring — a BOUNDED `limit` and `offset` (forced pagination). */
 export const IdentityCheckQueueQuery = z
   .object({
     limit: z.coerce.number().int().min(1).max(IDENTITY_CHECK_QUEUE_MAX_LIMIT).optional(),
-    offset: z.coerce.number().int().min(0).optional(),
+    offset: z.coerce.number().int().min(0).max(IDENTITY_CHECK_QUEUE_MAX_OFFSET).optional(),
   })
   .strict();
 export type IdentityCheckQueueQuery = z.output<typeof IdentityCheckQueueQuery>;
@@ -100,6 +106,8 @@ export const IdentityCheckQueueResponse = z
     entries: z.array(IdentityCheckQueueEntry),
     /** Does the caller hold the CHECK key (the detail + the record)? A verifier / helpline operator does not (DL6a). */
     can_check: z.boolean(),
+    /** Is there another page after this one (`-504` item 3)? A member staff could not reach never hides those behind them. */
+    has_more: z.boolean(),
   })
   .strict();
 export type IdentityCheckQueueResponse = z.output<typeof IdentityCheckQueueResponse>;
@@ -130,7 +138,11 @@ export const IdentityCheckDetailResponse = z
     signed_up_at: IsoDateTime,
     /** How the identity was recorded at joining — `manual` (typed in) | `digilocker`; `null` = no KYC record. */
     kyc_source: z.enum(['manual', 'digilocker']).nullable(),
-    /** The typed-in identity, decrypted — `null` for an anonymized member or one without a KYC record. */
+    /**
+     * The typed-in identity, decrypted — only while an identity check is AWAITED (`eligible`, no death claim standing;
+     * `-504` item 1). `null` for an anonymized member, one without a KYC record, one who needs no check, or one with a
+     * death claim standing.
+     */
     identity: z
       .object({
         name: z.string().nullable(),

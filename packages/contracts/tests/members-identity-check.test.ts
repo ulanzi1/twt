@@ -88,7 +88,7 @@ describe('Story 3.13 — DL11: the queue is bounded and carries ⛔ PII', () => 
   });
 });
 
-describe('Story 3.13 — DL14: the data export\'s identity checks (⛔ staff attribution)', () => {
+describe('Story 3.13 — DL14 (as amended by `-504` item 5): the data export\'s identity checks (⛔ the staff note, ⛔ staff attribution)', () => {
   const item = ProfileSection.shape.identityChecks.element;
   const ok = {
     decidedAt: '2026-11-01T09:00:00.000Z',
@@ -96,15 +96,14 @@ describe('Story 3.13 — DL14: the data export\'s identity checks (⛔ staff att
     evidenceKind: 'photo_id_in_person',
     documentKind: null,
     notConfirmedReason: 'no_document_shown',
-    note: 'came without an ID',
   };
 
   it('a well-formed act parses (the control)', () => {
     expect(item.safeParse(ok).success).toBe(true);
-    expect(item.safeParse({ ...ok, outcome: 'confirmed', notConfirmedReason: null, documentKind: 'passport', note: null }).success).toBe(true);
+    expect(item.safeParse({ ...ok, outcome: 'confirmed', notConfirmedReason: null, documentKind: 'passport' }).success).toBe(true);
   });
 
-  it.each([['decidedByDisplay', 'Asha'], ['decidedByActorId', 'x'], ['staffName', 'Asha']])('⛔ `%s` (strict)', (key, value) => {
+  it.each([['decidedByDisplay', 'Asha'], ['decidedByActorId', 'x'], ['staffName', 'Asha'], ['note', 'came without an ID']])('⛔ `%s` (strict)', (key, value) => {
     expect(item.safeParse({ ...ok, [key]: value }).success).toBe(false);
   });
 });

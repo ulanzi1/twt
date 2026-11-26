@@ -402,6 +402,12 @@ import {
   type QuestionnaireProposeRequest,
   type QuestionnaireRevertRequest,
   type QuestionnaireVersionKind,
+  // Story 3.13 — staff check a typed-in identity in life (the queue, the detail, the record, the audited number reveal).
+  IdentityCheckDetailResponse,
+  IdentityCheckMobileResponse,
+  IdentityCheckQueueResponse,
+  IdentityCheckRecordResponse,
+  type IdentityCheckRecordRequest,
 } from '@twt/contracts';
 // Story 13.1a — the field-worker console (register, approve, find a worker and read their code).
 import {
@@ -431,14 +437,6 @@ import {
   type RegisterFieldWorkerRequest,
   type SuspendFieldWorkerRequest,
   type TerminateFieldWorkerRequest,
-} from '@twt/contracts';
-// Story 3.13 — staff check a typed-in identity in life (the queue, the detail, the record, the audited number reveal).
-import {
-  IdentityCheckDetailResponse,
-  IdentityCheckMobileResponse,
-  IdentityCheckQueueResponse,
-  IdentityCheckRecordResponse,
-  type IdentityCheckRecordRequest,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -3931,9 +3929,15 @@ export function getBreachMembersOnRecord(): Promise<z.output<typeof BreachMember
 
 const identityCheckBase = (pariwarId: string) => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members`;
 
-/** The queue (⛔ name, ⛔ mobile) — readable by the check key's holders AND the reveal key's (verifier, helpline). */
-export function getIdentityCheckQueue(pariwarId: string): Promise<z.output<typeof IdentityCheckQueueResponse>> {
-  return apiFetch(`${identityCheckBase(pariwarId)}/identity-checks?limit=200`, IdentityCheckQueueResponse);
+/** The queue's page size — the screen steps `offset` by this much; the response's `has_more` says whether another page follows (`-504` item 3). */
+export const IDENTITY_CHECK_QUEUE_PAGE_SIZE = 50;
+
+/** One PAGE of the queue (⛔ name, ⛔ mobile) — readable by the check key's holders AND the reveal key's (verifier, helpline). */
+export function getIdentityCheckQueue(pariwarId: string, offset = 0): Promise<z.output<typeof IdentityCheckQueueResponse>> {
+  return apiFetch(
+    `${identityCheckBase(pariwarId)}/identity-checks?limit=${String(IDENTITY_CHECK_QUEUE_PAGE_SIZE)}&offset=${String(offset)}`,
+    IdentityCheckQueueResponse,
+  );
 }
 
 /** One member's detail — decrypts the typed-in identity; AUDITED per view (⛔ a window-focus refetch). */

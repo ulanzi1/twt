@@ -368,7 +368,7 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       }
     }
   });
-  it('⭐ Story 3.13 (DL14, AC13) — the staff identity checks: the strict-parsed profile lists each act, oldest first, with the note decrypted; ⛔ staff attribution', async () => {
+  it('⭐ Story 3.13 (DL14 as amended by `-504` item 5, AC13) — the staff identity checks: the strict-parsed profile lists each act, oldest first; ⛔ the staff note (it stays with staff), ⛔ staff attribution', async () => {
     const enc = fakeEncryption();
     const { memberId, pariwarId, exportId } = await seedPendingExport();
     const note = await encryption.serializeEnvelope(
@@ -390,10 +390,13 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       const zip = await JSZip.loadAsync(Buffer.from(bytes));
       const profile = JSON.parse(await zip.file('profile.json')!.async('string')) as { identityChecks: unknown[] };
       expect(profile.identityChecks).toEqual([
-        { decidedAt: '2026-11-01T09:00:00.000Z', outcome: 'not_confirmed', evidenceKind: 'photo_id_in_person', documentKind: null, notConfirmedReason: 'no_document_shown', note: 'ZZ came without an ID' },
-        { decidedAt: '2026-11-02T09:00:00.000Z', outcome: 'confirmed', evidenceKind: 'photo_id_video_call', documentKind: 'passport', notConfirmedReason: null, note: null },
+        { decidedAt: '2026-11-01T09:00:00.000Z', outcome: 'not_confirmed', evidenceKind: 'photo_id_in_person', documentKind: null, notConfirmedReason: 'no_document_shown' },
+        { decidedAt: '2026-11-02T09:00:00.000Z', outcome: 'confirmed', evidenceKind: 'photo_id_video_call', documentKind: 'passport', notConfirmedReason: null },
       ]);
+      // ⭐ The row in the table HAS a decryptable note (seeded above) — so this is the proof it is held back, not that none existed.
       const all = JSON.stringify(profile);
+      expect(all).not.toContain('ZZ came without an ID');
+      expect(JSON.stringify(profile.identityChecks)).not.toMatch(/"note"/);
       expect(all).not.toContain('ZZ-STAFF-NAME');
       expect(all).not.toMatch(/decidedBy|decided_by/);
     } finally {

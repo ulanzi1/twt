@@ -90,7 +90,6 @@ import { workplaces } from '../schema/workplaces.js';
 import { marketplaceModules } from '../schema/marketplace_modules.js';
 import { marketplacePartnerFormVisits } from '../schema/marketplace_partner_form_visits.js';
 import { memberIdentityValidations } from '../schema/member_identity_validations.js';
-import { MEMBER_IDENTITY_VALIDATION_FIELD_CLASS } from '../encryption/field-classes.js';
 import { resolvePublicNamePresentationMode } from '../kyc/presentation-policy.js';
 import { ANONYMIZED_SENTINEL } from '../member/anonymize.js';
 import { getKnownPeopleForExport, type KnownPeopleExportRow } from '../member/known-people.js';
@@ -455,26 +454,29 @@ export async function assembleMemberExport(
     openedAt: v.openedAt.toISOString(),
   }));
 
-  // ── Story 3.13 (DL14) — the staff IDENTITY CHECKS in life: each act, oldest first, with the staff note decrypted (the member
-  // is the legitimate audience; the RTBF sentinel ⇒ `null`). ⛔ Staff attribution (`decided_by_*` is the staff member's data).
+  // ── Story 3.13 (DL14, amended by `2026-11-26-504` item 5) — the staff IDENTITY CHECKS in life: each act, oldest first.
+  // ⛔ The staff NOTE (the Panel was told it "stays with staff"; `deferred-work.md` `3.13-R1-W6` holds the question) and ⛔
+  // staff attribution (`decided_by_*` is the staff member's data). The columns are PICKED, ⛔ `select()`: the note's
+  // ciphertext never leaves the table here, so a later edit cannot leak it by spreading a row.
   // ⚠ The matching `ProfileSection.identityChecks` field is in the SAME change (the jobs strict-parse — TR12).
   const identityCheckRows = await client
-    .select()
+    .select({
+      decidedAt: memberIdentityValidations.decidedAt,
+      outcome: memberIdentityValidations.outcome,
+      evidenceKind: memberIdentityValidations.evidenceKind,
+      documentKind: memberIdentityValidations.documentKind,
+      notConfirmedReason: memberIdentityValidations.notConfirmedReason,
+    })
     .from(memberIdentityValidations)
     .where(and(eq(memberIdentityValidations.pariwarId, pariwarId), eq(memberIdentityValidations.memberId, memberId)))
     .orderBy(asc(memberIdentityValidations.decidedAt), asc(memberIdentityValidations.validationId));
-  const identityChecks = [];
-  for (const v of identityCheckRows) {
-    const note = v.noteCiphertext === null ? null : await decryptField(v.noteCiphertext, pariwarId, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS, enc);
-    identityChecks.push({
-      decidedAt: v.decidedAt.toISOString(),
-      outcome: v.outcome,
-      evidenceKind: v.evidenceKind ?? null,
-      documentKind: v.documentKind ?? null,
-      notConfirmedReason: v.notConfirmedReason ?? null,
-      note: note === null || note === ANONYMIZED_SENTINEL ? null : note,
-    });
-  }
+  const identityChecks = identityCheckRows.map((v) => ({
+    decidedAt: v.decidedAt.toISOString(),
+    outcome: v.outcome,
+    evidenceKind: v.evidenceKind ?? null,
+    documentKind: v.documentKind ?? null,
+    notConfirmedReason: v.notConfirmedReason ?? null,
+  }));
 
   // ── Story 6.36e (NE10, V25) — the nominee MARKS, each with ONLY the name the member already saw. ⭐ `2026-10-24-399` (extends
   // `-333` call 3(a) and `-334` call 1 to these lists): `getNomineeLinksForExport` has already read an ERASED link as `ended`,

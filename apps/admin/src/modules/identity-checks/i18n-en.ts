@@ -6,6 +6,9 @@
 // `reveal.refused`. ⛔ Change one without a new approval.
 // ⭐ Every OTHER string here (form labels, document names, loading and error lines, the nav link — the ones DL12's list did
 // not cover) was APPROVED as written at the dev-story's end (2026-11-25, BigDev: "Approve as shown (Recommended)") — AC11.
+// ⭐ THREE MORE lines were APPROVED word for word at the code review (2026-11-26, BigDev: "Approve as written (Recommended)";
+// D3, `-504` item 6): `reveal.couldNotShow`, `form.savedConfirmed`, `form.savedNotConfirmed`. The queue's `previous` / `next` are
+// the console's own paging words ("Previous" / "Next" — the banners list's `banner.page.prev` / `banner.page.next`), ⛔ new ones.
 // ⚠ The microcopy gate scans this file for the whole words it bars (`microcopy.yaml`) — say "a claim filed for the death",
 // ⛔ the bare word for what a family files.
 // ⛔ A staff hint that the member is TOLD the reason — row `3-13a` adds it when its message ships (it would be false before).
@@ -27,6 +30,9 @@ export const identityCheckEn = {
     notYetChecked: 'Not checked yet',
     attempts: 'Checks recorded',
     open: 'Open',
+    // The house paging words (the banners list).
+    previous: 'Previous',
+    next: 'Next',
     stateLabels: {
       'lock-in': 'In lock-in',
       'pending-valid': 'Waiting for identity check',
@@ -79,6 +85,8 @@ export const identityCheckEn = {
     choose: 'Choose…',
     saving: 'Saving…',
     saveError: 'The check could not be saved. Try again.',
+    savedConfirmed: 'Identity confirmed.',
+    savedNotConfirmed: 'Saved.',
     evidenceKinds: {
       photo_id_in_person: 'In person',
       photo_id_video_call: 'On a video call',
@@ -97,6 +105,7 @@ export const identityCheckEn = {
     purpose: 'Shown to you only to arrange this identity check.',
     recorded: 'This showing is recorded.',
     refused: "This member's number can no longer be shown here.",
+    couldNotShow: 'The number could not be shown. Try again.',
   },
 } as const;
 

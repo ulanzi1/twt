@@ -6,7 +6,6 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { describe, expect, it } from 'vitest';
 
@@ -17,6 +16,7 @@ import {
   IdentityValidationRefusedError,
   assertIdentityCheckAwaited,
   listIdentityCheckQueue,
+  listIdentityCheckQueuePage,
   readIdentityCheckDetail,
   recordIdentityValidation,
   type RecordIdentityValidationInput,
@@ -457,6 +457,20 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     expect((await refusal(assertIdentityCheckAwaited(client, PARIWAR_A, memberId))).reason).toBe('not_eligible');
   });
 
+  it('⭐ P8 — `assertIdentityCheckAwaited` (the reveal\'s check) takes the intake advisory lock FIRST, as the writer does — with the death-claimed control refused the same way', async () => {
+    const { tx, client } = getTx();
+    const memberId = await seedTypedInMember(tx);
+    const claimed = await seedTypedInMember(tx);
+    await seedClaim(tx, PARIWAR_A, { deceasedMemberId: claimed, currentState: 'intake_pending' });
+    await enterAppScope(client, PARIWAR_A);
+    const rec = recording(client);
+    await assertIdentityCheckAwaited(rec.client, PARIWAR_A, memberId);
+    expect(rec.texts[0]).toBe('SELECT pg_advisory_xact_lock($1)');
+    const recDead = recording(client);
+    expect((await refusal(assertIdentityCheckAwaited(recDead.client, PARIWAR_A, claimed))).reason).toBe('death_reported');
+    expect(recDead.texts[0]).toBe('SELECT pg_advisory_xact_lock($1)');
+  });
+
   // ── AC10 (domain half) — the queue and the detail ───────────────────────────────────────────────────────────────
 
   it('⭐ AC10 — the queue: exactly the DL4-eligible members, `pending-valid` first, then signup ascending, ties by member_id; ⛔ ciphertext', async () => {
@@ -500,6 +514,42 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     expect((await listIdentityCheckQueue(tx, pariwarId, { at: new Date(), district: null })).map((r) => r.memberId)).not.toContain(south);
   });
 
+  it('⭐ `-504` item 3 — the queue leaves out a member with a standing death report (the claim module\'s ONE predicate) and lists them again once released as innocent; `hasMore` is true exactly when another page follows', async () => {
+    const { tx, client } = getTx();
+    const pariwarId = toPariwarId(randomUUID());
+    const t = (d: string) => new Date(`2026-0${d}T00:00:00Z`);
+    const first = await seedTypedInMember(tx, { pariwarId, createdAt: t('1-01') });
+    const dead = await seedTypedInMember(tx, { pariwarId, createdAt: t('2-01') });
+    const last = await seedTypedInMember(tx, { pariwarId, createdAt: t('3-01') });
+    const claimCaseId = await seedClaim(tx, pariwarId, { deceasedMemberId: dead, currentState: 'intake_pending' });
+    await enterAppScope(client, pariwarId);
+    const opts = { at: new Date(), district: null } as const;
+    // The claim stands ⇒ ⛔ listed; every other member is (the control that the exclusion is the claim, not the data).
+    expect((await listIdentityCheckQueue(tx, pariwarId, opts)).map((r) => r.memberId)).toEqual([first, last]);
+    // Released as innocent ⇒ listed again, in his signup place.
+    await tx.insert(schema.claimNomineeFindings).values({
+      findingId: randomUUID() as never,
+      claimCaseId: toClaimId(claimCaseId),
+      pariwarId,
+      kind: 'member_found_innocent',
+      rank: null,
+      recordedByActorId: 'investigator',
+      recordedByDisplay: 'Investigator',
+    });
+    expect((await listIdentityCheckQueue(tx, pariwarId, opts)).map((r) => r.memberId)).toEqual([first, dead, last]);
+    // `hasMore`: the page boundary, exactly. ONE row more is read; ⛔ it is returned.
+    const p1 = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: 2 });
+    expect(p1.entries.map((r) => r.memberId)).toEqual([first, dead]);
+    expect(p1.hasMore).toBe(true);
+    const p2 = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: 2, offset: 2 });
+    expect(p2.entries.map((r) => r.memberId)).toEqual([last]);
+    expect(p2.hasMore).toBe(false);
+    const exact = await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: 3 });
+    expect(exact.entries).toHaveLength(3);
+    expect(exact.hasMore).toBe(false);
+    expect((await listIdentityCheckQueuePage(tx, pariwarId, { ...opts, limit: 1, offset: 3 })).hasMore).toBe(false);
+  });
+
   it('AC10 — the detail: ciphertext as stored, the posting, the history (live first) and ONLY the live note', async () => {
     const { tx, client } = getTx();
     const memberId = await seedTypedInMember(tx);
@@ -522,6 +572,5 @@ describe.skipIf(!hasDatabase)('Story 3.13 — recordIdentityValidation (live DB)
     ]);
     expect(JSON.stringify(d!.history)).not.toContain('first-note');
     expect(await readIdentityCheckDetail(tx, PARIWAR_A, toMemberId(randomUUID()), new Date())).toBeNull();
-    await tx.execute(sql`SELECT 1`);
   });
 });

@@ -5,15 +5,17 @@
 // member's session → refused, an admin without the key → 403) are the ONLY guard of the human-actor chain (Trap 12).
 // ⚠ The role loops read `rbac.defaultRoleBundles` — ⛔ a hand list — so a 14th role is tested the day it is added.
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
-import { claim, encryption, ids, member as memberDomain, rbac } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { canonicalJsonStringify, claim, encryption, ids, member as memberDomain, rbac } from '@twt/domain';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
+import * as mobileIndex from '../../../src/modules/auth/shared/mobile-index.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { encryptIdentityCheckNote } from '../../../src/modules/identity-checks/crypto.js';
+import * as kycCrypto from '../../../src/modules/kyc/kyc-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
@@ -82,7 +84,7 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     return { client, userId };
   }
 
-  async function actor(pariwarId: string, role: string, dim: string, value: string | null, name = 'Asha (Staff)') {
+  async function actor(pariwarId: string, role: string, dim: string, value: string | null, name: string | null = 'Asha (Staff)') {
     const { client, userId } = await authenticate(name);
     await td.pool.query(
       `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, $3, $4, $5)`,
@@ -188,6 +190,38 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
   const errCode = (b: Json) => String((b.error as Json | undefined)?.code);
   const audits = (type: string, memberId: string) =>
     td.auditSink.ofType(type).filter((e) => (e.context as Json | undefined)?.member_id === memberId.toLowerCase());
+  /**
+   * ⭐ The PERSISTED line of a DISCLOSURE (`-504` item 2): the detail's view and the number's showing are written through
+   * `writeAuditEntry` (awaited), ⛔ the in-memory sink — so these are asserted off `audit_log_entries` (append-only; member ids
+   * are random per test, so a row is keyed by action + the member's locator).
+   */
+  const persisted = async (type: string, memberId: string) =>
+    (
+      await td.pool.query(
+        `SELECT actor_id, pariwar_id, action, resource_locator, request_payload_hash, response_status
+           FROM audit_log_entries WHERE action = $1 AND resource_locator = $2 ORDER BY seq`,
+        [type, `member:${memberId.toLowerCase()}`],
+      )
+    ).rows as Json[];
+  /**
+   * ⭐ The persisted row has NO context column — only `request_payload_hash` = sha256 of the canonical JSON of the context. A
+   * "no number / name / note in the line" proof therefore pins the hash of the EXACT expected context: put the number into the
+   * context and the hash changes (a `JSON.stringify(row)` search could never fail — it only ever held a hash).
+   */
+  const contextHash = (context: Json) => createHash('sha256').update(canonicalJsonStringify(context), 'utf8').digest('hex');
+  /** Make the audit store refuse for one call — the failure injection for "a disclosure is audited FIRST". */
+  async function withAuditWriteFailing<T>(fn: () => Promise<T>): Promise<T> {
+    const real = deps.servicePool;
+    (deps as { servicePool: unknown }).servicePool = {
+      query: () => Promise.reject(new Error('audit store down')),
+      connect: () => Promise.reject(new Error('audit store down')),
+    };
+    try {
+      return await fn();
+    } finally {
+      (deps as { servicePool: unknown }).servicePool = real;
+    }
+  }
   const confirmBody = { outcome: 'confirmed', evidence_kind: 'photo_id_in_person', document_kind: 'voter_id' };
   const post = (client: Client, url: string, payload: Json, key: string | null = randomUUID()) =>
     client.inject({ method: 'POST', url, payload, headers: key === null ? {} : { 'idempotency-key': key } });
@@ -291,22 +325,21 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect(seen.sort()).toEqual(ALLOWED_REVEAL);
   });
 
-  it('⭐ AC8a — EVERY press writes ONE `member_mobile_shown` line with ⛔ the number; two presses ⇒ two lines; a verifier of another district → 403', async () => {
+  it('⭐ AC8a — EVERY press writes ONE PERSISTED `member_mobile_shown` row with ⛔ the number; two presses ⇒ two rows; a verifier of another district → 403', async () => {
     const w = await world();
     const { client, userId } = await actor(w.pariwarId, 'verifier', 'district', w.district);
     expect((await client.inject({ method: 'POST', url: revealUrl(w, w.memberId) })).statusCode).toBe(200);
     expect((await client.inject({ method: 'POST', url: revealUrl(w, w.memberId) })).statusCode).toBe(200);
-    const lines = audits('admin_identity_check.member_mobile_shown', w.memberId);
+    const lines = await persisted('admin_identity_check.member_mobile_shown', w.memberId);
     expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatchObject({ actorId: userId });
-    const serialized = JSON.stringify(lines);
-    expect(serialized).not.toContain(MOBILE_DIGITS);
-    expect(serialized).not.toContain(MOBILE_DIGITS.slice(-4) + '"');
+    expect(lines[0]).toMatchObject({ actor_id: userId, pariwar_id: w.pariwarId, response_status: 200 });
+    // The context is EXACTLY the member id — ⛔ the number, ⛔ a name (the hash of that one-key object, twice).
+    expect(lines.map((l) => l.request_payload_hash)).toEqual(Array(2).fill(contextHash({ member_id: w.memberId.toLowerCase() })));
     const { client: away } = await actor(w.pariwarId, 'verifier', 'district', `D-away-${randomUUID().slice(0, 6)}`);
     expect((await away.inject({ method: 'POST', url: revealUrl(w, w.memberId) })).statusCode).toBe(403);
   });
 
-  it('⭐ AC8a — "for this purpose": refused 409 `not_eligible` once confirmed (the control beside it), and `death_reported` under a standing report', async () => {
+  it('⭐ AC8a / `-504` item 4 — "for this purpose": refused 409 `not_eligible` once confirmed (the control beside it), and under a standing death report the SAME generic refusal — ⛔ the claim named — while the audit line keeps `death_reported`', async () => {
     const w = await world();
     const control = await seedMember(w.pariwarId, w.district);
     const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
@@ -318,7 +351,10 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     await fileClaim({ pariwarId: w.pariwarId, memberId: control });
     const dead = await da.inject({ method: 'POST', url: revealUrl(w, control) });
     expect(dead.statusCode).toBe(409);
-    expect(errCode(j(dead))).toBe('identity_validation.death_reported');
+    // ⭐ The reveal key's holders (DA, PA, verifier, helpline) are ⛔ told a claim stands: the same code AND words as `after`.
+    expect(errCode(j(dead))).toBe('identity_validation.not_eligible');
+    expect((j(dead).error as Json).message).toBe((j(after).error as Json).message);
+    expect(dead.body).not.toMatch(/died|death|claim/i);
     expect(audits('admin_identity_check.member_mobile_reveal_rejected', control).map((e) => (e.context as Json).reason)).toEqual(['death_reported']);
     expect(JSON.stringify(td.auditSink.ofType('admin_identity_check.member_mobile_reveal_rejected'))).not.toContain(MOBILE_DIGITS);
   });
@@ -387,10 +423,18 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
       ['no_document_shown', true, NOTE, 'Asha (District Admin)'],
       ['member_not_reached', false, null, 'Asha (District Admin)'],
     ]);
-    const reads = audits('admin_identity_check.identity_check_read', w.memberId);
+    const reads = await persisted('admin_identity_check.identity_check_read', w.memberId);
     expect(reads).toHaveLength(1);
-    const line = JSON.stringify(reads);
-    for (const planted of [NAME, DOB, NOTE, MOBILE_DIGITS]) expect(line).not.toContain(planted);
+    // The context is EXACTLY these ids and flags — ⛔ the name, ⛔ the date of birth, ⛔ the note, ⛔ the number.
+    expect(reads[0]!.request_payload_hash).toBe(
+      contextHash({
+        member_id: w.memberId.toLowerCase(),
+        identity_opened: true,
+        live_validation_id: history.find((h) => h.live)!.validation_id,
+        eligible: true,
+        death_reported: false,
+      }),
+    );
     expect(JSON.stringify(td.auditSink.ofType('admin_identity_check.identity_check_recorded'))).not.toContain(NOTE);
   });
 
@@ -456,5 +500,357 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect(String(row.note_ciphertext)).not.toContain(NOTE);
     // The helper round-trips (the control that the stored form is this module's).
     expect(await encryptIdentityCheckNote('x', w.pariwarId, deps.encryption)).toMatch(/^enc:/);
+  });
+
+  // ── Code review 2026-11-26 — the patches (`-504`) ───────────────────────────────────────────────────────────────
+
+  it('⭐ P1 / item 2 — a disclosure is audited FIRST: when its audit line cannot be written the detail and the number are a 503 with ⛔ the data and ⛔ a row; the control passes, persists ONE row each, and is `no-store`', async () => {
+    const w = await world();
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const failedDetail = await withAuditWriteFailing(() => client.inject({ method: 'GET', url: detailUrl(w, w.memberId) }));
+    expect(failedDetail.statusCode, failedDetail.body).toBe(503);
+    expect(errCode(j(failedDetail))).toBe('identity_validation.audit_unavailable');
+    for (const planted of [NAME, DOB, MOBILE_DIGITS]) expect(failedDetail.body).not.toContain(planted);
+    const failedReveal = await withAuditWriteFailing(() => client.inject({ method: 'POST', url: revealUrl(w, w.memberId) }));
+    expect(failedReveal.statusCode, failedReveal.body).toBe(503);
+    expect(errCode(j(failedReveal))).toBe('identity_validation.audit_unavailable');
+    expect(failedReveal.body).not.toContain(MOBILE_DIGITS);
+    expect(await persisted('admin_identity_check.identity_check_read', w.memberId)).toHaveLength(0);
+    expect(await persisted('admin_identity_check.member_mobile_shown', w.memberId)).toHaveLength(0);
+    // The control: the same two calls once the store is back — each writes ONE persisted row, and neither is cacheable (P12).
+    const detail = await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(detail.statusCode, detail.body).toBe(200);
+    expect(detail.headers['cache-control']).toBe('no-store');
+    const reveal = await client.inject({ method: 'POST', url: revealUrl(w, w.memberId) });
+    expect(reveal.statusCode, reveal.body).toBe(200);
+    expect(reveal.headers['cache-control']).toBe('no-store');
+    expect(await persisted('admin_identity_check.identity_check_read', w.memberId)).toHaveLength(1);
+    expect(await persisted('admin_identity_check.member_mobile_shown', w.memberId)).toHaveLength(1);
+  });
+
+  it('⭐ P2 / item 1 — a typed-in field that exists but cannot be decrypted fails the detail (503 `identity_unreadable`, ⛔ a blank beside a live form, ⛔ audit row); the control with the field restored reads', async () => {
+    const w = await world();
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const foreign = (value: string) => encryption.encryptKycField(value, randomUUID(), deps.encryption); // AAD of another Pariwar ⇒ ⛔ readable here
+    const good = (await td.pool.query<{ name_ciphertext: string; photo_ciphertext: string | null }>(`SELECT name_ciphertext, photo_ciphertext FROM member_kyc_profiles WHERE member_id = $1`, [w.memberId])).rows[0]!;
+    await td.pool.query(`UPDATE member_kyc_profiles SET name_ciphertext = $2 WHERE member_id = $1`, [w.memberId, await foreign(NAME)]);
+    const noName = await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(noName.statusCode, noName.body).toBe(503);
+    expect(errCode(j(noName))).toBe('identity_validation.identity_unreadable');
+    expect(noName.body).not.toContain(DOB);
+    // A PHOTO that exists must decrypt too (a missing photo is fine — the control below has none).
+    await td.pool.query(`UPDATE member_kyc_profiles SET name_ciphertext = $2, photo_ciphertext = $3 WHERE member_id = $1`, [w.memberId, good.name_ciphertext, await foreign('data:image/png;base64,AAAA')]);
+    const noPhoto = await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(noPhoto.statusCode, noPhoto.body).toBe(503);
+    expect(errCode(j(noPhoto))).toBe('identity_validation.identity_unreadable');
+    expect(await persisted('admin_identity_check.identity_check_read', w.memberId)).toHaveLength(0);
+    await td.pool.query(`UPDATE member_kyc_profiles SET photo_ciphertext = $2 WHERE member_id = $1`, [w.memberId, good.photo_ciphertext]);
+    const ok = await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(j(ok).identity).toMatchObject({ name: NAME, date_of_birth: DOB });
+  });
+
+  it('⭐ P3 / item 1 — the identity is shown ONLY while a check is awaited: a confirmed, a DigiLocker and a death-claimed member get `identity: null` (history, posting and the death banner stay); the control shows it', async () => {
+    const w = await world();
+    const digi = await seedMember(w.pariwarId, w.district, { kyc: 'digilocker' });
+    const dead = await seedMember(w.pariwarId, w.district);
+    await fileClaim({ pariwarId: w.pariwarId, memberId: dead });
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const control = await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) });
+    expect(j(control).identity).toMatchObject({ name: NAME, date_of_birth: DOB });
+    expect(j(control).masked_mobile).toBe(`+91·····${MOBILE_DIGITS.slice(-4)}`);
+    expect(j(control).eligible).toBe(true);
+    expect((await post(client, detailUrl(w, w.memberId), confirmBody)).statusCode).toBe(201);
+    for (const [label, id] of [['confirmed', w.memberId], ['DigiLocker', digi], ['death-claimed', dead]] as const) {
+      const res = await client.inject({ method: 'GET', url: detailUrl(w, id) });
+      expect(res.statusCode, `${label}: ${res.body}`).toBe(200);
+      expect(j(res).identity, label).toBeNull();
+      expect(j(res).eligible, label).toBe(false);
+      expect(res.body, label).not.toContain(NAME);
+      expect(res.body, label).not.toContain(DOB);
+      expect(j(res).posting, label).toMatchObject({ district: w.district });
+      expect(j(res).masked_mobile, label).toBeNull();
+    }
+    expect(j(await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) })).history as Json[]).toHaveLength(1);
+    expect(j(await client.inject({ method: 'GET', url: detailUrl(w, dead) })).death_reported).toBe(true);
+  });
+
+  it('⭐ D2 / item 3 — the queue leaves out a member with a standing death claim (the claim module\'s one predicate); the control member stays', async () => {
+    const w = await world();
+    const dead = await seedMember(w.pariwarId, w.district);
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const { client: pa } = await actor(w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId);
+    const ids_ = async (c: Client) => new Set((j(await c.inject({ method: 'GET', url: queueUrl(w) })).entries as Json[]).map((e) => e.member_id));
+    expect(await ids_(da)).toEqual(new Set([w.memberId, dead]));
+    await fileClaim({ pariwarId: w.pariwarId, memberId: dead });
+    expect(await ids_(da)).toEqual(new Set([w.memberId]));
+    expect(await ids_(pa)).toEqual(new Set([w.memberId]));
+  });
+
+  it('⭐ P4 / P11 — `has_more` is true exactly while another page follows; an `offset` beyond the ceiling is a 400, ⛔ a 500', async () => {
+    const w = await world();
+    const second = await seedMember(w.pariwarId, w.district);
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const page = async (qs: string) => j(await client.inject({ method: 'GET', url: `${queueUrl(w)}?${qs}` }));
+    const one = await page('limit=1');
+    expect(one.entries as Json[]).toHaveLength(1);
+    expect(one.has_more).toBe(true);
+    const two = await page('limit=1&offset=1');
+    expect(two.entries as Json[]).toHaveLength(1);
+    expect(two.has_more).toBe(false);
+    expect(new Set([...(one.entries as Json[]), ...(two.entries as Json[])].map((e) => e.member_id))).toEqual(new Set([w.memberId, second]));
+    expect((await page('limit=2')).has_more).toBe(false);
+    expect((await page('')).has_more).toBe(false);
+    for (const offset of ['1000001', '99999999999999999999']) {
+      const res = await client.inject({ method: 'GET', url: `${queueUrl(w)}?offset=${offset}` });
+      expect(res.statusCode, res.body).toBe(400);
+    }
+  });
+
+  it('⭐ P6 / family 2 — two staff acts racing on ONE member over two connections: two confirmations ⇒ exactly one 201 and one 409, ONE live row, ONE marker event; two not-confirmed ⇒ both land and the older is superseded; one key twice ⇒ one write', async () => {
+    const markers = async (memberId: string) =>
+      Number(((await td.pool.query(`SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1 AND event_type = 'member.identity_validation_recorded'`, [memberId])).rows[0] as { n: number }).n);
+    const live = async (memberId: string) => (await validations(memberId)).filter((r) => r.superseded_at === null);
+
+    const w = await world();
+    const { client: a } = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Asha (First)');
+    const { client: b } = await actor(w.pariwarId, 'district_admin', 'district', w.district, 'Bela (Second)');
+    const [x, y] = await Promise.all([post(a, detailUrl(w, w.memberId), confirmBody), post(b, detailUrl(w, w.memberId), confirmBody)]);
+    expect([x.statusCode, y.statusCode].sort(), `${x.body} ${y.body}`).toEqual([201, 409]);
+    expect(errCode(j(x.statusCode === 409 ? x : y))).toMatch(/^identity_validation\.(not_eligible|concurrent)$/);
+    expect(await validations(w.memberId)).toHaveLength(1);
+    expect(await live(w.memberId)).toHaveLength(1);
+    expect(await flag(w.memberId)).toBe(true);
+    expect(await markers(w.memberId)).toBe(1);
+
+    const w2 = await world();
+    const { client: c } = await actor(w2.pariwarId, 'district_admin', 'district', w2.district);
+    const { client: d } = await actor(w2.pariwarId, 'district_admin', 'district', w2.district);
+    const nc = { outcome: 'not_confirmed', not_confirmed_reason: 'member_not_reached', note: 'ZZ race' };
+    const [p, q] = await Promise.all([post(c, detailUrl(w2, w2.memberId), nc), post(d, detailUrl(w2, w2.memberId), nc)]);
+    expect([p.statusCode, q.statusCode].every((s) => s === 201 || s === 409), `${p.body} ${q.body}`).toBe(true);
+    const landed = [p, q].filter((r) => r.statusCode === 201).length;
+    expect(landed).toBeGreaterThanOrEqual(1);
+    expect(await validations(w2.memberId)).toHaveLength(landed);
+    expect(await live(w2.memberId)).toHaveLength(1);
+    expect(await markers(w2.memberId)).toBe(landed);
+
+    const w3 = await world();
+    const { client: e } = await actor(w3.pariwarId, 'district_admin', 'district', w3.district);
+    const key = randomUUID();
+    const [r1, r2] = await Promise.all([post(e, detailUrl(w3, w3.memberId), confirmBody, key), post(e, detailUrl(w3, w3.memberId), confirmBody, key)]);
+    expect([r1.statusCode, r2.statusCode].filter((s) => s === 201), `${r1.body} ${r2.body}`).toHaveLength(1);
+    expect([200, 409]).toContain([r1.statusCode, r2.statusCode].find((s) => s !== 201));
+    expect(await validations(w3.memberId)).toHaveLength(1);
+    expect(await markers(w3.memberId)).toBe(1);
+  });
+
+  it('⭐ P7 / families 3 + 12(a) — a member of ANOTHER Pariwar named under this Pariwar\'s path is ⛔ reachable: detail, record and reveal deny (PA → 404, DA → 403), ⛔ row, ⛔ flag, ⛔ identity in a body; the control member is reached', async () => {
+    const w = await world();
+    const foreign = await world();
+    const { client: pa } = await actor(w.pariwarId, 'pariwar_admin', 'pariwar', w.pariwarId);
+    const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    for (const [label, c, status] of [['PA', pa, 404], ['DA', da, 403]] as const) {
+      const bodies = [
+        await c.inject({ method: 'GET', url: detailUrl(w, foreign.memberId) }),
+        await post(c, detailUrl(w, foreign.memberId), confirmBody),
+        await c.inject({ method: 'POST', url: revealUrl(w, foreign.memberId) }),
+      ];
+      for (const res of bodies) {
+        expect(res.statusCode, `${label}: ${res.body}`).toBe(status);
+        for (const planted of [NAME, DOB, MOBILE_DIGITS]) expect(res.body).not.toContain(planted);
+      }
+    }
+    expect(await validations(foreign.memberId)).toHaveLength(0);
+    expect(await flag(foreign.memberId)).toBe(false);
+    expect((await pa.inject({ method: 'GET', url: detailUrl(w, w.memberId) })).statusCode).toBe(200);
+  });
+
+  it('⭐ P7 — a TERMINATED member is refused at every route (detail shows no identity, record 409, number 409) and is not in the queue; the control member is', async () => {
+    const w = await world();
+    const terminated = await seedMember(w.pariwarId, w.district);
+    await inScope(w.pariwarId, async (s) => {
+      const v = Number(((await s.client.query(`SELECT max(event_version)::int AS v FROM events_log WHERE stream_id = $1`, [terminated])).rows[0] as { v: number }).v);
+      for (const [i, type] of ['member.moderation.suspended', 'member.moderation.terminated'].entries()) {
+        await s.client.query(
+          `INSERT INTO events_log (stream_id, event_type, payload, event_version, actor_id, pariwar_id) VALUES ($1, $2, '{}'::jsonb, $3, NULL, $4)`,
+          [terminated, type, v + 1 + i, w.pariwarId],
+        );
+      }
+    });
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const detail = j(await client.inject({ method: 'GET', url: detailUrl(w, terminated) }));
+    expect(detail).toMatchObject({ identity: null, eligible: false });
+    const rec = await post(client, detailUrl(w, terminated), confirmBody);
+    expect(rec.statusCode, rec.body).toBe(409);
+    expect(errCode(j(rec))).toBe('identity_validation.not_eligible');
+    const rev = await client.inject({ method: 'POST', url: revealUrl(w, terminated) });
+    expect(rev.statusCode, rev.body).toBe(409);
+    expect(errCode(j(rev))).toBe('identity_validation.not_eligible');
+    expect(await validations(terminated)).toHaveLength(0);
+    expect(await flag(terminated)).toBe(false);
+    const q = new Set((j(await client.inject({ method: 'GET', url: queueUrl(w) })).entries as Json[]).map((e) => e.member_id));
+    expect(q).toEqual(new Set([w.memberId]));
+  });
+
+  it('⭐ P8 / family 8 — a staff user with NO display name cannot record (409 `admin.display_name_missing`, ⛔ row, ⛔ flag); the control with a name records', async () => {
+    const w = await world();
+    const { client: nameless } = await actor(w.pariwarId, 'district_admin', 'district', w.district, null);
+    const res = await post(nameless, detailUrl(w, w.memberId), confirmBody);
+    expect(res.statusCode, res.body).toBe(409);
+    expect(errCode(j(res))).toBe('admin.display_name_missing');
+    expect(await validations(w.memberId)).toHaveLength(0);
+    expect(await flag(w.memberId)).toBe(false);
+    const { client: named } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    expect((await post(named, detailUrl(w, w.memberId), confirmBody)).statusCode).toBe(201);
+  });
+
+  it('⭐ P8 / AC10 (the spy) — the QUEUE decrypts nothing (⛔ a Tier-1 decrypt on a list); the detail does (the control that the spy sees decrypts)', async () => {
+    const w = await world();
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const decryptKyc = vi.spyOn(kycCrypto, 'decryptKycField');
+    const decryptMobile = vi.spyOn(mobileIndex, 'decryptMobile');
+    try {
+      expect((await client.inject({ method: 'GET', url: queueUrl(w) })).statusCode).toBe(200);
+      expect(decryptKyc).not.toHaveBeenCalled();
+      expect(decryptMobile).not.toHaveBeenCalled();
+      expect((await client.inject({ method: 'GET', url: detailUrl(w, w.memberId) })).statusCode).toBe(200);
+      expect(decryptKyc).toHaveBeenCalled();
+      expect(decryptMobile).toHaveBeenCalled();
+    } finally {
+      decryptKyc.mockRestore();
+      decryptMobile.mockRestore();
+    }
+  });
+
+  // ── Code review round 2 (adversarial review of the patches) ────────────────────────────────────────────────────
+
+  const intakeKey = (pariwarId: string, memberId: string) =>
+    BigInt(`0x${createHash('sha256').update(`${pariwarId.toLowerCase()}:${memberId.toLowerCase()}`).digest('hex').slice(0, 15)}`);
+  async function waitUntilBlockedOn(key: bigint): Promise<void> {
+    for (let i = 0; i < 200; i += 1) {
+      const r = await td.pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted AND classid = $1::bigint::oid AND objid = $2::bigint::oid`,
+        [(key >> 32n).toString(), (key & 0xffffffffn).toString()],
+      );
+      if (r.rows[0]!.n > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error('the record never blocked on the claim-intake key — is the lock still taken FIRST?');
+  }
+
+  it('⭐ P6 / family 2 — a record that ARRIVES while a death claim is being filed waits on the claim-intake key and decides AFTER the claim lands: `death_reported`, ⛔ row, ⛔ flag; the control without a claim in flight records', async () => {
+    const w = await world();
+    const control = await seedMember(w.pariwarId, w.district);
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const holder = await td.pool.connect();
+    try {
+      // "The claim intake": holds the key for (pariwar, member) while the claim is filed.
+      await holder.query('BEGIN');
+      await holder.query('SELECT pg_advisory_xact_lock($1)', [intakeKey(w.pariwarId, w.memberId).toString()]);
+      const pending = post(client, detailUrl(w, w.memberId), confirmBody); // must BLOCK on the held key
+      await waitUntilBlockedOn(intakeKey(w.pariwarId, w.memberId));
+      await fileClaim({ pariwarId: w.pariwarId, memberId: w.memberId }); // lands (committed, another connection) while the record waits
+      await holder.query('COMMIT');
+      const res = await pending;
+      expect(res.statusCode, res.body).toBe(409);
+      expect(errCode(j(res))).toBe('identity_validation.death_reported');
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      holder.release();
+    }
+    expect(await validations(w.memberId)).toHaveLength(0);
+    expect(await flag(w.memberId)).toBe(false);
+    expect((await post(client, detailUrl(w, control), confirmBody)).statusCode).toBe(201);
+  });
+
+  it('⭐ P6 — the number press takes the SAME key FIRST: held by a claim being filed, it waits and then answers the generic refusal; ⛔ number, ⛔ `member_mobile_shown` row', async () => {
+    const w = await world();
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const holder = await td.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT pg_advisory_xact_lock($1)', [intakeKey(w.pariwarId, w.memberId).toString()]);
+      const pending = client.inject({ method: 'POST', url: revealUrl(w, w.memberId) });
+      await waitUntilBlockedOn(intakeKey(w.pariwarId, w.memberId));
+      await fileClaim({ pariwarId: w.pariwarId, memberId: w.memberId });
+      await holder.query('COMMIT');
+      const res = await pending;
+      expect(res.statusCode, res.body).toBe(409);
+      expect(errCode(j(res))).toBe('identity_validation.not_eligible');
+      expect(res.body).not.toContain(MOBILE_DIGITS);
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      holder.release();
+    }
+    expect(await persisted('admin_identity_check.member_mobile_shown', w.memberId)).toHaveLength(0);
+  });
+
+  it('⭐ P13 / families 2 + 8 — a `recordResult` failure AFTER the commit still writes the audit line and answers 201 (⛔ a 500, ⛔ a lost line); the idempotency key stays `pending`, so a replay is ⛔ re-run', async () => {
+    const w = await world();
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    expect(deps.pool).toBe(td.pool);
+    // Fail ONLY the keyed store's "completed" write — every other statement (the act's own transaction) runs for real.
+    const realConnect = td.pool.connect.bind(td.pool) as (cb?: unknown) => Promise<import('pg').PoolClient>;
+    const wrapped = async (): Promise<import('pg').PoolClient> => {
+      const c = await realConnect();
+      const realQuery = c.query.bind(c) as (...a: unknown[]) => unknown;
+      (c as unknown as { query: (...a: unknown[]) => unknown }).query = (...args: unknown[]) => {
+        const text = typeof args[0] === 'string' ? args[0] : '';
+        if (text.includes("SET status = 'completed'")) return Promise.reject(new Error('store down'));
+        return realQuery(...args);
+      };
+      const realRelease = c.release.bind(c);
+      c.release = ((err?: Error | boolean) => {
+        (c as unknown as { query: unknown }).query = realQuery;
+        return realRelease(err);
+      }) as typeof c.release;
+      return c;
+    };
+    const spy = vi.spyOn(td.pool, 'connect').mockImplementation(((cb?: unknown) => (typeof cb === 'function' ? realConnect(cb) : wrapped())) as never);
+    const key = randomUUID();
+    td.auditSink.events.length = 0;
+    try {
+      const res = await post(client, detailUrl(w, w.memberId), confirmBody, key);
+      expect(res.statusCode, res.body).toBe(201);
+    } finally {
+      spy.mockRestore();
+    }
+    // The store write DID fail (the key is still `pending` — ⛔ a vacuous pass); the act and its audit line landed.
+    const keyRow = await td.pool.query<{ status: string }>('SELECT status FROM idempotency_keys WHERE key LIKE $1', [`%:${key}`]);
+    expect(keyRow.rows.map((r) => r.status)).toEqual(['pending']);
+    expect(await validations(w.memberId)).toHaveLength(1);
+    expect(await flag(w.memberId)).toBe(true);
+    expect(audits('admin_identity_check.identity_check_recorded', w.memberId)).toHaveLength(1);
+  });
+
+  it('⭐ P7 / family 1 — an ANONYMIZED member is refused at every route (detail: ⛔ identity, ⛔ number; record and number 409) and is not in the queue; two acts pin `attempt_count` 2', async () => {
+    const w = await world();
+    const anon = await seedMember(w.pariwarId, w.district);
+    await inScope(w.pariwarId, async (s) => {
+      await memberDomain.projectMemberState(s.client, {
+        memberId: ids.memberId(anon),
+        pariwarId: ids.pariwarId(w.pariwarId),
+        eventType: 'member.rtbf_anonymized' as never,
+        payload: { from_state: 'lock-in', to_state: 'anonymized', trigger: 'rtbf_anonymized', actor: 'system' } as never,
+        actorId: null,
+      });
+    });
+    const { client } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
+    const detail = j(await client.inject({ method: 'GET', url: detailUrl(w, anon) }));
+    expect(detail).toMatchObject({ state: 'anonymized', identity: null, masked_mobile: null, eligible: false });
+    const rec = await post(client, detailUrl(w, anon), confirmBody);
+    expect(rec.statusCode, rec.body).toBe(409);
+    expect(errCode(j(rec))).toBe('identity_validation.not_eligible');
+    const rev = await client.inject({ method: 'POST', url: revealUrl(w, anon) });
+    expect(rev.statusCode, rev.body).toBe(409);
+    expect(await validations(anon)).toHaveLength(0);
+    expect(new Set((j(await client.inject({ method: 'GET', url: queueUrl(w) })).entries as Json[]).map((e) => e.member_id))).toEqual(new Set([w.memberId]));
+    // `attempt_count` counts every act, superseded ones included.
+    const nc = { outcome: 'not_confirmed', not_confirmed_reason: 'member_not_reached', note: 'ZZ again' };
+    expect((await post(client, detailUrl(w, w.memberId), nc)).statusCode).toBe(201);
+    expect((await post(client, detailUrl(w, w.memberId), nc)).statusCode).toBe(201);
+    const entry = (j(await client.inject({ method: 'GET', url: queueUrl(w) })).entries as Json[]).find((e) => e.member_id === w.memberId);
+    expect(entry).toMatchObject({ attempt_count: 2, latest_outcome: 'not_confirmed' });
   });
 });

@@ -115,11 +115,6 @@ export const EVENT_TYPE_REGISTRY = {
       'Posting / transfer-in-out changed via the Life Events panel (Story 3.9) — non-transition marker; carries non-PII district + optional pariwar_ref + is_retirement (Epic 4 Story 4.5 retirement anchor).',
     schema: member.PostingUpdatedPayloadSchema,
   },
-  // ── Story 10.26 — the personal-event ASSERTION ────────────────────────────────────
-  // ⚠ `member.*` ON PURPOSE, and this file is one of the four roots Story 8.10's `no-ingest-path`
-  // fence source-scans for a fourth `contribution.*` literal. The event supplies a `contribution.*`
-  // FACT but is not a `contribution.*` EVENT — the producer maps the boolean anchor onto the dotted
-  // fact key in `@twt/validity-service`, which the fence does not scan and must not need to.
   // ── Story 3.13 — a staff identity check in life (DL3) ──────────────────────────────
   'member.identity_validation_recorded': {
     type: 'member.identity_validation_recorded',
@@ -127,6 +122,11 @@ export const EVENT_TYPE_REGISTRY = {
       'A District Admin or Pariwar Admin recorded an identity check on a typed-in identity while the member is alive (Story 3.13, FR-2) — non-transition marker on the member stream. Carries the record id + the outcome (confirmed | not_confirmed) only; NO name, note, document kind or reason. A confirmed on a pending-valid member is followed in the same transaction by member.kyc_completed (pending-valid → active).',
     schema: member.IdentityValidationRecordedPayloadSchema,
   },
+  // ── Story 10.26 — the personal-event ASSERTION ────────────────────────────────────
+  // ⚠ `member.*` ON PURPOSE, and this file is one of the four roots Story 8.10's `no-ingest-path`
+  // fence source-scans for a fourth `contribution.*` literal. The event supplies a `contribution.*`
+  // FACT but is not a `contribution.*` EVENT — the producer maps the boolean anchor onto the dotted
+  // fact key in `@twt/validity-service`, which the fence does not scan and must not need to.
   'member.personal_event_asserted': {
     type: 'member.personal_event_asserted',
     description:

@@ -138,11 +138,16 @@ export function LoginPage(): ReactElement {
   async function completeLogin(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: sessionKey });
     // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to (Story 6.22: or the fraud work-list; Story 13.1g:
-    // or the field worker Move requests page), IFF `next` is EXACTLY an allowlisted relative path (`login-next.ts`); anything else lands
-    // on the default page as before (⛔ an open redirect).
+    // or the field worker Move requests page; Story 3.13: or the identity-check queue / one member's identity check), IFF `next` is
+    // EXACTLY an allowlisted relative path (`login-next.ts`); anything else lands on the default page as before (⛔ an open redirect).
     const back = allowedNextReturn(search.next ?? null);
     if (back !== null) {
-      void navigate({ to: back.to, params: { pariwarId: back.pariwarId } });
+      // ONE member's identity check is the only return whose route has a second param.
+      if (back.to === '/p/$pariwarId/identity-checks/$memberId') {
+        void navigate({ to: back.to, params: { pariwarId: back.pariwarId, memberId: back.memberId } });
+      } else {
+        void navigate({ to: back.to, params: { pariwarId: back.pariwarId } });
+      }
       return;
     }
     void navigate({ to: '/audit/integrity' });

@@ -636,7 +636,8 @@ export type AuthAuditEventType =
   | 'admin_claim.membership_check_read'
   // ── Story 3.13 (DL8, DL6a, DL13) — staff check a typed-in identity in life. ids, outcome / reason codes ONLY (⛔ a name, ⛔ a
   // date of birth, ⛔ the note, ⛔ the MOBILE NUMBER — `-328`'s rule), with a `member:<uuid>` resourceLocator.
-  //   identity_check_read — the detail was opened (it decrypts the typed-in name, date of birth, photo and the live note).
+  //   identity_check_read — the detail was opened (while a check is awaited it decrypts the typed-in name, date of birth and photo; always the live note).
+  //     A DISCLOSURE: persisted (awaited) before the data is returned, as is `member_mobile_shown` (`2026-11-26-504` item 2).
   //   identity_check_recorded / identity_check_rejected — the act (`member.validate_identity`), or its refusal with the reason.
   //   member_mobile_shown — ONE line per press of "Show mobile number" (`member.reveal_mobile_for_identity_check`, `-502` Q3 B).
   //   member_mobile_reveal_rejected — a refused press, with the reason code.

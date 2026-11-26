@@ -109,7 +109,8 @@ export function registerIdentityCheckRoutes(app: FastifyInstance, deps: AppDeps)
     h.getQueue,
   );
 
-  // DL8 — the DETAIL: the typed-in name, date of birth and photo (one audited view), the masked mobile, the history.
+  // DL8 (as amended by `2026-11-26-504` item 1) — the DETAIL: the state, the posting and the history for every member; the typed-in name, date
+  // of birth and photo and the masked mobile ONLY while a check is awaited (one audited view, persisted before it is returned).
   r.get(
     '/api/v1/p/:pariwarId/admin/members/:memberId/identity-check',
     {

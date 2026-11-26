@@ -25,19 +25,20 @@
 // imports it, and `claim/` already imports `member/`; one `claim/` import here (even a type re-export through `icp.ts`)
 // would give `@twt/domain` a runtime init cycle that typecheck cannot see ([[project_type_only_import_cycle_trap]]).
 
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
 
 /**
  * THE predicate, ONCE: a claim `c` naming the member as the deceased, in ANY state, that ⛔ no `member_found_innocent`
- * finding has released. Both reads below use it (Story 6.22 — the ONE copy the source fence counts for this file).
+ * finding has released. Every read in this file uses it, the single-member ones by value and `noStandingDeathReportSql` over a
+ * caller's own column references (Story 6.22 — the ONE copy the source fence counts for this file).
  *
  * ⚠ Raw SQL with explicit aliases, ⛔ not a Drizzle correlated subquery: an outer column referenced inside a same-named
  * subquery table collapses to a tautology ([[project_epic6_drizzle_correlated_subquery_bug]]).
  */
-function standingReportWhere(pariwarId: PariwarId, memberId: MemberId) {
+function standingReportWhereFor(pariwarId: SQL, memberId: SQL) {
   return sql`c.pariwar_id = ${pariwarId}
          AND c.deceased_member_id = ${memberId}
          AND NOT EXISTS (
@@ -47,6 +48,28 @@ function standingReportWhere(pariwarId: PariwarId, memberId: MemberId) {
               AND f.claim_case_id = c.claim_case_id
               AND f.kind = 'member_found_innocent'
          )`;
+}
+
+/** The one member, by value — what every single-member read binds. */
+function standingReportWhere(pariwarId: PariwarId, memberId: MemberId) {
+  return standingReportWhereFor(sql`${pariwarId}`, sql`${memberId}`);
+}
+
+/**
+ * ⭐ Story 3.13 (`2026-11-26-504` item 3) — the SAME predicate, for a SET read: `NOT EXISTS` a standing report for the member
+ * a row of the caller's own query names. `pariwarId` / `memberId` are SQL EXPRESSIONS — the caller's column references (the
+ * identity-check queue passes its `members` alias's pariwar and member columns). It is {@link standingReportWhereFor}, ⛔ a
+ * second copy: the release rule stays in ONE place, so a list that leaves a death-claimed member out and the gate that refuses
+ * them share ONE definition. (The list is an unlocked snapshot and the gate runs under the claim-intake lock, so they can
+ * differ for an instant while a claim is being filed — the gate is the authority.) The aliases `c` / `f` are this fragment's
+ * own, inside its subquery; the caller's query may use the same letters outside it.
+ */
+export function noStandingDeathReportSql(pariwarId: SQL, memberId: SQL): SQL {
+  return sql`NOT EXISTS (
+    SELECT 1
+      FROM claims c
+     WHERE ${standingReportWhereFor(pariwarId, memberId)}
+  )`;
 }
 
 /**

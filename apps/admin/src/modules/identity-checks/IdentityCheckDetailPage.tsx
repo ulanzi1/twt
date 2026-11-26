@@ -2,6 +2,11 @@
 // server, ONE audited view), the masked mobile + the "Show mobile number" press, the posting, the history, and the two acts —
 // "Confirm identity" / "Could not confirm". A claim filed for the member's death shows the banner and ⛔ the forms (DL5); a
 // member who needs no check shows the not-eligible line and ⛔ the forms (DL4). The server re-checks both on every write.
+// The typed-in identity arrives ONLY while a check is awaited (`-504` item 1) — for anyone else the three identity rows are ⛔
+// shown at all (⛔ a dash, ⛔ "No photo on record" for a photo that is merely withheld), and nor is the Mobile row without a
+// masked number. After a save the page says so ("Identity confirmed." / "Saved.") in a live region that is ALWAYS mounted, and
+// moves focus to it — a confirmation makes the member ineligible, so the forms (and the button that was pressed) go away AT
+// ONCE, before the refetch answers. A refetch that fails keeps the page on its data and says so; it never swaps the page away.
 
 import { useNavigate, useParams } from '@tanstack/react-router';
 import type { IdentityCheckDetailResponse, IdentityCheckRecordRequest } from '@twt/contracts';
@@ -27,20 +32,37 @@ export function IdentityCheckDetailRoute(): ReactElement {
   }, [session.isError, navigate, pariwarId, memberId]);
   if (session.isLoading) return <p role="status">Checking your session…</p>;
   if (session.isError) return <p role="status">Redirecting to sign in…</p>;
-  return <IdentityCheckDetailView pariwarId={pariwarId} memberId={memberId} />;
+  // `key` — what one member's page remembers (a saved line, a refusal) is ⛔ carried to another member's.
+  return <IdentityCheckDetailView key={memberId} pariwarId={pariwarId} memberId={memberId} />;
 }
 
 /** What the last write's refusal means on screen (by CODE — the API's message is ⛔ shown). */
 type WriteRefusal = 'not_eligible' | 'death_reported' | 'other' | null;
+/** The outcome of the last SAVED write (the page-level acknowledgement), or `null` before one / after the next attempt starts. */
+type SavedOutcome = IdentityCheckRecordRequest['outcome'] | null;
 
 export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: string; memberId: string }): ReactElement {
   const navigate = useNavigate();
   const detail = useIdentityCheckDetail(pariwarId, memberId);
   const status = detail.error instanceof ApiError ? detail.error.status : null;
   const [refusal, setRefusal] = useState<WriteRefusal>(null);
+  const [saved, setSaved] = useState<SavedOutcome>(null);
+  const savedRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (status === 401) void navigate({ to: '/login', search: { next: identityCheckPath(pariwarId, memberId) } });
   }, [status, navigate, pariwarId, memberId]);
+  // A refusal is the server's word at ONE moment (a death claim filed, a check no longer awaited). When the detail is read AGAIN
+  // and says the member is awaiting a check with no death claim standing (a claim released as innocent), the refusal is stale:
+  // ⛔ the banner and the hidden forms until a reload.
+  const awaitingNow = detail.data !== undefined && detail.data.eligible && !detail.data.death_reported;
+  useEffect(() => {
+    if (awaitingNow) setRefusal(null);
+  }, [awaitingNow, detail.dataUpdatedAt]);
+  // After a save the focus moves to the acknowledgement: on a confirmation the button that was pressed is gone with the forms,
+  // and focus would otherwise fall to the page.
+  useEffect(() => {
+    if (saved !== null) savedRef.current?.focus();
+  }, [saved]);
 
   const back = (
     <button
@@ -62,7 +84,9 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
       </main>
     );
   }
-  if (detail.isError || !detail.data) {
+  // The BARE error state is for a page that never had its data. A refetch that fails while the data is there (a save went through
+  // and the re-read answers 503) keeps the page on that data and says so (below).
+  if (!detail.data) {
     const line = status === 403 ? t.detail.forbidden : status === 404 ? t.detail.notFound : t.detail.loadError;
     return (
       <main className="mx-auto max-w-3xl p-4">
@@ -75,12 +99,21 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
   }
 
   const d = detail.data;
+  // A CONFIRMATION that went through ends the check AT ONCE: the member is not awaiting one, whatever the stale data still says.
+  const confirmedNow = saved === 'confirmed';
   const deathReported = d.death_reported || refusal === 'death_reported';
-  const notEligible = !deathReported && (!d.eligible || refusal === 'not_eligible');
+  const notEligible = !deathReported && (!d.eligible || refusal === 'not_eligible' || confirmedNow);
+  // ... but "does not need an identity check" would mislead right after staff confirmed; the history says who confirmed and when.
+  const showNotEligibleLine = notEligible && !confirmedNow;
 
   return (
     <main className="mx-auto max-w-3xl p-4">
       {back}
+      {detail.isError ? (
+        <p role="alert" className="mt-2 text-sm" data-testid="identity-check-refresh-error">
+          {t.detail.loadError}
+        </p>
+      ) : null}
       <h1 className="mt-2 text-lg font-semibold">
         {t.title} · {t.queue.member} {d.short_member_id}
       </h1>
@@ -92,44 +125,77 @@ export function IdentityCheckDetailView({ pariwarId, memberId }: { pariwarId: st
         <p role="alert" className="mt-3 rounded border border-amber-400 bg-amber-50 p-2 text-sm" data-testid="identity-check-death-banner">
           {t.detail.deathBanner}
         </p>
-      ) : notEligible ? (
+      ) : showNotEligibleLine ? (
         <p role="status" className="mt-3 text-sm" data-testid="identity-check-not-eligible">
           {t.detail.notEligible}
         </p>
       ) : null}
 
-      <IdentityFacts d={d} pariwarId={pariwarId} showReveal={!deathReported && !notEligible} />
+      <IdentityFacts d={d} pariwarId={pariwarId} awaiting={!deathReported && !notEligible} />
       <History d={d} />
 
+      {/* ALWAYS mounted (a live region inserted already populated is often ignored); the text is what arrives. `tabIndex` so a save can focus it. */}
+      <div ref={savedRef} role="status" tabIndex={-1} className="mt-4 text-sm font-medium outline-none" data-testid="identity-check-saved-region">
+        {saved !== null ? <p data-testid="identity-check-saved">{saved === 'confirmed' ? t.form.savedConfirmed : t.form.savedNotConfirmed}</p> : null}
+      </div>
       {!deathReported && !notEligible ? (
-        <RecordForms pariwarId={pariwarId} memberId={memberId} onRefused={setRefusal} />
+        <RecordForms
+          pariwarId={pariwarId}
+          memberId={memberId}
+          onRefused={setRefusal}
+          onSaved={setSaved}
+          onSignedOut={() => void navigate({ to: '/login', search: { next: identityCheckPath(pariwarId, memberId) } })}
+        />
       ) : null}
     </main>
   );
 }
 
-function IdentityFacts({ d, pariwarId, showReveal }: { d: IdentityCheckDetailResponse; pariwarId: string; showReveal: boolean }): ReactElement {
+/**
+ * `awaiting` — a check is awaited RIGHT NOW (no death claim, not already confirmed). Only then are the typed-in identity, the masked
+ * number and the "Show mobile number" press on screen: the server sends them only for such a member (`identity` / `masked_mobile`
+ * `null` for anyone else), and the page must not keep showing what a save or a refusal has just ended.
+ */
+function IdentityFacts({ d, pariwarId, awaiting }: { d: IdentityCheckDetailResponse; pariwarId: string; awaiting: boolean }): ReactElement {
+  const stateLabel = t.queue.stateLabels[d.state];
   return (
     <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm" data-testid="identity-check-facts">
-      <dt className="font-medium">{t.detail.name}</dt>
-      <dd data-testid="identity-check-name">{d.identity?.name ?? '—'}</dd>
-      <dt className="font-medium">{t.detail.dateOfBirth}</dt>
-      <dd data-testid="identity-check-dob">{d.identity?.date_of_birth ?? '—'}</dd>
-      <dt className="font-medium">{t.detail.photo}</dt>
-      <dd>
-        {d.identity?.photo ? (
-          <img src={d.identity.photo} alt={t.detail.photo} className="h-32 w-auto rounded border" data-testid="identity-check-photo" />
-        ) : (
-          t.detail.noPhoto
-        )}
-      </dd>
-      <dt className="font-medium">{t.detail.mobile}</dt>
-      <dd>
-        <span data-testid="identity-check-masked-mobile">{d.masked_mobile ?? '—'}</span>
-        {showReveal ? <RevealMobile pariwarId={pariwarId} memberId={d.member_id} /> : null}
-      </dd>
+      {awaiting && d.identity !== null ? (
+        <>
+          <dt className="font-medium">{t.detail.name}</dt>
+          <dd data-testid="identity-check-name">{d.identity.name ?? '—'}</dd>
+          <dt className="font-medium">{t.detail.dateOfBirth}</dt>
+          <dd data-testid="identity-check-dob">{d.identity.date_of_birth ?? '—'}</dd>
+          <dt className="font-medium">{t.detail.photo}</dt>
+          <dd>
+            {d.identity.photo ? (
+              <img src={d.identity.photo} alt={t.detail.photo} className="h-32 w-auto rounded border" data-testid="identity-check-photo" />
+            ) : (
+              t.detail.noPhoto
+            )}
+          </dd>
+        </>
+      ) : null}
+      {awaiting && d.masked_mobile !== null ? (
+        <>
+          <dt className="font-medium">{t.detail.mobile}</dt>
+          <dd>
+            <span data-testid="identity-check-masked-mobile">{d.masked_mobile}</span>
+            <RevealMobile pariwarId={pariwarId} memberId={d.member_id} />
+          </dd>
+        </>
+      ) : null}
       <dt className="font-medium">{t.detail.joinedOn}</dt>
-      <dd>{formatIstDate(d.signed_up_at)}</dd>
+      <dd>
+        {formatIstDate(d.signed_up_at)}
+        {/* The state reads in the queue's own words — a state with no label (a member who is active, withdrawn, anonymized) shows ⛔ its internal name. */}
+        {stateLabel !== undefined ? (
+          <>
+            {' · '}
+            <span data-testid="identity-check-state">{stateLabel}</span>
+          </>
+        ) : null}
+      </dd>
       <dt className="font-medium">{t.detail.posting}</dt>
       <dd>{d.posting ? [d.posting.district, d.posting.workplace_name].filter(Boolean).join(' · ') : t.detail.noPosting}</dd>
     </dl>
@@ -179,29 +245,38 @@ function RecordForms({
   pariwarId,
   memberId,
   onRefused,
+  onSaved,
+  onSignedOut,
 }: {
   pariwarId: string;
   memberId: string;
   onRefused: (r: WriteRefusal) => void;
+  onSaved: (outcome: SavedOutcome) => void;
+  onSignedOut: () => void;
 }): ReactElement {
-  const record = useRecordIdentityCheck(pariwarId, memberId);
+  // The page hears the outcome — a save, or the server's refusal — from the HOOK, in the step that starts the refresh (not from the
+  // per-call callbacks below, which run later and ⛔ at all once these forms have unmounted).
+  const record = useRecordIdentityCheck(pariwarId, memberId, { onSaved, onRefused });
   const keyRef = useRef<AttemptKey | null>(null);
   // Each form keeps its OWN fields — a note typed into one ⛔ appears in the other.
   const [cEvidence, setCEvidence] = useState('');
   const [cDocument, setCDocument] = useState('');
   const [cNote, setCNote] = useState('');
   const [evidence, setEvidence] = useState('');
-  const [document, setDocument] = useState('');
+  const [documentKind, setDocumentKind] = useState('');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [noteMissing, setNoteMissing] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  // The ids of the required selects left empty (`aria-invalid`) — set by the browser's own `invalid` event and by the submit guards.
+  const [emptyIds, setEmptyIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const asksEvidence = reason !== 'member_not_reached';
   const asksDocument = WITH_DOCUMENT.has(reason);
 
   const send = (body: IdentityCheckRecordRequest): void => {
     setSaveError(false);
+    onSaved(null);
     record.mutate(
       { body, idempotencyKey: attemptKey(keyRef, body) },
       {
@@ -211,24 +286,49 @@ function RecordForms({
           setCDocument('');
           setCNote('');
           setEvidence('');
-          setDocument('');
+          setDocumentKind('');
           setReason('');
           setNote('');
-          onRefused(null);
         },
         onError: (err) => {
-          const code = err instanceof ApiError ? err.code : '';
-          if (code === 'identity_validation.not_eligible') onRefused('not_eligible');
-          else if (code === 'identity_validation.death_reported') onRefused('death_reported');
+          if (err instanceof ApiError && err.status === 401) onSignedOut();
           else setSaveError(true);
         },
       },
     );
   };
 
-  const confirm = (e: FormEvent): void => {
+  /**
+   * The submit guard for a form's required selects. The browser's own required-field handling normally stops an empty select
+   * before this runs (and says why, in its own words); this is the backstop — every empty one is marked `aria-invalid` and the
+   * FIRST gets focus. ⛔ New words. Returns true when something is empty.
+   */
+  /**
+   * Choosing another reason changes which kinds are asked. A select that goes away takes its `aria-invalid` mark with it —
+   * ⛔ a kind asked again later coming back already marked wrong.
+   */
+  const changeReason = (next: string): void => {
+    setReason(next);
+    const kept = new Set<string>(['not-confirmed-reason']);
+    if (next !== 'member_not_reached') kept.add('not-confirmed-evidence');
+    if (WITH_DOCUMENT.has(next)) kept.add('not-confirmed-document');
+    setEmptyIds((prev) => {
+      const marks = [...prev].filter((id) => !id.startsWith('not-confirmed-') || kept.has(id));
+      return marks.length === prev.size ? prev : new Set(marks);
+    });
+  };
+
+  const refuseEmpty = (form: HTMLFormElement, required: ReadonlyArray<readonly [string, string]>): boolean => {
+    const empty = required.filter(([, value]) => value === '').map(([id]) => id);
+    if (empty.length === 0) return false;
+    setEmptyIds((prev) => new Set([...prev, ...empty]));
+    form.querySelector<HTMLElement>(`#${empty[0]!}`)?.focus();
+    return true;
+  };
+
+  const confirm = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    if (!cEvidence || !cDocument) return;
+    if (refuseEmpty(e.currentTarget, [['confirm-evidence', cEvidence], ['confirm-document', cDocument]])) return;
     send({
       outcome: 'confirmed',
       evidence_kind: cEvidence as never,
@@ -237,19 +337,21 @@ function RecordForms({
     });
   };
 
-  const couldNotConfirm = (e: FormEvent): void => {
+  const couldNotConfirm = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    if (note.trim() === '') {
-      setNoteMissing(true);
-      return;
-    }
-    setNoteMissing(false);
-    if (!reason || (asksEvidence && !evidence) || (asksDocument && !document)) return;
+    const missingNote = note.trim() === '';
+    setNoteMissing(missingNote);
+    const missingChoice = refuseEmpty(e.currentTarget, [
+      ['not-confirmed-reason', reason],
+      ...(asksEvidence ? ([['not-confirmed-evidence', evidence]] as const) : []),
+      ...(asksDocument ? ([['not-confirmed-document', documentKind]] as const) : []),
+    ]);
+    if (missingNote || missingChoice) return;
     send({
       outcome: 'not_confirmed',
       not_confirmed_reason: reason as never,
       evidence_kind: asksEvidence ? (evidence as never) : null,
-      document_kind: asksDocument ? (document as never) : null,
+      document_kind: asksDocument ? (documentKind as never) : null,
       note: note.trim(),
     });
   };
@@ -257,7 +359,19 @@ function RecordForms({
   const select = (id: string, label: string, value: string, set: (v: string) => void, options: string[], labels: Record<string, string>) => (
     <label className="flex flex-col text-sm" htmlFor={id}>
       {label}
-      <select id={id} data-testid={id} className="mt-1 rounded border p-1" value={value} onChange={(e) => set(e.target.value)}>
+      <select
+        id={id}
+        data-testid={id}
+        className="mt-1 rounded border p-1"
+        required
+        aria-invalid={emptyIds.has(id) ? true : undefined}
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+          setEmptyIds((prev) => (prev.has(id) ? new Set([...prev].filter((x) => x !== id)) : prev));
+        }}
+        onInvalid={() => setEmptyIds((prev) => (prev.has(id) ? prev : new Set([...prev, id])))}
+      >
         <option value="">{t.form.choose}</option>
         {options.map((o) => (
           <option key={o} value={o}>
@@ -283,9 +397,9 @@ function RecordForms({
       </form>
 
       <form onSubmit={couldNotConfirm} className="flex flex-col gap-2 rounded border p-3" data-testid="identity-check-not-confirmed-form">
-        {select('not-confirmed-reason', t.form.reason, reason, setReason, REASONS, t.reasons)}
+        {select('not-confirmed-reason', t.form.reason, reason, changeReason, REASONS, t.reasons)}
         {asksEvidence ? select('not-confirmed-evidence', t.form.evidenceKind, evidence, setEvidence, EVIDENCE, t.form.evidenceKinds) : null}
-        {asksDocument ? select('not-confirmed-document', t.form.documentKind, document, setDocument, DOCUMENTS, t.form.documentKinds) : null}
+        {asksDocument ? select('not-confirmed-document', t.form.documentKind, documentKind, setDocumentKind, DOCUMENTS, t.form.documentKinds) : null}
         <label className="flex flex-col text-sm" htmlFor="not-confirmed-note">
           {t.form.note}
           <textarea

@@ -30,7 +30,7 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { lockAndReadDeathReport } from '../claim/death-report-lock.js';
-import { isDeathReportStanding } from '../claim/death-report.js';
+import { isDeathReportStanding, noStandingDeathReportSql } from '../claim/death-report.js';
 import { bindScopedDb, type Db } from '../db.js';
 import type { MemberId, MemberIdentityValidationId, PariwarId } from '../ids/index.js';
 import {
@@ -371,21 +371,32 @@ interface QueueSqlRow extends Record<string, unknown> {
 const toDate = (v: string | Date): Date => (v instanceof Date ? v : new Date(v));
 const sqlList = (values: readonly string[]) => sql.join(values.map((v) => sql`${v}`), sql`, `);
 
+/** One page of the queue, and whether another follows it (`2026-11-26-504` item 3). */
+export interface IdentityCheckQueuePage {
+  readonly entries: IdentityCheckQueueEntry[];
+  /** `true` when at least one more member waits after this page — a member staff could not reach cannot hide those behind them. */
+  readonly hasMore: boolean;
+}
+
 /**
  * ⭐ DL11 — FR-2's trustee-action queue: every DL4-eligible member, `pending-valid` first, then signup date ascending,
  * tie-broken by `member_id`. The DL4 predicates are the SAME definitions the writer uses (the state list, the derived
  * checkable strengths, `trustee_verified = false`; `terminated` = the member's LATEST `member.moderation.*` action event
  * by `event_version` — the stream the writer's overlay folds, ⛔ a second source; the write path refuses an illegal
- * moderation action, so the latest action event IS the folded status). The district filter is pushed into SQL so a page is a true page; the
- * API ALSO applies the per-row scope predicate (DL6). ⛔ Ciphertext is selected.
+ * moderation action, so the latest action event IS the folded status). ⭐ `2026-11-26-504` item 3: a member with a standing
+ * DEATH REPORT is ⛔ listed — the claim module's ONE predicate (`noStandingDeathReportSql`), so the list and the writer's
+ * death lock (DL5) cannot disagree. The district filter is pushed into SQL so a page is a true page; the API ALSO applies
+ * the per-row scope predicate (DL6). ⛔ Ciphertext is selected. ONE row more than the page is read to learn `hasMore`; it is
+ * ⛔ returned.
  */
-export async function listIdentityCheckQueue(
+export async function listIdentityCheckQueuePage(
   db: Db,
   pariwarId: PariwarId,
   opts: ListIdentityCheckQueueOptions,
-): Promise<IdentityCheckQueueEntry[]> {
+): Promise<IdentityCheckQueuePage> {
   // Clamped BEFORE interpolation (the forced-pagination invariant applies to a raw-SQL LIMIT too).
   const limit = clampLimit(opts.limit, IDENTITY_CHECK_QUEUE_LIMIT);
+  const probe = limit + 1;
   const offset = Math.max(0, Math.trunc(opts.offset ?? 0));
   const districtFilter = opts.district === null ? sql`` : sql`AND p.district = ${opts.district}`;
   const result = await db.execute<QueueSqlRow>(sql`
@@ -413,11 +424,12 @@ export async function listIdentityCheckQueue(
                 AND e.event_type IN (${sqlList(MODERATION_EVENT_TYPES)})
               ORDER BY e.event_version DESC
               LIMIT 1), 'none') <> ${MODERATION_ACTION_EVENT_TYPES.terminate}
+       AND ${noStandingDeathReportSql(sql`m.pariwar_id`, sql`m.member_id`)}
        ${districtFilter}
      ORDER BY (m.state = 'pending-valid') DESC, m.created_at ASC, m.member_id ASC
-     LIMIT ${limit} OFFSET ${offset}
+     LIMIT ${probe} OFFSET ${offset}
   `);
-  return result.rows.map((r) => ({
+  const rows = result.rows.map((r) => ({
     memberId: r.member_id as MemberId,
     signedUpAt: toDate(r.created_at),
     state: r.state as MemberLifecycleState,
@@ -426,6 +438,16 @@ export async function listIdentityCheckQueue(
     latestDecidedAt: r.latest_decided_at === null ? null : toDate(r.latest_decided_at),
     attemptCount: Number(r.attempt_count),
   }));
+  return { entries: rows.slice(0, limit), hasMore: rows.length > limit };
+}
+
+/** The page's entries alone — {@link listIdentityCheckQueuePage} without the `hasMore` signal. */
+export async function listIdentityCheckQueue(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: ListIdentityCheckQueueOptions,
+): Promise<IdentityCheckQueueEntry[]> {
+  return (await listIdentityCheckQueuePage(db, pariwarId, opts)).entries;
 }
 
 /** One act in a member's history, as the detail shows it (DL8) — ⛔ the note except on the LIVE row. */

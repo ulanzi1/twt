@@ -16,6 +16,11 @@
 > reading as that note put them). This note goes to you FIRST; the sitting agenda's own copy of the question, and its line placing this
 > message at a later sitting, are BigDev's to withdraw or mark (that agenda lives with another session and is ⛔ edited here). (3) is
 > still owed.
+> **2026-11-26 — the details line changed, and the law's correction duty added, at BigDev's word** (*"yes add both to the note and
+> commit"*): the last sentence of "How — the details did not match" no longer says a wrong detail *"cannot be changed at present"*; it
+> asks the member to say so through the help request (Q2 (ii), the words table, "How much to trust this note"). The DPDP Act's s.12(2)
+> and s.8(3) are now cited beside the rulebook (Q2's costs, E3). ⚠ **(1) is REOPENED for that one Hindi sentence** — BigDev reads it
+> before the note is sent; the other Hindi lines are unchanged.
 
 ## §0 — the gate
 
@@ -84,11 +89,13 @@ photo ID was shown; the member could not be reached.
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
 | **(i)** | **One line for all four reasons:** show an original photo ID to staff, in person or on a video call (ending with the Q1 sentence you choose). | Every member reads the same "how". | It promises a fix that cannot happen for a member who typed a detail wrongly, and *"Staff may phone you"* reads oddly after *"we could not reach you"*. |
-| **(ii)** | **A line per reason** (our suggestion): the photo and no-ID reasons keep the line in (i); "could not reach you" drops *"Staff may phone you"*; "the details did not match" asks for an ID whose details match what the member gave — which finishes it when the wrong ID was shown — and says plainly that a wrong detail cannot be changed at present. | Each member reads what can actually happen for their reason. | Three lines to approve instead of one. It tells the member about a gap the Trust has not closed, and a member whose detail WAS wrong who asks for help gets nothing staff can do. A photo mismatch that came from the Trust's record rather than the member's ID still reads "show an ID", which cannot finish it. The Trust's rulebook gives members a right to have their data corrected; counsel has ⛔ been asked whether telling a member it cannot be changed fits that. |
-| **(iii)** | **A line per reason, as (ii)**, but the details line ⛔ mentions that a wrong detail cannot be changed. | The member is told less. | For a member whose detail was wrong, the same as (ii) — they ask, and staff have nothing to offer — and they are ⛔ told why; the same open question on the rulebook's correction right. |
+| **(ii)** | **A line per reason** (our suggestion): the photo and no-ID reasons keep the line in (i); "could not reach you" drops *"Staff may phone you"*; "the details did not match" asks for an ID whose details match what the member gave — which finishes it when the wrong ID was shown — and asks a member whose detail was wrong to say so through the help request, where the Pariwar Admin can record the request (the correction process you approved on 14 August, `-109`). | Each member reads what can actually happen for their reason, and a member with a wrong detail has a way to ask for it to be corrected. | Three lines to approve instead of one. A member whose detail WAS wrong who asks has the request recorded, but ⛔ one can change the detail yet — nothing changes for them until a way to correct it is built, and the message does ⛔ say so (they learn it from staff). A photo mismatch that came from the Trust's record rather than the member's ID still reads "show an ID", which cannot finish it. The data-protection law says the Trust *"shall"* correct inaccurate personal data when the person asks (DPDP Act s.12(2)), and the Trust's rulebook lists a correction right; counsel has ⛔ been asked whether, and from when, that binds the Trust here — if it does, a way to correct must be built, whatever the message says. |
+| **(iii)** | **A line per reason, as (ii)**, but the details line ⛔ mentions a wrong detail. | The member is told less. | A member whose detail was wrong is ⛔ invited to say so, so fewer will ask and fewer requests are recorded; one who asks anyway gets the same as (ii). The same open question on the law's and the rulebook's correction right. |
 
-**Our reading:** **(ii)** — **because** a message that promises a fix nothing provides is worse than one that names the gap; the gap
-itself is recorded as owed work (see "What is at stake"). **Built until you rule: (ii).**
+**Our reading:** **(ii)** — **because** it neither promises a fix nothing provides nor tells the member the Trust will not correct a
+detail (which the law says the Trust shall do when asked); a member who reports a wrong detail has the request recorded, so it is on
+file when a way to correct it exists. The gap itself is recorded as owed work (`3.13a-G1`; see "What is at stake"). **Built until you
+rule: (ii).**
 
 # The words — approve as written, or change them
 
@@ -106,13 +113,14 @@ Trust's staff will phone you to arrange it."* too.
 | Reason — could not be reached | Reason: we could not reach you. | कारण: हम आपसे संपर्क नहीं कर सके। |
 | How — photo, or no ID shown | To finish this, show an original government photo ID (for example your Aadhaar card, PAN card or voter ID card) to the Trust's staff, in person or on a video call. Staff may phone you to arrange it, or you can ask for help here. | इसे पूरा करने के लिए, अपना कोई मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर दिखाएँ। कर्मचारी समय तय करने के लिए आपको फ़ोन कर सकते हैं, या आप यहाँ मदद माँग सकते हैं। |
 | How — could not be reached | To finish this, show an original government photo ID (for example your Aadhaar card, PAN card or voter ID card) to the Trust's staff, in person or on a video call. You can ask for help here to arrange it. | इसे पूरा करने के लिए, अपना कोई मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर दिखाएँ। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। |
-| How — the details did not match | To finish this, show the Trust's staff an original government photo ID whose details match the ones you gave when you joined (for example your Aadhaar card, PAN card or voter ID card), in person or on a video call. You can ask for help here to arrange it. If a detail you gave was wrong, it cannot be changed at present. | इसे पूरा करने के लिए, ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर अपना कोई ऐसा मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) दिखाएँ, जिसका विवरण जुड़ते समय दिए गए आपके विवरण से मेल खाता हो। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। अगर आपका दिया कोई विवरण गलत था, तो उसे इस समय बदला नहीं जा सकता। |
+| How — the details did not match | To finish this, show the Trust's staff an original government photo ID whose details match the ones you gave when you joined (for example your Aadhaar card, PAN card or voter ID card), in person or on a video call. You can ask for help here to arrange it. If a detail you gave was wrong, ask for help here too. | इसे पूरा करने के लिए, ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर अपना कोई ऐसा मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) दिखाएँ, जिसका विवरण जुड़ते समय दिए गए आपके विवरण से मेल खाता हो। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें। |
 | The button | Ask for help | मदद माँगें |
 
 Every line is checked against what is built: the photo IDs are examples from the six kinds you were shown on 21 November — all original
 government photo IDs, shown in person or on a video call, as you ruled on 25 November; "staff may phone you" is the number you let staff see for this purpose; "ask for help here" is the
-app's existing help request. ⛔ line says "submit again" (a member cannot), ⛔ line names a time limit (there is none), and ⛔ line
-mentions cover or the joining lock-in (that is a later piece of work, and its own note).
+app's existing help request; a wrong detail reported there can be recorded by the Pariwar Admin (the correction process you approved on
+14 August) but ⛔ changed, so the line promises neither a change nor a time. ⛔ line says "submit again" (a member cannot), ⛔ line names a
+time limit (there is none), and ⛔ line mentions cover or the joining lock-in (that is a later piece of work, and its own note).
 
 # Confirm — does ⛔ hold the build (object if you want it otherwise)
 
@@ -169,8 +177,8 @@ counsel's answer is "it must be given", that overrides A and we come back to you
   phone — and, as told on 25 November, the identity check and the phone number go live only together with this message. Q3 must be
   settled before the data download goes live.
 - **If nothing is decided:** the message is built on Q1 A and Q2 (ii) but not put live; nor is the identity check itself. A
-  member whose typed-in detail is wrong has ⛔ way to be confirmed whatever you decide here — that gap is recorded as owed work with ⛔
-  piece of work assigned to it yet. Q3: the note stays out of the download (A), as built.
+  member whose typed-in detail is wrong has ⛔ way to be confirmed whatever you decide here — that gap is recorded as owed work
+  (`3.13a-G1`, 26 November) with ⛔ piece of work assigned to it yet. Q3: the note stays out of the download (A), as built.
 
 ---
 
@@ -184,14 +192,18 @@ counsel's answer is "it must be given", that overrides A and we come back to you
 - **Corrected in this note:** the story's first draft had one "how" line for all four reasons and called leaving out a phone
   notification "your words"; both were corrected when the story was checked (Q2; Confirm 2). A first rewrite of the details line said
   a wrong detail *"cannot be corrected in the app yet"* — "yet" hinted at a fix nothing builds, and was replaced in both languages (the
-  first Hindi used अभी, which reads as "not yet"; it is now इस समय, "at this time"). The wrongly-reported-
+  first Hindi used अभी, which reads as "not yet"; it then used इस समय, "at this time"). On 26 November that sentence — *"If a detail
+  you gave was wrong, it cannot be changed at present."* — was replaced in both languages by *"If a detail you gave was wrong, ask for
+  help here too."*: next to the law's duty to correct on request (s.12(2)) it read as the Trust refusing a correction, and it gave the
+  member no way to ask. The wrongly-reported-
   death case and the private-note reading were first written as information and are now confirms, because each narrows what a member
   is told. The first draft also said all the staff you named can see the number (the field workers and Block Admins cannot yet). Q3 was
   first framed as one question; it is two — what the Trust chooses to give (yours) and what the law requires (counsel's) — and is split.
 - **Still uncertain:** whether staff will in practice phone members (nothing schedules it); whether a helpline operator's hand-off to a
   District Admin or the Pariwar Admin works (it is not enforced); how many members typed a detail wrongly; the Hindi is the session's
-  draft until BigDev has read it (status above); counsel has ⛔ been asked whether a member has a right to have a wrong detail
-  corrected (the rulebook lists a correction right — counsel's to read); a Pariwar's own settings can remove the "KYC or verification
+  draft until BigDev has read it (status above); counsel has ⛔ been asked whether, and from when, a member has a right to have a wrong
+  detail corrected (the Act's s.12(2) says the Trust *"shall"* correct on request, and the rulebook lists a correction right — counsel's
+  to read); a Pariwar's own settings can remove the "KYC or verification
   help" category, and then the button opens the help request with nothing chosen; what counsel will say on Q3 — the law gives a right
   to *"a summary of personal data"*; it does ⛔ say "a full copy", but we are not lawyers and do not read that as settled.
 
@@ -204,7 +216,9 @@ for the words.
 
 We suggest the message says what can actually happen: staff may phone to arrange a meeting or a video call, or the member can ask for
 help in the app (Q1 A). For most reasons the fix is to show an original photo ID. But if the member typed a detail wrongly when they
-joined, nothing built today can change it — so for that reason we suggest saying so plainly rather than promising a fix (Q2 (ii)). If
+joined, nothing built today can change it — so for that reason we suggest asking the member to tell us through the help request,
+where the request is recorded, without promising a fix (Q2 (ii)). The law says the Trust shall correct wrong data when a person asks;
+a way for staff to do that is recorded as owed work, with nothing yet assigned to it. If
 you would rather the Trust promise to phone every such member, choose Q1 C — knowing that nothing schedules those calls yet.
 
 Staff may also write a short private note when they check someone, for example "phone switched off twice". We suggest keeping that
@@ -246,6 +260,11 @@ If this section and the evidence below ever disagree, the evidence is the record
 > since, is filed — but the identity is checked first, by staff, from the death documents and the details on record, before any drive
 > opens."* — Confirm 1.
 
+> **`2026-08-14-109` row 2** (Trustee-ratified): *"a **recorded, staff-executed correction process carried on a helpdesk ticket** is
+> sufficient"*; and *"⛔ **No general admin member-profile editor is built** — that carries its own RBAC surface, its own PII
+> write-audit posture and its own correction-vs-falsification question, none of which this ruling authorises."* — the details line's
+> *"ask for help here too"*, and why ⛔ route changes the detail.
+
 ## E2 — What is NOT ratified
 
 - **The words, and what "how to arrange it" promises** — reserved by `-502` item 4's cost line (Q1, Q2, the words table).
@@ -258,8 +277,10 @@ If this section and the evidence below ever disagree, the evidence is the record
   Hindi and English, with the reason, words approved by the Panel"*.
 - **The death-report reading and the in-app-only reading** — ours (Confirm 1, 2). The rulebook's Part 7 R10(B) makes the in-app surface
   the official place for the Trust's word to members (a rulebook, ⛔ ratified; consistent with Confirm 2).
-- **Correcting a wrong detail** — ⛔ ruling and ⛔ row; `-424` Q2 (b)'s addition (the old entry stays visible beside a staff change)
-  would bind it once a death is reported (*"in this particular case"*). Recorded in `deferred-work.md` as owed (Story 3.13a, Task 0.5).
+- **Correcting a wrong detail** — ⛔ ruling on who may change a typed-in detail or how (`-109` row 2, E1, ruled only that a correction
+  is RECORDED on a help ticket, and left the profile editor and the correction-vs-falsification question open) and ⛔ row; `-424` Q2 (b)'s addition (the old entry stays visible beside a staff change)
+  would bind it once a death is reported (*"in this particular case"*). Recorded in `deferred-work.md` as owed — `3.13a-G1`, OPEN and
+  unhomed (Story 3.13a, Task 0.5, 2026-11-26).
 - **Whether a member may download the private note (Q3)** — ⛔ ruling covers what the download contains for an identity check; today's
   contents are author decisions: `-504` item 5 (*"It carries the date, outcome, evidence kind, document kind and the closed reason of
   each check; ⛔ the staff note"*; the open question *"goes to the Panel / counsel at the sitting that approves row `3-13a`'s message, or
@@ -284,6 +305,10 @@ If this section and the evidence below ever disagree, the evidence is the record
 - **The help request** (Story 10.2, built): the category "KYC or verification help" (`kyc-trouble`) goes to the helpline operators of
   the member's Pariwar (`packages/domain/src/helpdesk/registry.ts`); only a District Admin or the Pariwar Admin (Super Admin by
   derivation) can record the check. A Pariwar's category settings can remove the category.
+- **A correction request is recorded, ⛔ applied** (Story 10.21, built): `recordCorrection`
+  (`packages/domain/src/member-data-rights/corrections.ts`) appends a record on a help ticket and ⛔ writes a profile field; the route
+  needs `member.data_rights`, held by the Pariwar Admin (Super Admin by derivation). The typed-in name and date of birth are written
+  only by the two KYC routes, which refuse a joined member (`3.13a-G1`).
 - **⛔ phone notifications** — the app's push code is a prototype imported nowhere (`apps/mobile/lib/push-notifications.ts`).
 - **The data download** already carries each check's date, outcome, how it was done, the kind of ID and the reason — ⛔ the note
   (`packages/domain/src/data-export/assemble.ts`, the identity-check select; the contract section is strict, so an extra key fails the
@@ -293,7 +318,10 @@ If this section and the evidence below ever disagree, the evidence is the record
   typing a document number into it (`deferred-work.md` `3.13-R1-N5`).
 - **The law (public text):** DPDP Act 2023 s.11(1)(a) gives *"a summary of personal data which is being processed by such Data
   Fiduciary and the processing activities undertaken by that Data Fiduciary with respect to such personal data"*. The Trust's privacy
-  policy (an unpublished draft, git-ignored) promises a summary in the same terms — cited, ⛔ quoted.
+  policy (an unpublished draft, git-ignored) promises a summary in the same terms — cited, ⛔ quoted. On correction, s.12(2): *"A Data
+  Fiduciary shall, upon receiving a request for correction, completion or updating from a Data Principal,— (a) correct the inaccurate
+  or misleading personal data"*; and s.8(3): data *"likely to be— (a) used to make a decision that affects the Data Principal"* must be
+  kept complete, accurate and consistent (`docs/legal/DPDP Act.pdf`; whether and from when they bind the Trust is counsel's).
 - **Story 3.13a will build** (v1.2, proposed until BigDev answers its build questions): a card on the app's home screen, shown only
   while the member's live record is "could not confirm", they are still waiting for a check and no death is reported; the reason and one
   "how" line chosen by the reason; the "Ask for help" button; the card re-checked whenever the member returns to the home screen or the
@@ -342,4 +370,14 @@ grep -n '^### Decision [0-9-]*-505:' .decision-log.md
 grep -n 'writes `actorId: null` for `member.identity_validation_recorded`' .decision-log.md
 grep -n "note: 'Note'\|noteOptional" apps/admin/src/modules/identity-checks/i18n-en.ts
 grep -n '3.13-R1-W6\|3.13-R1-N5' _bmad-output/implementation-artifacts/deferred-work.md
+
+# The correction ruling and the correction record (expect "a recorded, staff-executed correction process"; a record, ⛔ a write)
+grep -n '^### Decision [0-9-]*-109:' .decision-log.md
+grep -n 'recorded, staff-executed correction process carried on a helpdesk ticket' .decision-log.md
+grep -n 'Nothing in this module writes a member profile' packages/domain/src/member-data-rights/corrections.ts
+grep -n "MEMBER_DATA_RIGHTS_KEY\|requireDataRights" apps/api/src/modules/member-data-rights/routes.ts
+grep -n "MEMBER_DATA_RIGHTS\|    role: 'pariwar_admin'" packages/domain/src/rbac/roles.ts
+
+# The wrong-detail gap is recorded as owed (expect the 3.13a-G1 item, OPEN, unhomed)
+grep -n '3.13a-G1' _bmad-output/implementation-artifacts/deferred-work.md
 ```

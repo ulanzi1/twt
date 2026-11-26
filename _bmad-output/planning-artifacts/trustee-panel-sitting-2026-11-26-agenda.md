@@ -3,6 +3,12 @@
 > **Status: PREPARED 2026-11-26; ⛔ NOT YET SENT** (BigDev sends). One page for the sitting. Each item names its full note; the notes
 > are the record and this page is only the order of business. Prepared by BigDev (Solo Builder), written by the session from a survey of
 > every Panel note on `main`, on every branch and in every worktree, checked against `.decision-log.md`.
+> **2026-11-26 — a note goes BEFORE this sitting** (BigDev: *"put the private-note question in same routing note, this session will go
+> first"*; *"mark that this file come before"*): the Story 3.13a note
+> `trustee-panel-routing-note-2026-11-26-3-13a-member-told-identity-not-confirmed.md` (on branch
+> `story/3-13a-member-told-when-identity-not-confirmed` only, ⛔ on `main`) is sent to you FIRST. It asks the member's message words
+> (Part C's last line) AND item 9 (as its Q3). ⛔ Item 9 and that Part C line are therefore WITHDRAWN from this sitting — marked below,
+> kept as written. If the 3.13a note has been ruled by the time of this sitting, item 9 is already answered there.
 
 **How to read this:** each item gives the question in one sentence, our suggestion, and what is waiting on your answer. Nothing below
 is live for members today. Every item can be answered by option letter, the way you answered the 21 November notes.
@@ -78,6 +84,8 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Our suggestion:** A (keep it out), subject to counsel on the legal half; C (on request, read first) if counsel says it must be given.
 - **Waiting on it:** the data download going live.
 - **Note:** `trustee-panel-routing-note-2026-11-26-3-13-staff-note-in-member-download.md`.
+- ⛔ **2026-11-26 — WITHDRAWN from this sitting:** asked instead as **Q3** of the Story 3.13a note, which is sent before this sitting
+  (status block). ⛔ send the note named above; it is kept as written.
 
 **10. The code-escrow mirror's security check** *(⚠ we have no record of whether this was sent to you in August — BigDev to confirm)*
 - **Question:** four questions about the copy of the Trust's code kept with the escrow holder: should the record admit that one written
@@ -106,6 +114,8 @@ These are recorded as needing you, but no note has been written. They will come 
 - **Text templates:** whether staff may register the nearest wording the telecom registry accepts.
 - **Public drive list:** one line ("may choose whether their relative is named") no longer matches your ruling.
 - **The member's message when their identity is not confirmed:** the Hindi and English words, once that work is built.
+  ⛔ **2026-11-26 — no longer owed here:** the words ARE asked, before this sitting and before the work is built, in the Story 3.13a
+  note (status block) — with the promise (its Q1), a line per reason (its Q2) and this agenda's item 9 (its Q3).
 
 ---
 

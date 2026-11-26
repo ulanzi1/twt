@@ -3,6 +3,11 @@
 > **Status: WRITTEN 2026-11-26; ⛔ NOT YET SENT** (BigDev sends). Prepared for the Panel sitting of late November 2026 as part of
 > the agenda `trustee-panel-sitting-2026-11-26-agenda.md`. Written by the session from `deferred-work.md` item `3.13-R1-W6`.
 > **Prepared by:** BigDev (Solo Builder).
+> ⛔ **2026-11-26 — DO NOT SEND; superseded before sending** (BigDev: *"put the private-note question in same routing note, this
+> session will go first"*): this question is asked as **Q3** of the Story 3.13a note
+> `trustee-panel-routing-note-2026-11-26-3-13a-member-told-identity-not-confirmed.md` (branch
+> `story/3-13a-member-told-when-identity-not-confirmed`), its options, costs and reading kept as this note put them. This note is kept
+> as written, for the record; the agenda's item 9 is withdrawn.
 
 ---
 

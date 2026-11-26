@@ -9,6 +9,8 @@
 > their check goes to you with this note unless it has been asked already — it must be asked no later than the sitting that approves
 > this message, or before the members' data download goes live if that is sooner; ⚠ the unsent sitting agenda prepared on 26 November
 > lists this message for a later sitting (*"once that work is built"*) — BigDev reconciles the two before either is sent; (3) the words are re-checked against the build questions BigDev answers for the story.
+> **2026-11-26 — (1) DONE:** BigDev read every Hindi line (shown in the session with the English beside it) — *"Hindi is ok"*. ⛔ change.
+> This is BigDev's read of the draft, ⛔ the Panel's approval of the words. (2) and (3) are still owed.
 
 ## §0 — the gate
 

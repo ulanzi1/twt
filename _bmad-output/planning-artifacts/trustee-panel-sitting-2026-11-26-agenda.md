@@ -90,7 +90,7 @@ is live for members today. Every item can be answered by option letter, the way 
 
 ## Part B — for your information (no answer needed)
 
-**11. How many members can see a family's bank account number** *(⚠ no record of whether this was sent in September — BigDev to confirm)*
+**11. How many members can see a family's bank account number** *(written 4 September, never sent — BigDev, 2026-11-26: "the disclosure note was not sent, keep it in the pack")*
 - A count, for information, of who can see each family's account number under your September ruling.
 - **Note:** `trustee-panel-disclosure-note-2026-09-04-member-banking-access-quantification.md`.
 

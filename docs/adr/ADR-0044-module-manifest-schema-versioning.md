@@ -35,6 +35,7 @@
 
 **A module's manifest is IMMUTABLE after `module.authored`, belongs to exactly one Pariwar, and is versioned at two
 levels — a row-level `manifest_schema_version` (v1 only, DB-pinned) and an inner `version` on each JSON grammar — with
+  ⚠ **Correction (2026-11-26, before any ratification — the headline is kept as written):** `manifest_schema_version` is now `IN (1, 2)` (migration `0216`, Story 12.5b's second route), and `0216` adds two CHECKs beyond §5's "six" (`marketplace_modules_v1_is_trust_sends`, `marketplace_modules_route_columns`). The Consequences line that sharing member data with a partner "has ⛔ basis on record yet and is routed to Panel / counsel": the Panel half is RULED by `2026-11-21-484` (Trustee-ratified); counsel's half is still open (roster Row 54 (b)).
 the grammars growing additively inside `version: 1` and every breaking change taking a new version.**
 
 1. **Immutable manifest (QE11).** Every content column of `marketplace_modules` is unchanged after INSERT, enforced by a

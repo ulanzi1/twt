@@ -27,6 +27,7 @@
   Story 12.3's lead route; the sweep claims nothing while there are no rows.
 - **`-484` Q1 C allows a second route** (the member fills in the partner's own form; "the Trust sends nothing"). This ADR is about the
   FIRST route only; the second is 12.5's K-12, owed to a correct-course before 12.3.
+  ⚠ **Correction (2026-11-26):** the second route is BUILT — Story 12.5b is `done` (§1's dated line records it).
 
 ## Decision
 
@@ -249,6 +250,7 @@ story.
   S1–S10, P0–P5, the K items.
 - [ADR-0044](ADR-0044-module-manifest-schema-versioning.md) — the immutable manifest that holds the URL and the secret NAME (cross-
   referenced, ⛔ edited: an accepted ADR is not annotated in place).
+  ⚠ **Correction (2026-11-26):** ADR-0044 is `drafted`, ⛔ accepted, and it WAS annotated in place on 2026-11-22 (`-489` QE17: *"dated lines on ADR-0044 and ADR-0046"*).
 - [adr-0001](adr-0001-credential-escrow-mechanism.md) — credential escrow (the per-module secrets belong in its inventory — Row 54 (f)).
 - `docs/launch-gate-inventory/inventory-roster.md` — Row 54 `partner-lead-handoff-live`.
 - Code: `packages/domain/src/marketplace/{lead-handoff,lead-envelope,lead-member-fields}.ts`, `packages/domain/migrations/0214_…`,

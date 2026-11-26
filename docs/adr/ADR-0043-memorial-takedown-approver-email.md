@@ -50,6 +50,7 @@ query site.**
 >   `admin_credentials` reader allow-list and the projection rules (exactly one `SELECT 1 FROM admin_credentials`; aliases unique to
 >   Q3); the child joins the `decryptAdminEmail` caller allow-list; and the fence gains an exact allow-list of
 >   `readAdminEmailCiphertext` callers (the 6.25 child and this child).
+  ⚠ **Correction (2026-11-26):** Q2 now has THREE callers — ADR-0045's field-worker move-notice child is the third.
 > Everything else in ADR-0040 stands unchanged. ⛔ No other new path is admitted; a fourth is a new ADR.
 
 Load-bearing details:
@@ -66,6 +67,7 @@ Load-bearing details:
   approved was taken down"* / *"… has been taken down by the helpline at the nominee's request. You do not need to do anything. To see
   which, open Memorial reviews in the Trust console."*
 - **The DB role**: as ADR-0040 (F17) — the selector on the service login, the re-check and Q2 under `SET LOCAL ROLE twt_app`.
+  ⚠ **Correction (2026-11-26, before this ADR is put to the Panel — the line above is kept as written).** The code does ⛔ run `SET LOCAL ROLE twt_app`: the child runs on the BYPASSRLS service pool and `withPariwarScope` sets only `app.pariwar_id` (`apps/jobs/src/scheduler/memorial-takedown-approver-emails.ts`; `packages/domain/src/db.ts`), exactly as ADR-0045 records for its own child and as the 6.25 child does against ADR-0040's F17. The real posture is roster Row 26 (`jobs-db-role`, open). This ADR is put for ratification with that posture, ⛔ with the sentence above.
 
 ## Alternatives considered
 

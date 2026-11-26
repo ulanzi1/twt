@@ -1,6 +1,9 @@
 # Trustee Panel routing note — the member's message when staff could not confirm their identity: what it promises, what it says for each reason, and whether the member may download staff's private note
 
-> **Status: WRITTEN 2026-11-26, ⛔ SENT.** Written from Story 3.13a (Task 0.3, at BigDev's ask, before the story's build questions
+> **Status: SENT and RULED 2026-11-26 — Decision `2026-11-26-508` (Trustee-ratified, DR + KB; relayed by BigDev).** Everything below
+> the ruling block is kept as the questions were put. ⚠ Not recorded: the channel, the send time, and whether the text sent is
+> identical to this file as committed at `d0f4a8b2`. The original status lines follow.
+> **Status (as written): WRITTEN 2026-11-26, ⛔ SENT.** Written from Story 3.13a (Task 0.3, at BigDev's ask, before the story's build questions
 > were answered), which builds the app message you ruled on 25 November (Q2 C). ⛔ Member uses the system yet. ⛔ Nothing waits on this
 > note to be built or merged; the message — and with it the identity check and the phone number (as told on 25 November) — does ⛔ go
 > live until you have ruled.
@@ -46,11 +49,24 @@ promise to do about it, and what do we say for each reason?"* — questions abou
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-26 — Decision `2026-11-26-508` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> As relayed by BigDev: *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*.
+>
+> - **Q1 — A:** both ways — *"Staff may phone you to arrange it, or you can ask for help here."* — and the "Ask for help" button with
+>   "KYC or verification help" already chosen (our suggestion).
+> - **Q2 — (ii):** a "how" line per reason; the details line asks a member whose detail was wrong to say so through the help request
+>   (our suggestion).
+> - **The words:** chosen with ⛔ change, read in the decision as approved as written (the relay does ⛔ say "words approved" in so
+>   many words — BigDev may object).
+> - **Q3 — A:** the private note stays out of the member's data download (our suggestion). ⚠ Counsel's half is ⛔ ruled and stays open:
+>   if counsel says the note must be given, that overrides A and B / C come back to the Panel.
+> - **Confirms 1–3 — all confirmed:** the message stops once a claim is filed for the death; the app only; the reason from the list,
+>   ⛔ the private note.
+>
+> ⛔ NOT covered (see the decision): who may correct a wrong typed-in detail, or how (`3.13a-G1` — the ruling accepts the gap as a
+> stated cost, ⛔ a rule that it is never fixed); counsel's answer on Q3 and on the correction right. Everything below is **unedited** —
+> the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev of story 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **The finance officer's page carries a few control labels ⛔ in DL11's approved list.** The submit and close buttons (*"Record the bank
+  date"*, *"Close"*), the row's *"District"* and *"Bank date recorded … by"* lines, and the loading / load-error / generic-refusal lines
+  (`apps/admin/src/modules/fee-bank-dates/i18n-en.ts` — the lines ⛔ marked DL11). Written from the approved phrases (the 6.39 control's
+  posture). Owner: BigDev. **Trigger:** BigDev reads them (approve, or give words) — before the real-browser pass (roster Row 58 (d)).
+- **AC5's list of allowed edits to 6.39's specs missed one case.** Three assertions in `apps/admin/tests/membership-check.test.tsx` pinned
+  today's console note under a blocking RECORDED date — the case `2026-11-27-510` DL11 AMENDED (`-474` item 3). They now pin the amended
+  note, the same exact-text check (⛔ loosened). Recorded, ⛔ a new rule. Owner: BigDev. **Trigger:** the story's code review.
+- **The writer's parameter-free DB error (`FeeBankDateWriteError`, TR5) has ⛔ live leg that reaches it** — every CHECK it could hit is
+  refused first by the writer's own shape step, and the one-live 23505 is not constructible (the claim-row lock). Its predicate is plain;
+  the "⛔ log line carries the reference" leg (AC4) runs on a captured stream with a positive control. Owner: BigDev. **Trigger:** a
+  later change makes an insert error reachable.
+- **The real-browser pass of the page and the console's new lines is UN-ATTESTED** — the agent's Chrome was ⛔ connected (2026-11-27).
+  Tracked as roster Row 58 (d). **Trigger:** a session with a connected browser.
+- **The step-up's production cost stands (DL9):** the record cannot be made in production until deferral R4 (*"ADMIN step-up
+  OTP-over-SMS"*) is discharged — roster Row 58 (e). ⛔ New item; named here so the dev record points at it.
+
 ## Deferred from: Story 6.39a Task 0.5 — four edges open with the Panel (2026-11-27)
 
 All four are in ONE routing note, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`:

@@ -66,7 +66,7 @@ questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel
 
 # Story 6.39a: Staff May Use the Bank's Date for a Joining Fee Recorded After the Death — When the Trust's Own Bank Statement Shows It Arrived Before
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.39 compares the date of death on the accepted certificate with the date the joining
 > fee was **recorded** — the moment the member (or, after the death, the family) typed the payment's reference into the app — and,
@@ -766,13 +766,13 @@ or one user holding both role grants), a bank date that person records leaves th
   - [x] 4.3 The 6.39a fence `it` block + positive control (AC10).
   - [x] 4.4 Tests: AC5 (incl. the PQ3 test, the earlier-date leg, the direct-writer re-assert leg and the one-person wait), AC6 (the PQ1
         test), AC7; then the WHOLE 6.39 membership-check and approval-path suites (TR1).
-- [ ] **Task 5 — The staff surfaces (AC12)** — client + hooks for the page (copy `certificate-reminders`' list + 6.39's
+- [x] **Task 5 — The staff surfaces (AC12)** — client + hooks for the page (copy `certificate-reminders`' list + 6.39's
       `usePostMembershipCheck` invalidations: a recorded bank date invalidates the console's preview and packet queries); the page, its
       route component and its nav link (`RootLayout.tsx`); the two list sections; the form with the shared `StepUpPanel`; the control's
       new lines (the amended note in DL11's record-first order);
       DL11's words in the module's `i18n-en.ts` and `verifierConsoleEn`; component tests; the browser pass (or
       un-attested).
-- [ ] **Task 6 — Close** — 6.1 `ci:local` on a FRESH container on the story's own DB (AC13); 6.2 the roster row's (a) status line, Row 46's
+- [x] **Task 6 — Close** — 6.1 `ci:local` on a FRESH container on the story's own DB (AC13); 6.2 the roster row's (a) status line, Row 46's
       dated line; 6.3 `deferred-work.md` dispositions (the corrected-UTR item; anything new); 6.4 Completion Notes, File List, Change Log;
       Status → review.
 
@@ -900,6 +900,8 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026-11-27.
+
 ### Debug Log References
 
 - **Task 0.2 answers (2026-11-27, BigDev, in session, through three question dialogs — each answer the option marked recommended):**
@@ -908,6 +910,18 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
   appeal); DL11 *"Amend the note"* (the record-first wording, amending `-474` item 3); DL3 *"Trim, ignore letter case"*; DL11's words
   *"Approve as written"* (the finance page, the console's four new lines and the gate line, as listed in DL11 / DL7); DL1, DL2, DL4,
   DL7, DL10, DL12, DL13, DL14 *"Accept all as written"*. ⛔ Panel question was asked or answered (PQ1–PQ4 stay with the note).
+- **Dev, 2026-11-27 (the build):** the story's own container `twt-6-39a-pg` (postgres 16.14, `127.0.0.1:5461`, DB `twt_dev`), fresh,
+  migrated through `0219`. ⚠ An incident, fixed: a first draft of the translator spec's helper ran `ALTER TABLE claim_membership_checks
+  DISABLE TRIGGER …` on the pool while its own scope transaction held a lock on the table — a self-wait; the four tests hung and the
+  `ENABLE` never ran, so the guard was OFF on that container until re-enabled by hand (all four triggers then `O`). The helper was
+  rewritten as a plain owner INSERT (⛔ DDL on a shared table — [[project_test_only_ddl_use_pg_temp_clone]]) and the container recreated
+  fresh before `ci:local`. ⛔ Shared DB was touched.
+- **`ci:local` (2026-11-27, fresh container, `DATABASE_URL` = the story's port):** 40 of 41 jobs green, `integration-tests` included;
+  `test (unit)` red on ONE test — `apps/admin/tests/ground-inspection-discrepancy.test.tsx` (Story 6.27d) timed out at 5076 ms under
+  the run's load. The story touches ⛔ file of it; it passed 3 / 3 alone and in the whole admin suite (116 files / 2517 tests) right
+  after — the contention class ([[project_ci_local_concurrency_oversubscription]]). Recorded as red, ⛔ re-labelled green.
+- **Whole suites, live, on the story DB:** domain 564 files / 9040 tests; API 254 / 255 files (3491 tests) — the one red was
+  `medical-disclose.spec.ts`'s random-base64 `ckd` collision (known failure #13), 21 / 21 on re-run; admin 116 / 2517; contracts 1836.
 
 ### Completion Notes List
 
@@ -940,8 +954,113 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - 2026-11-27 — the Panel RULED the note (ledger `2026-11-27f`): `2026-11-27-511` (Trustee-ratified, DR + KB — *"Q1 B, Q2 A, Q3 A, Q4 A"*),
   committed ALONE as `50e28068`; every answer as built ⇒ ⛔ AC or Task changes. The note's ruling block filled; `deferred-work.md` PQ1–PQ4
   DISCHARGED as questions; roster Row 58 (b) dated (MET with (a)). ⛔ Code.
+- 2026-11-27 — DEV DONE (`bmad-dev-story 6.39a on worktree`; ledger `2026-11-27g`). Tasks 0.1 and 1–6, commits `5ac6d176` (Task 1),
+  `5543b013` (Tasks 2–3), `41b90fff` (Task 4), `a67b0d23` (Task 5), then the records. What was built, AC by AC:
+  - **AC1 / AC11** — migration `0219`: `claim_fee_bank_dates` (one live per claim, the guard leaving the note out, the one-way trigger,
+    RLS with an UPDATE leg, grants at birth) and `claim_membership_checks.fee_date_source` (DEFAULT `'recorded'`) + `fee_bank_date_id`
+    (the one-way `'bank'` ⇒ an id CHECK); the check table's guard REPLACED with both columns (TR2 — proved as the OWNER), a comment naming
+    row `3-17` (TR13). The erasure scrub of the note (every row — the note is required): `rtbf-anonymize.test.ts` 36 → 37 statements,
+    33 → 34 tables, 32 → 33 without claims; a live leg as `twt_app`.
+  - **AC2** — `compareFeeCalendarDateWithDeathDate`; the instant entry delegates (6.39's legs untouched).
+  - **AC3 / AC4 / AC8 / AC9** — the finance officer's act (writer, routes, step-up, list): every handler refusal with ⛔ row and its
+    `_rejected` line; ⛔ line for a 400 / step-up refusal; PQ4 and PQ2 each named by one test; the typed reference in ⛔ audit, body or log
+    line (a CAPTURED log stream with a positive control — the request URL); the source pin that the writer's code mentions the typed
+    reference exactly twice (the input and the ONE compare); the key `claim.record_fee_bank_date` (catalog v67 / 99), N7 pinned from the
+    bundles; positive legs for a finance officer and a Super Admin; 403 for four roles; the human-actor gate at 21.
+  - **AC5 / AC6 / AC7 / AC10** — the gate's `bank_date_recorded` (still THREE counted reads — the live record rides the check's
+    statement, `VERIFIER_CONSOLE_MAX_READS` stays 36); the check uses the earlier of the two dates; `bank_date_changed` (handler and,
+    by a direct writer call, the writer) and `same_person` (a Super Admin; one user with both grants; ids compared normalised); PQ3 and
+    PQ1 each named by one test; the one-person wait asserted; the four translators; the freeze-commit skip; the family's line stays
+    `false`; the 6.39a fence block with planted controls; runtime imports from three entry points clean.
+  - **AC12** — the page, its route, nav link, the console's new lines and words (`fee-bank-dates.test.tsx`, 15). ⚠ The real-browser
+    pass is RECORDED UN-ATTESTED: the agent's Chrome was ⛔ connected (`list_connected_browsers` empty) — roster Row 58 (d) stays open.
+  - **AC13** — 6.39's specs edited by AC5's kinds (i)–(v), and ONE further edit ⛔ in that list (stated, ⛔ hidden): three assertions in
+    `apps/admin/tests/membership-check.test.tsx` pinned TODAY's console note under a blocking RECORDED date — the case `-510` DL11 amended —
+    and now pin the amended note, the same exact-text check. `ci:local` 40 / 41 (above — the red is a contention timeout in a 6.27d file,
+    green alone).
+  - **Not built / not claimed:** TR10 — "matches in practice" is ⛔ proven (the first real use attests it). DL5 — once a claim is
+    `state_trustee_approved` a wrong bank date can ⛔ longer be corrected here (asserted; roster Row 58 note 2). The corrected-UTR item
+    stays "Not addressed by 6.39a" (its dated note of Task 0.5 stands). A handful of the page's control labels are ⛔ in DL11's approved
+    list — listed in `deferred-work.md` for BigDev. Nothing is pushed.
 
 ### File List
+
+- `_bmad-output/implementation-artifacts/6-39a-bank-date-for-a-fee-recorded-after-the-death.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/claim-verification/MembershipCheckControl.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/fee-bank-dates/FeeBankDatesPage.tsx` (new)
+- `apps/admin/src/modules/fee-bank-dates/errors.ts` (new)
+- `apps/admin/src/modules/fee-bank-dates/i18n-en.ts` (new)
+- `apps/admin/src/modules/fee-bank-dates/index.ts` (new)
+- `apps/admin/src/router.tsx`
+- `apps/admin/src/routes/FeeBankDatesRoute.tsx` (new)
+- `apps/admin/src/routes/RootLayout.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/fee-bank-dates.test.tsx` (new)
+- `apps/admin/tests/membership-check.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/context.ts`
+- `apps/api/src/modules/claims/claims.fee-bank-date.handlers.ts` (new)
+- `apps/api/src/modules/claims/claims.fee-bank-date.routes.ts` (new)
+- `apps/api/src/modules/claims/claims.membership-check.handlers.ts`
+- `apps/api/src/modules/claims/fee-bank-date-crypto.ts` (new)
+- `apps/api/src/modules/claims/index.ts`
+- `apps/api/src/modules/claims/membership-check-required-message.ts`
+- `apps/api/tests/integration/claims/_fee-bank-date-world.ts` (new)
+- `apps/api/tests/integration/claims/fee-bank-date-check.spec.ts` (new)
+- `apps/api/tests/integration/claims/fee-bank-date.spec.ts` (new)
+- `apps/api/tests/integration/claims/membership-check-bank-date-routes.spec.ts` (new)
+- `apps/api/tests/integration/claims/membership-check.spec.ts`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `packages/contracts/src/claims/fee-bank-date.ts` (new)
+- `packages/contracts/src/claims/index.ts`
+- `packages/contracts/src/claims/membership-check.ts`
+- `packages/contracts/tests/claims-fee-bank-date.test.ts` (new)
+- `packages/contracts/tests/claims-membership-check.test.ts`
+- `packages/contracts/tests/claims-verifier-console.test.ts`
+- `packages/domain/migrations/0219_claim-fee-bank-dates.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/events.ts`
+- `packages/domain/src/claim/fee-bank-date-persist.ts` (new)
+- `packages/domain/src/claim/fee-bank-date-read.ts` (new)
+- `packages/domain/src/claim/fee-death-date.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/membership-check-approval.ts`
+- `packages/domain/src/claim/membership-check-persist.ts`
+- `packages/domain/src/claim/membership-check-read.ts`
+- `packages/domain/src/claim/state.ts`
+- `packages/domain/src/encryption/field-classes.ts`
+- `packages/domain/src/encryption/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/policies/claim-fee-bank-date-rls.ts` (new)
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/claim_fee_bank_dates.ts` (new)
+- `packages/domain/src/schema/claim_membership_checks.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/tests/claim/dpdpa-consent-events.test.ts`
+- `packages/domain/tests/claim/fee-bank-date-choice.test.ts` (new)
+- `packages/domain/tests/claim/fee-death-date.test.ts`
+- `packages/domain/tests/claim/membership-check-bank-date-gate.test.ts` (new)
+- `packages/domain/tests/claim/nominee-name-check-events.test.ts`
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- `packages/domain/tests/integration/claim/fee-bank-date-check.spec.ts` (new)
+- `packages/domain/tests/integration/claim/fee-bank-date-rtbf.spec.ts` (new)
+- `packages/domain/tests/integration/claim/membership-check-approval.spec.ts`
+- `packages/domain/tests/integration/claim/membership-check-concurrency.spec.ts`
+- `packages/domain/tests/integration/rls/claim-fee-bank-date-policy-regression.spec.ts` (new)
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/events/src/registry.ts`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
 ## Change Log
 
@@ -956,3 +1075,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | 2026-11-27 | v1.6 | Task 0.4 done: decision `2026-11-27-510` (author-commit, BigDev) committed ALONE as `22770eb0`; DL11 gains the words approved with it (the form's five prompts; the not-found, no-joining-payment and no-display-name refusals; the 400 and 401 lines); Task 0.2's owed-words note marked approved; Task 0.4 ticked. |
 | 2026-11-27 | v1.7 | Task 0.5 done: roster Row 58 `fee-bank-date-live` (legs (a)–(e), all open) and a dated line on Row 46; `deferred-work.md` — PQ1–PQ4 open with their triggers, the corrected-UTR item's dated *"Not addressed by 6.39a"* note, a dated line under 6.39's PQ1 (b); Status `ready-for-dev → in-progress`; Task 0 complete. |
 | 2026-11-27 | v1.8 | The Panel ruled the note — `2026-11-27-511` (Trustee-ratified, DR + KB: *"Q1 B, Q2 A, Q3 A, Q4 A"*; the 27 November version, `f01b7c24`), every answer the built side: the Panel-questions heading and PQ1–PQ4 marked RULED (the questions kept as put); the Policy-meaning note gains the sentence's appeal clause as recorded in `-511`; ⛔ AC, Task or DL change. |
+| 2026-11-27 | v1.9 | Dev done (`bmad-dev-story 6.39a on worktree`; ledger `2026-11-27g`): Tasks 0.1 and 1–6 ticked; Agent Model, Debug Log (the container, the trigger incident, `ci:local` 40 / 41 with the one contention red), Completion Notes, File List; Status `in-progress → review`. The real-browser pass recorded un-attested; one edit to 6.39's specs beyond AC5's kinds stated, ⛔ hidden. |

@@ -961,6 +961,9 @@ observes these.
   - **2026-11-27 — the PQ1 (b) half's build DECIDED**, [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510)
     (author-commit, Story 6.39a DL1–DL14); its go-live is tracked on **Row 58** (`fee-bank-date-live`). ⛔ Built yet — (b)'s "reflected in
     code" half for PQ1 (b) stays OPEN until row `6-39a-…` lands (Row 58 (a)). ⛔ Leg moves.
+  - **2026-11-27 — the PQ1 (b) half BUILT on the story branch, ⛔ landed** (`story/6-39a-…`, `5ac6d176` … `a67b0d23`): a fee paid in life but
+    recorded after the death can be helped by the finance officer's bank date (the earlier of the two dates, by the one rule). (b) stays
+    OPEN until row `6-39a-…` is on `main` (Row 58 (a)). ⛔ Leg moves.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 
@@ -1317,3 +1320,13 @@ observes these.
     relayed by BigDev: *"by DR and KB / Q1 B, Q2 A, Q3 A, Q4 A"*) — the note as committed at `f01b7c24`. Every answer is the side the
     story builds (B on Q1, A on Q2–Q4). (b) is ⛔ MET yet: its "reflected in code" half waits on row `6-39a-…` landing — (b) is MET with
     (a). (a), (c), (d), (e) unchanged.
+  - **2026-11-27 — BUILT on the story branch, ⛔ landed** (`bmad-dev-story 6.39a`; commits `5ac6d176` … `a67b0d23` on
+    `story/6-39a-…`, off `6536b8bb`; row `6-39a-…` → `review`). **(a)** ⏳ still OPEN — ⛔ on `main`. **(b)** ⏳ still OPEN — each ruled answer
+    is in code and named by ONE test (Q1 B — the domain spec `fee-bank-date-check.spec.ts`, "PQ1"; Q2 A — `fee-bank-date.spec.ts`, "PQ2";
+    Q3 A — `fee-bank-date-check.spec.ts` (API), "PQ3"; Q4 A — `fee-bank-date.spec.ts`, "PQ4"), MET only with (a). **(c)** unchanged — the
+    one-person wait is ASSERTED (the API spec's TR14 leg: a user with both grants records the bank date, their own re-check is refused
+    `same_person`, the claim answers `bank_date_recorded` and the fee denial is refused). **(d)** ⏳ RECORDED UN-ATTESTED, ⛔ run — the
+    agent's Chrome was ⛔ connected (`list_connected_browsers` empty, 2026-11-27); the page and the console's new lines are covered by
+    component tests only (`apps/admin/tests/fee-bank-dates.test.tsx`, 15) — ⛔ marked MET: a real pass, run later, records itself here.
+    **(e)** unchanged — the step-up is built (DL9) and its delivery is still the admin stub. ⚠ Note (2) as built: a correction is refused
+    `window_closed` once the claim is `state_trustee_approved` (the domain spec's PQ1 leg asserts it).

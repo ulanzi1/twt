@@ -1,4 +1,4 @@
-# Trustee Panel routing note — the member's message when staff could not confirm their identity: what it promises, and what it says for each reason
+# Trustee Panel routing note — the member's message when staff could not confirm their identity: what it promises, what it says for each reason, and whether the member may download staff's private note
 
 > **Status: WRITTEN 2026-11-26, ⛔ SENT.** Written from Story 3.13a (Task 0.3, at BigDev's ask, before the story's build questions
 > were answered), which builds the app message you ruled on 25 November (Q2 C). ⛔ Member uses the system yet. ⛔ Nothing waits on this
@@ -11,12 +11,19 @@
 > lists this message for a later sitting (*"once that work is built"*) — BigDev reconciles the two before either is sent; (3) the words are re-checked against the build questions BigDev answers for the story.
 > **2026-11-26 — (1) DONE:** BigDev read every Hindi line (shown in the session with the English beside it) — *"Hindi is ok"*. ⛔ change.
 > This is BigDev's read of the draft, ⛔ the Panel's approval of the words. (2) and (3) are still owed.
+> **2026-11-26 — (2) DONE, by BigDev's word:** *"put the private-note question in same routing note, this session will go first."* —
+> the question is now **Q3** of this note, taken from the separate note prepared for the late-November sitting (its options, costs and
+> reading as that note put them). This note goes to you FIRST; the sitting agenda's own copy of the question, and its line placing this
+> message at a later sitting, are BigDev's to withdraw or mark (that agenda lives with another session and is ⛔ edited here). (3) is
+> still owed.
 
 ## §0 — the gate
 
 **It is the Panel's:** what the Trust PROMISES a member it will do (Q1 — a phone call, a help request, or both), and what the Trust
 TELLS a member about each reason staff recorded (Q2), in words you reserved for yourselves on 25 November (*"New words for members, in
-Hindi and English, which you would approve"*).
+Hindi and English, which you would approve"*); and what the Trust DISCLOSES to a member about themselves — whether the private note
+staff write about a check is part of the copy of their data a member can download (Q3). Q3's legal half — what the data-protection law
+requires — is counsel's, ⛔ yours, and is split out.
 **⛔ Asked — already ruled:** THAT the member is told, and told the reason (your ruling of 25 November). Three narrower readings —
 the message stops once a death is reported, it is in the app only, and "the reason" is the one picked from the list (⛔ the private
 note) — are put to you as non-blocking confirms.
@@ -37,10 +44,13 @@ promise to do about it, and what do we say for each reason?"* — questions abou
 # The questions
 
 **In one sentence:** when staff could not confirm a member's identity, the app will tell the member so and why — what should it
-promise about arranging the check, and what should it say for each of the four reasons?
+promise about arranging the check, what should it say for each of the four reasons, and should the member's data download include the
+private note staff wrote about the check?
 
 **Why it cannot be decided without you:** you ruled that the member is told and told the reason, and kept the words for yourselves.
 What the message promises is a promise the Trust must keep, and one of the four reasons is one that showing an ID cannot always fix.
+The private note is about what the Trust discloses to a person about themselves; on 25 November we told you it *"stays with staff"*,
+and the download is the one place where that could stop being true.
 
 ## The one fact that decides it
 
@@ -113,7 +123,8 @@ mentions cover or the joining lock-in (that is a later piece of work, and its ow
    notification is left out because the app cannot send one yet — that is our reading, ⛔ your words; adding one later would be its own
    piece of work. The cost: a member who never opens the app is not told.
 3. **"The reason" is the one staff pick from the list,** ⛔ the private note staff write — our reading of "the reason staff
-   recorded", told to you on 25 November. Object if you want the note shown to the member.
+   recorded", told to you on 25 November. Object if you want the note shown to the member on this message (whether it is in
+   their data download is Q3).
 
 # Shown for information — ⛔ asked (object if you disagree)
 
@@ -121,39 +132,68 @@ mentions cover or the joining lock-in (that is a later piece of work, and its ow
    too (staff can check them, as told on 21 November). A member who was never checked is ⛔ told anything new.
 2. **On this message the member sees the reason only** — ⛔ the date, ⛔ who checked, ⛔ which ID was shown (the private note is
    Confirm 3). Their data download, once it is live, already shows the date of each check and how and with which kind of ID it was done
-   (⛔ the private note — whether a member may download it is the separate question asked at this sitting or before).
+   (⛔ the private note — whether a member may download it is Q3 below).
 
-**Read with:** the separate note on whether a member may download the private note staff wrote about their check. It must be asked no
-later than the sitting that approves these words.
+# Q3 — may a member download the private note staff wrote about their identity check?
+
+**In one sentence:** when a member downloads a copy of the data the Trust holds about them, should it include the short private note
+a staff member wrote while checking their identity?
+
+**The one fact that decides it:** the note is written only for staff, and the staff who write it are ⛔ told the member may read it.
+The member is already told the outcome and the reason from the list (your 25 November ruling). The note is the staff member's own words
+about the call or the meeting, for example *"Phone switched off twice; will try again Friday."* Once a note has been downloaded it
+cannot be taken back.
+
+| | Option | What changes for a person | Cost |
+|---|---|---|---|
+| **A** | **Keep the note out of the download** (what is built today). The download lists each check: date, outcome, how the ID was shown, which ID, and the reason (our suggestion, subject to counsel). | The member sees that a check happened, how it went and why, but not the staff member's own words. | If counsel says the law requires the note, it must be added later (a small change, so this is easy to reverse). A member who wants the note has no way to get it. |
+| **B** | **Put the note in the download.** | The member can read what staff wrote about them. | It goes back on what you were told on 25 November. Staff are not told the member may read it, so notes written so far were written as private. A careless or unkind line, or a document number typed in against instructions, would reach the member and could not be recalled. Staff must be told from now on, and notes will become shorter and more guarded. |
+| **C** | **Keep it out, but say that a note exists, and give it on request.** The download says that staff also wrote a private note about this check, which the member may ask for. A request goes to a trustee or the grievance officer, who decides and replies. | The member knows the note exists and can ask for it. Someone reads it before it is given. | A request path and new words (Hindi and English, for your approval) must be built. Someone must handle each request. It is slower for the member. |
+
+**Our reading:** **A**, provided counsel confirms that a summary without the note satisfies the member's right of access — **because**
+the member already gets everything the note would tell them that matters to them (the outcome and the reason), the note was written as
+a staff working note, and A is the only option that can be undone later without harm (B cannot). If counsel says the note must be given,
+we suggest **C** over B, so that a person reads a note before it goes out. **Built until you rule: A.**
+
+**What we are ⛔ asking you:** whether the data-protection law requires the note to be given — that is counsel's. We will put this to
+counsel: *"Does a member's right to a summary of their personal data (DPDP Act s.11(1)(a)) require the Trust to give the member the
+free-text note staff wrote about their identity check, or is a summary of the check (date, outcome, ID kind, reason) enough?"* If
+counsel's answer is "it must be given", that overrides A and we come back to you to choose between B and C.
 
 ---
 
 # What is at stake right now
 
-- **Live today:** nothing — ⛔ member uses the system.
+- **Live today:** nothing — ⛔ member uses the system, and the data download is ⛔ live.
 - **Blocked:** nothing in the building or merging of Story 3.13a. Its going live waits on your ruling and on a check of the message on a
-  phone — and, as told on 25 November, the identity check and the phone number go live only together with this message.
+  phone — and, as told on 25 November, the identity check and the phone number go live only together with this message. Q3 must be
+  settled before the data download goes live.
 - **If nothing is decided:** the message is built on Q1 A and Q2 (ii) but not put live; nor is the identity check itself. A
   member whose typed-in detail is wrong has ⛔ way to be confirmed whatever you decide here — that gap is recorded as owed work with ⛔
-  piece of work assigned to it yet.
+  piece of work assigned to it yet. Q3: the note stays out of the download (A), as built.
 
 ---
 
 # How much to trust this note
 
 - **Earlier versions of this question:** none sent. Your 25 November ruling (Q2 C) chose to tell the member the reason; this is the
-  first note on the words.
+  first note on the words. Q3 was first written as its own note for the late-November sitting (unsent); at BigDev's word it is asked
+  here instead, its options, costs and reading kept as that note put them. Until 26 November the build PUT the note in the download,
+  under our own earlier build decision; our code review caught that this contradicted what you were told on 25 November, and the note
+  was held back (BigDev's choice). That is why Q3 is a question now.
 - **Corrected in this note:** the story's first draft had one "how" line for all four reasons and called leaving out a phone
   notification "your words"; both were corrected when the story was checked (Q2; Confirm 2). A first rewrite of the details line said
   a wrong detail *"cannot be corrected in the app yet"* — "yet" hinted at a fix nothing builds, and was replaced in both languages (the
   first Hindi used अभी, which reads as "not yet"; it is now इस समय, "at this time"). The wrongly-reported-
   death case and the private-note reading were first written as information and are now confirms, because each narrows what a member
-  is told. The first draft also said all the staff you named can see the number (the field workers and Block Admins cannot yet).
+  is told. The first draft also said all the staff you named can see the number (the field workers and Block Admins cannot yet). Q3 was
+  first framed as one question; it is two — what the Trust chooses to give (yours) and what the law requires (counsel's) — and is split.
 - **Still uncertain:** whether staff will in practice phone members (nothing schedules it); whether a helpline operator's hand-off to a
   District Admin or the Pariwar Admin works (it is not enforced); how many members typed a detail wrongly; the Hindi is the session's
   draft until BigDev has read it (status above); counsel has ⛔ been asked whether a member has a right to have a wrong detail
   corrected (the rulebook lists a correction right — counsel's to read); a Pariwar's own settings can remove the "KYC or verification
-  help" category, and then the button opens the help request with nothing chosen.
+  help" category, and then the button opens the help request with nothing chosen; what counsel will say on Q3 — the law gives a right
+  to *"a summary of personal data"*; it does ⛔ say "a full copy", but we are not lawyers and do not read that as settled.
 
 ---
 
@@ -167,8 +207,14 @@ help in the app (Q1 A). For most reasons the fix is to show an original photo ID
 joined, nothing built today can change it — so for that reason we suggest saying so plainly rather than promising a fix (Q2 (ii)). If
 you would rather the Trust promise to phone every such member, choose Q1 C — knowing that nothing schedules those calls yet.
 
-Two narrower readings are put to you to confirm: the message stops once a death is reported (even a wrong report), and it is in the
-app only, with no phone notification, because the app cannot send one yet.
+Staff may also write a short private note when they check someone, for example "phone switched off twice". We suggest keeping that
+note out of the copy of their data a member can download (Q3 A): it was written as a working note between staff, the member already
+learns what matters from the reason, and keeping it out can be reversed if counsel says it must be given — giving it cannot be. If
+counsel says yes, we will come back to you with a choice between giving every note and giving notes on request after someone has read
+them.
+
+Three narrower readings are put to you to confirm: the message stops once a death is reported (even a wrong report); it is in the app
+only, with no phone notification, because the app cannot send one yet; and "the reason" is the one from the list, ⛔ the private note.
 
 If this section and the evidence below ever disagree, the evidence is the record.
 
@@ -214,11 +260,13 @@ If this section and the evidence below ever disagree, the evidence is the record
   the official place for the Trust's word to members (a rulebook, ⛔ ratified; consistent with Confirm 2).
 - **Correcting a wrong detail** — ⛔ ruling and ⛔ row; `-424` Q2 (b)'s addition (the old entry stays visible beside a staff change)
   would bind it once a death is reported (*"in this particular case"*). Recorded in `deferred-work.md` as owed (Story 3.13a, Task 0.5).
-- **Whether a member may download the private note** — `deferred-work.md` `3.13-R1-W6`; the note
+- **Whether a member may download the private note (Q3)** — ⛔ ruling covers what the download contains for an identity check; today's
+  contents are author decisions: `-504` item 5 (*"It carries the date, outcome, evidence kind, document kind and the closed reason of
+  each check; ⛔ the staff note"*; the open question *"goes to the Panel / counsel at the sitting that approves row `3-13a`'s message, or
+  before the data export goes live, whichever is first"*) and `-505` item 1 (the staff user id blanked on the two events a check writes).
+  ⛔ ruling covers whether staff are told their note may be read. `deferred-work.md` `3.13-R1-W6`. Q3 is taken from the note
   `trustee-panel-routing-note-2026-11-26-3-13-staff-note-in-member-download.md` (`4a48c24d`, on `governance/panel-sitting-2026-11-26`
-  only — ⛔ on this branch, ⛔ sent); `-504` item 5: *"goes to the Panel / counsel
-  at the sitting that approves row `3-13a`'s message, or before the data export goes live, whichever is first"* (the note named in "Read
-  with").
+  only, ⛔ sent) at BigDev's word (status block); that note is kept as written there.
 
 ## E3 — What the code actually does (and what Story 3.13a will build)
 
@@ -238,7 +286,14 @@ If this section and the evidence below ever disagree, the evidence is the record
   derivation) can record the check. A Pariwar's category settings can remove the category.
 - **⛔ phone notifications** — the app's push code is a prototype imported nowhere (`apps/mobile/lib/push-notifications.ts`).
 - **The data download** already carries each check's date, outcome, how it was done, the kind of ID and the reason — ⛔ the note
-  (`packages/domain/src/data-export/assemble.ts`).
+  (`packages/domain/src/data-export/assemble.ts`, the identity-check select; the contract section is strict, so an extra key fails the
+  export — `packages/contracts/src/data-export/data-export.ts`). The download is ⛔ live.
+- **Staff see the field labelled only "Note" / "Note (optional)"** (`apps/admin/src/modules/identity-checks/i18n-en.ts`); ⛔ line tells
+  them the member may read it. The note is encrypted, read back only on the staff detail, and scrubbed on erasure. Nothing stops staff
+  typing a document number into it (`deferred-work.md` `3.13-R1-N5`).
+- **The law (public text):** DPDP Act 2023 s.11(1)(a) gives *"a summary of personal data which is being processed by such Data
+  Fiduciary and the processing activities undertaken by that Data Fiduciary with respect to such personal data"*. The Trust's privacy
+  policy (an unpublished draft, git-ignored) promises a summary in the same terms — cited, ⛔ quoted.
 - **Story 3.13a will build** (v1.2, proposed until BigDev answers its build questions): a card on the app's home screen, shown only
   while the member's live record is "could not confirm", they are still waiting for a check and no death is reported; the reason and one
   "how" line chosen by the reason; the "Ask for help" button; the card re-checked whenever the member returns to the home screen or the
@@ -280,4 +335,11 @@ grep -rln 'push-notifications' apps/mobile --include='*.ts' --include='*.tsx' | 
 
 # The data download's identity-check fields (expect decidedAt, evidenceKind, documentKind, notConfirmedReason; no note)
 grep -n 'decidedAt\|evidenceKind\|documentKind\|notConfirmedReason\|noteCiphertext' packages/domain/src/data-export/assemble.ts
+
+# Q3 — what the Panel was told, the author decisions, the staff label, the residual
+grep -n 'which stays with' _bmad-output/planning-artifacts/trustee-panel-told-2026-11-25-3-13-identity-check-as-built.md
+grep -n '^### Decision [0-9-]*-505:' .decision-log.md
+grep -n 'writes `actorId: null` for `member.identity_validation_recorded`' .decision-log.md
+grep -n "note: 'Note'\|noteOptional" apps/admin/src/modules/identity-checks/i18n-en.ts
+grep -n '3.13-R1-W6\|3.13-R1-N5' _bmad-output/implementation-artifacts/deferred-work.md
 ```

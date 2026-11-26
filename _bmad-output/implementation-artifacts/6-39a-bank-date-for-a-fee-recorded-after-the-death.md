@@ -755,16 +755,16 @@ or one user holding both role grants), a bank date that person records leaves th
   - [x] 3.5 Handlers + routes (DL10 — permission hook, then step-up on the POST; ⛔ decrypt; the note encrypted), registration, the
         human-actor gate entry + floor, audit types in `audit-sink.ts`.
   - [x] 3.6 Tests: AC3, AC4, the AC8 positive and 403 legs, AC9's planted values.
-- [ ] **Task 4 — The check and the gate (AC5, AC6, AC7, AC10)**
-  - [ ] 4.1 The gate leaf (DL7): facts + the new reason + precedence; `MEMBERSHIP_CHECK_WAIT_REASONS` + contracts mirror + the API message +
+- [x] **Task 4 — The check and the gate (AC5, AC6, AC7, AC10)**
+  - [x] 4.1 The gate leaf (DL7): facts + the new reason + precedence; `MEMBERSHIP_CHECK_WAIT_REASONS` + contracts mirror + the API message +
         ALL THREE admin maps + the two lists in `claims-verifier-console.test.ts` (DL7); the facts read stays ONE statement (36 reads).
         Run the NW1 scan AND a runtime import ([[project_type_only_import_cycle_trap]]).
-  - [ ] 4.2 The membership check (DL6): handler reads + preview fields + `expected_fee_bank_date_id`; writer re-assert
+  - [x] 4.2 The membership check (DL6): handler reads + preview fields + `expected_fee_bank_date_id`; writer re-assert
         (`computedAgainstFeeBankDateId`) + the same-person refusal + the two columns; `bank_date_changed` and `same_person` in
         `MembershipCheckRefusedError`'s reasons, `REFUSAL_MESSAGES` (exhaustive) and the admin `refused` map; `bank_date_changed` in the
         admin hook's refetch list; AC5's kinds (i)–(v) of edit to 6.39's specs.
-  - [ ] 4.3 The 6.39a fence `it` block + positive control (AC10).
-  - [ ] 4.4 Tests: AC5 (incl. the PQ3 test, the earlier-date leg, the direct-writer re-assert leg and the one-person wait), AC6 (the PQ1
+  - [x] 4.3 The 6.39a fence `it` block + positive control (AC10).
+  - [x] 4.4 Tests: AC5 (incl. the PQ3 test, the earlier-date leg, the direct-writer re-assert leg and the one-person wait), AC6 (the PQ1
         test), AC7; then the WHOLE 6.39 membership-check and approval-path suites (TR1).
 - [ ] **Task 5 — The staff surfaces (AC12)** — client + hooks for the page (copy `certificate-reminders`' list + 6.39's
       `usePostMembershipCheck` invalidations: a recorded bank date invalidates the console's preview and packet queries); the page, its

@@ -16,10 +16,20 @@
 
 import { z } from 'zod';
 
+import { FeeBankDateReasonCode } from './fee-bank-date.js';
+
 /** The fee half's result: the joining fee's Indian calendar date against the certificate's date of death. */
 export const MEMBERSHIP_CHECK_FEE_OUTCOMES = ['before_death', 'same_day', 'after_death'] as const;
 export const MembershipCheckFeeOutcome = z.enum(MEMBERSHIP_CHECK_FEE_OUTCOMES);
 export type MembershipCheckFeeOutcome = z.output<typeof MembershipCheckFeeOutcome>;
+
+/**
+ * Story 6.39a (DL6) — WHICH fee date the check compared: the recorded date, or the finance officer's bank date (only when
+ * strictly earlier). ⚠ Row `3-17` will add a third source.
+ */
+export const MEMBERSHIP_CHECK_FEE_DATE_SOURCES = ['recorded', 'bank'] as const;
+export const MembershipCheckFeeDateSource = z.enum(MEMBERSHIP_CHECK_FEE_DATE_SOURCES);
+export type MembershipCheckFeeDateSource = z.output<typeof MembershipCheckFeeDateSource>;
 
 /** The identity half's result — `not_required` iff the identity was already checked. */
 export const MEMBERSHIP_CHECK_IDENTITY_OUTCOMES = ['not_required', 'confirmed', 'not_confirmed'] as const;
@@ -40,11 +50,18 @@ export type MembershipCheckIdentityReason = z.output<typeof MembershipCheckIdent
  * Why an approval WAITS on the membership check, in precedence order — `details.reason` of every
  * `<prefix>.membership_check_required` 409 (`verifier_decision.` / `cycle_freeze.` / `r9_voting.` / `closure.`).
  */
-export const MEMBERSHIP_CHECK_WAIT_REASONS = ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed'] as const;
+export const MEMBERSHIP_CHECK_WAIT_REASONS = [
+  'not_checked',
+  'stale',
+  // Story 6.39a (DL7) — the finance officer recorded the bank's date since the check: check again.
+  'bank_date_recorded',
+  'fee_after_death',
+  'identity_not_confirmed',
+] as const;
 export const MembershipCheckWaitReason = z.enum(MEMBERSHIP_CHECK_WAIT_REASONS);
 export type MembershipCheckWaitReason = z.output<typeof MembershipCheckWaitReason>;
 
-/** Is `value` one of the four wait reasons? (The admin's guard before it picks a reason's line.) */
+/** Is `value` one of the wait reasons? (The admin's guard before it picks a reason's line.) */
 export function isMembershipCheckWaitReason(value: unknown): value is MembershipCheckWaitReason {
   return typeof value === 'string' && (MEMBERSHIP_CHECK_WAIT_REASONS as readonly string[]).includes(value);
 }
@@ -79,6 +96,12 @@ export const MembershipCheckRequest = z
      * `membership_check.check_changed` — code review 2026-11-21).
      */
     expected_live_check_id: z.string().uuid().nullable(),
+    /**
+     * ⭐ Story 6.39a (DL6, TR7) — the bank-date record the staff member saw (the preview's `fee_bank_date.record_id`; `null` =
+     * none). REQUIRED: a check is never recorded against a bank date its writer never saw (409
+     * `membership_check.bank_date_changed`).
+     */
+    expected_fee_bank_date_id: z.string().uuid().nullable(),
     identity_outcome: MembershipCheckIdentityOutcome,
     /** `not_confirmed` only — the writer refuses it elsewhere, and refuses `not_confirmed` without it. */
     identity_reason: MembershipCheckIdentityReason.optional(),
@@ -136,8 +159,27 @@ export const MembershipCheckPreviewResponse = z
     expected_live_review_id: z.string().uuid().nullable(),
     /** The date of death on the accepted certificate, as the District Admin entered it. `null` with no accepted review. */
     date_of_death: DateShape.nullable(),
-    /** The joining fee's date, Indian calendar. `null` when the joining receipt cannot be identified. */
+    /**
+     * The joining fee's RECORDED date, Indian calendar. `null` when the joining receipt cannot be identified. ⚠ Story 6.39a
+     * keeps its meaning (⛔ renamed — contract churn): the bank's date, when used, is `fee_bank_date.bank_credit_date`.
+     */
     fee_paid_on: DateShape.nullable(),
+    /** Story 6.39a (DL6) — which date `fee_outcome` was computed from: `bank` only when the bank's date is strictly earlier. */
+    fee_date_source: MembershipCheckFeeDateSource,
+    /**
+     * Story 6.39a (DL6) — the claim's live bank-date record naming the joining payment (the one the check CONSIDERS), or
+     * `null`. Its `record_id` is the POST's `expected_fee_bank_date_id`. ⛔ The note.
+     */
+    fee_bank_date: z
+      .object({
+        record_id: z.string().uuid(),
+        bank_credit_date: DateShape,
+        reason_code: FeeBankDateReasonCode,
+        recorded_by_display: z.string(),
+        recorded_at: z.string().datetime(),
+      })
+      .strict()
+      .nullable(),
     /** `false` ⇒ the member's joining receipt cannot be identified: the check cannot be recorded (tell the Super Admin). */
     fee_receipt_found: z.boolean(),
     /** The computed comparison — `null` unless both dates are known. */

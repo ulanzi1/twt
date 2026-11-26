@@ -452,6 +452,53 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     expect(stripComments(read('packages/domain/src/claim/nominee-name-check.ts'))).toContain('assertMembershipCheckedForApproval');
   });
 
+  it('⛔⛔ Story 6.39a (TR3, TR5; AC10, AC4) — the bank date\'s WRITER, READS, HANDLER and note crypto ⛔ never decrypt; the typed statement reference reaches ⛔ query', () => {
+    // ⭐ N2: the finance officer sees ⛔ name and ⛔ date of death, so the finance path needs ⛔ Tier-1 read — it only ENCRYPTS
+    // the note. The death date stays in the membership-check handler (6.39's block above).
+    const MODULES = [
+      'packages/domain/src/claim/fee-bank-date-persist.ts',
+      'packages/domain/src/claim/fee-bank-date-read.ts',
+      'apps/api/src/modules/claims/claims.fee-bank-date.handlers.ts',
+      'apps/api/src/modules/claims/fee-bank-date-crypto.ts',
+    ];
+    const FORBIDDEN = ['decrypt', 'nameCiphertext', 'name_ciphertext', 'acceptedDateCiphertext', 'accepted_date_ciphertext', 'getMemberNominees'];
+    const reaches = (code: string): string[] => FORBIDDEN.filter((forbidden) => stripComments(code).includes(forbidden));
+    for (const f of MODULES) {
+      expect(reaches(read(f)), `${f} reached for a forbidden name`).toEqual([]);
+    }
+    // ⭐⭐ POSITIVE CONTROL — a planted specimen of each forbidden reach turns the scan red…
+    const SPECIMENS: readonly [string, string][] = [
+      ['const note = await decryptTier1(parseEnvelope(row.noteCiphertext), field, kms, kekRef);', 'decrypt'],
+      ['const { nameCiphertext } = kycRow;', 'nameCiphertext'],
+      ['sql`SELECT k.name_ciphertext FROM member_kyc_profiles k`', 'name_ciphertext'],
+      ['const ct = review.acceptedDateCiphertext;', 'acceptedDateCiphertext'],
+      ['sql`SELECT r.accepted_date_ciphertext FROM claim_death_certificate_reviews r`', 'accepted_date_ciphertext'],
+      ['const nominees = await getMemberNominees(db, memberId);', 'getMemberNominees'],
+    ];
+    expect(SPECIMENS.map(([, token]) => token).sort()).toEqual([...FORBIDDEN].sort());
+    for (const [specimen, token] of SPECIMENS) {
+      expect(reaches(specimen), `the scan FAILED TO CATCH a planted '${token}': ${specimen}`).toContain(token);
+    }
+    // …planted into the REAL writer's source, the same scan now fails for it.
+    expect(reaches(`${read(MODULES[0]!)}\nexport const planted = (ct: string) => decryptTier1(ct);\n`)).toEqual(['decrypt']);
+    // ⭐ Teeth on the OTHER side: the handler's crypto module DOES encrypt (the green above is ⛔ a vacuous file).
+    expect(stripComments(read('apps/api/src/modules/claims/fee-bank-date-crypto.ts'))).toContain('encryptTier1');
+
+    // ⭐⭐ AC4 / TR5 — the typed reference is compared in TypeScript and is ⛔ a query parameter: in the writer it appears
+    // EXACTLY twice in code — the input field's declaration and the ONE compare call. A `where(eq(… utr, input.statementReference))`
+    // or a `sql` template carrying it would add an occurrence.
+    const uses = (code: string) => stripComments(code).split('statementReference').length - 1;
+    const writer = read(MODULES[0]!);
+    expect(uses(writer)).toBe(2);
+    expect(stripComments(writer)).toContain('isSameStatementReference(input.statementReference, receipt.utr)');
+    // POSITIVE CONTROL — a planted query that carries it is caught.
+    expect(uses(`${writer}\nawait db.select().from(vyawasthaShulkReceipts).where(eq(vyawasthaShulkReceipts.utr, input.statementReference));\n`)).toBe(3);
+    // …and in the handler the wire field is read ONCE — passed to the writer — ⛔ into an audit context or a log line.
+    const handler = stripComments(read(MODULES[2]!));
+    expect(handler.split('statement_reference').length - 1).toBe(1);
+    expect(handler).toContain('statementReference: body.statement_reference');
+  });
+
   it('⛔⛔ Story 6.23a (AC10; invariant 7) — the warnings module and the late-reason writer ⛔ never decrypt', () => {
     // ⭐ The post-death warning at the gate and on the console is read from the live determination's MARKS (fact 2);
     // the only date-decrypt stays where it already was — the audited timeline read. A `decrypt` here would move a

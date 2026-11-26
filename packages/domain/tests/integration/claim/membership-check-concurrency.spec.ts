@@ -181,6 +181,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — membership check two-connection co
     feeOutcome: 'before_death',
     // Each District Admin opened the check BEFORE either recorded — each saw ⛔ live check.
     expectedLiveCheckId: null,
+    computedAgainstFeeBankDateId: null, // Story 6.39a — AC5 kind (i): the new required input
     identityOutcome,
     identityReason: identityOutcome === 'not_confirmed' ? 'document_unreadable' : null,
     noteCiphertext: identityOutcome === 'not_confirmed' ? 'enc:v1:n' : null,

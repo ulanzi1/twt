@@ -52,9 +52,10 @@ export function feeBankDateRefusalReasonOf(code: unknown): FeeBankDateRefusalRea
 
 /**
  * Which fee date the membership check compared (DL6) — the membership check's own vocabulary, mirrored here for the list.
- * ⚠ The SAME tuple as `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` in `membership-check.ts` (pinned there).
+ * ⚠ The SAME tuple as `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` in `membership-check.ts` — kept local (that file imports this one;
+ * ⛔ an import cycle) and pinned equal by `claims-fee-bank-date.test.ts`.
  */
-const FEE_DATE_SOURCES = ['recorded', 'bank'] as const;
+export const FEE_BANK_DATE_LIST_FEE_DATE_SOURCES = ['recorded', 'bank'] as const;
 
 /**
  * A payment reference as the UPI / NEFT form admits it — the SAME regex as the payment confirm
@@ -127,7 +128,7 @@ export const FeeBankDateListRow = z
     amount_inr: z.number().int(),
     /** The stored reference's last four — ⛔ the whole reference (DL3: the typed one is a real check, ⛔ a copy). */
     reference_last4: z.string(),
-    fee_date_source: z.enum(FEE_DATE_SOURCES),
+    fee_date_source: z.enum(FEE_BANK_DATE_LIST_FEE_DATE_SOURCES),
     expected_live_check_id: z.string().uuid(),
     expected_live_record_id: z.string().uuid().nullable(),
     live_record: FeeBankDateLiveRecord.nullable(),

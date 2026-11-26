@@ -21,8 +21,14 @@
 //       supersedes a check its writer never saw ⇒ `check_changed` (code review 2026-11-21); a 23505 on the
 //       one-live-row index at (6) maps to the same refusal — defence in depth only: every inserter of a check row
 //       takes a KEY SHARE lock on the claim row through the FK, so it serialises with (1) and (5b) answers first;
-//   (6) supersede the live check (`re_checked`), insert the new one, and emit `claim.membership_checked` — ONE
-//       transaction.
+//   (5c) ⭐ Story 6.39a (DL6, TR7) — the BANK DATE: the claim's live bank-date record naming the joining payment (the one
+//       the check CONSIDERS — `considerableFeeBankDate`) must still be the one the handler computed against
+//       (`computedAgainstFeeBankDateId`; `null` = none) ⇒ else `bank_date_changed`;
+//   (5d) ⭐ Story 6.39a (DL6, N7) — the SAME PERSON: the actor must ⛔ be the one who recorded that live bank date ⇒ else
+//       `same_person` (whatever roles they hold — roles alone do ⛔ separate people);
+//   (6) supersede the live check (`re_checked`), insert the new one — with `fee_date_source` and `fee_bank_date_id` from
+//       what (4) and (5c) RE-READ (the earlier of the two dates, `chooseFeeDate`), so the outcome and the record it names can
+//       ⛔ diverge — and emit `claim.membership_checked` — ONE transaction.
 //
 // ⛔ PII (N7): the note arrives ALREADY ENCRYPTED; ⛔ date reaches this file at all — only the comparison's outcome
 // code. ⛔ No ciphertext is opened here (the no-comparison fence, this story's `it` block).
@@ -32,6 +38,7 @@ import type pg from 'pg';
 
 import { bindScopedDb } from '../db.js';
 import type {
+  ClaimFeeBankDateId,
   ClaimId,
   ClaimMembershipCheckId,
   DeathCertificateReviewId,
@@ -39,6 +46,7 @@ import type {
   VyawasthaShulkReceiptId,
 } from '../ids/index.js';
 import {
+  type MembershipCheckFeeDateSource,
   type MembershipCheckFeeOutcome,
   type MembershipCheckIdentityOutcome,
   type MembershipCheckIdentityReason,
@@ -51,6 +59,8 @@ import { claims } from '../schema/claims.js';
 import { deathCertificateStatus, readDeathCertificateSnapshot } from './death-certificate-approval.js';
 import { MembershipCheckRefusedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
+import { isSameActorId } from './approver-own-visit.js';
+import { chooseFeeDate, considerableFeeBankDate, getLiveFeeBankDate } from './fee-bank-date-read.js';
 import { isIdentityCheckRequired, readDeceasedKycStanding } from './membership-check-approval.js';
 import { readJoiningFeeReceipt } from './membership-check-read.js';
 import { projectClaimState } from './project.js';
@@ -91,6 +101,11 @@ export interface RecordMembershipCheckInput {
    * the lock, so a re-check never supersedes a check its writer never saw (code review 2026-11-21, family 12 (c)).
    */
   readonly expectedLiveCheckId: string | null;
+  /**
+   * ⭐ Story 6.39a (DL6) — the live bank-date record the handler CONSIDERED (naming the joining payment), whichever date
+   * won; `null` only when ⛔ such record was considered. Re-asserted under the lock (`bank_date_changed`).
+   */
+  readonly computedAgainstFeeBankDateId: string | null;
   /** The comparison's outcome, computed by the handler (N3). ⛔ Never from the request. */
   readonly feeOutcome: MembershipCheckFeeOutcome;
   /** The staff member's judgment — or `not_required` when the identity is already checked. */
@@ -111,6 +126,9 @@ export interface RecordMembershipCheckResult {
   readonly deathCertificateReviewId: DeathCertificateReviewId;
   readonly feeReceiptId: VyawasthaShulkReceiptId;
   readonly feeOutcome: MembershipCheckFeeOutcome;
+  /** Story 6.39a (DL6) — which fee date the outcome came from, and the bank-date record considered (or `null`). */
+  readonly feeDateSource: MembershipCheckFeeDateSource;
+  readonly feeBankDateId: ClaimFeeBankDateId | null;
   readonly identityRequired: boolean;
   readonly identityOutcome: MembershipCheckIdentityOutcome;
   readonly identityReason: MembershipCheckIdentityReason | null;
@@ -245,6 +263,21 @@ export async function recordMembershipCheck(
     throw refuse('check_changed', 'the live membership check is not the one this check was opened against — open it again');
   }
 
+  // (5c) The bank date — still the record the handler computed against (DL6, TR7).
+  const considered = considerableFeeBankDate(await getLiveFeeBankDate(db, input.pariwarId, input.claimCaseId), receipt.receiptId);
+  const consideredId = considered ? (considered.recordId as string).toLowerCase() : null;
+  const computedAgainstBank =
+    input.computedAgainstFeeBankDateId === null ? null : input.computedAgainstFeeBankDateId.toLowerCase();
+  if (consideredId !== computedAgainstBank) {
+    throw refuse('bank_date_changed', 'the bank date on this claim is not the one this check was computed against — open it again');
+  }
+  // (5d) The same person (N7) — the one who typed the bank date never records the check that considers it.
+  if (considered !== null && isSameActorId(considered.decidedByActorId, input.actorId)) {
+    throw refuse('same_person', 'the actor recorded the bank date this check considers — another person records the check');
+  }
+  const { source: feeDateSource } = chooseFeeDate(receipt.paidAt, considered);
+  const feeBankDateId = considered?.recordId ?? null;
+
   // (6) Supersede the live check, insert the new one, emit the identity annotation.
   const superseded = await db
     .update(claimMembershipChecks)
@@ -272,6 +305,8 @@ export async function recordMembershipCheck(
       deathCertificateReviewId: currentReviewId,
       feeReceiptId: receipt.receiptId,
       feeOutcome: input.feeOutcome,
+      feeDateSource,
+      feeBankDateId,
       identityRequired,
       identityOutcome: input.identityOutcome,
       identityReason,
@@ -316,6 +351,8 @@ export async function recordMembershipCheck(
     deathCertificateReviewId: currentReviewId,
     feeReceiptId: receipt.receiptId,
     feeOutcome: input.feeOutcome,
+    feeDateSource,
+    feeBankDateId,
     identityRequired,
     identityOutcome: input.identityOutcome,
     identityReason,

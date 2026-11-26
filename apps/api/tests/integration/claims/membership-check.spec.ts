@@ -235,6 +235,8 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
   const body = async (w: World, over: Json = {}): Promise<Json> => ({
     expected_live_review_id: await reviewId(w),
     expected_live_check_id: await liveCheckId(w),
+    // Story 6.39a — AC5 kind (i): the bank-date record the staff member saw (⛔ one in these worlds).
+    expected_fee_bank_date_id: null,
     identity_outcome: 'confirmed',
     ...over,
   });
@@ -267,6 +269,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
         latest_posting_district: w.district,
         live_check: null,
         gate: { passed: false, reason: 'not_checked' },
+        // Story 6.39a — AC5 kind (iii): ⛔ bank-date record in these worlds.
+        fee_date_source: 'recorded',
+        fee_bank_date: null,
       });
       // ONE read audit line — ids and the outcome code; ⛔ either date.
       const reads = auditsFor('admin_claim.membership_check_read', w.claimCaseId);
@@ -421,7 +426,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     // The certificate is re-reviewed (another date ⇒ a NEW accepted review) after the staff member opened the check.
     await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: '2026-05-03' }));
     expect(await reviewId(w)).not.toBe(old);
-    const stale = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: old, expected_live_check_id: null, identity_outcome: 'confirmed' } });
+    const stale = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: old, expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' } });
     expect(stale.statusCode, stale.body).toBe(409);
     expect(errCode(j(stale))).toBe('membership_check.stale');
     expect(await checks(w)).toEqual([]);
@@ -432,7 +437,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
   it('⭐ AC4 — ⛔ accepted certificate (none, awaiting review, rejected) is 409 `membership_check.certificate_not_accepted`, ⛔ row', async () => {
     const w = await world({ certificate: 'none' });
     const { client } = await da(w);
-    const post = () => client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } });
+    const post = () => client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' } });
     // (i) no certificate at all.
     let res = await post();
     expect(res.statusCode, res.body).toBe(409);
@@ -481,7 +486,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       const get = await client.inject({ method: 'GET', url: url(w) });
       expect(get.statusCode, `${kind}: ${get.body}`).toBe(409);
       expect(errCode(j(get))).toBe('membership_check.certificate_date_unreadable');
-      const post = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: rid, expected_live_check_id: null, identity_outcome: 'confirmed' } });
+      const post = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: rid, expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' } });
       expect(post.statusCode, `${kind}: ${post.body}`).toBe(409);
       expect(errCode(j(post))).toBe('membership_check.certificate_date_unreadable');
       expect(await checks(w)).toEqual([]);
@@ -497,7 +502,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
   it('⭐ AC4 — OUTSIDE the review window is 409 `membership_check.window_closed` (before the certificate is even looked for), ⛔ row', async () => {
     const w = await world({ target: 'documents_pending' });
     const { client } = await da(w);
-    const res = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } });
+    const res = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' } });
     expect(res.statusCode, res.body).toBe(409);
     expect(errCode(j(res))).toBe('membership_check.window_closed');
     expect(await checks(w)).toEqual([]);
@@ -774,6 +779,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       death_certificate_review_id: rid,
       fee_receipt_id: w.receiptId,
       fee_outcome: 'same_day',
+      fee_date_source: 'recorded', // Story 6.39a — AC5 kind (ii)
       identity_required: true,
       identity_outcome: 'not_confirmed',
       identity_reason: 'name_differs',
@@ -815,7 +821,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       const res = await client.inject({
         method,
         url: `/api/v1/p/${x.pariwarId}/admin/claims/${w.claimCaseId}/membership-check`,
-        ...(method === 'POST' ? { payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } } : {}),
+        ...(method === 'POST' ? { payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' } } : {}),
       });
       expect([403, 404], `${method}: ${res.body}`).toContain(res.statusCode);
     }

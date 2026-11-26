@@ -16,6 +16,11 @@
 // under the claim-row lock, that the review and the receipt are still the ones compared.
 // ⭐ The deceased's name and date of birth are ⛔ opened here — the verifier console's packet already carries them
 // (`memberRecord`, audited there). ⛔ A second place that opens them (DL8).
+// ⭐ Story 6.39a (DL6) — the BANK DATE: the claim's live bank-date record naming the joining payment (the finance officer's)
+// is CONSIDERED, and the fee date is the EARLIER of its date and the recorded one (`chooseFeeDate` — a later bank date never
+// counts against a family), fed to the ONE rule. The POST carries the record the staff member saw
+// (`expected_fee_bank_date_id`, compared here, then re-asserted by the writer under the lock — `bank_date_changed`); the
+// writer also refuses the person who recorded that date (`same_person`).
 // ⭐ EVERY refusal is audited `_rejected` with its reason code; the success and the read with ids and outcome codes
 // ONLY — ⛔ never either date, ⛔ never the note, ⛔ never a name (N7). Mutations audit AFTER the transaction closes.
 
@@ -77,6 +82,9 @@ const REFUSAL_MESSAGES: Record<RefusalReason, string> = {
   no_fee_receipt: "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Please tell the Super Admin.",
   invalid_outcome: 'The identity answer does not fit this claim. Open the membership check again.',
   missing_display: 'Your account has no display name — the check cannot be recorded.',
+  // Story 6.39a (DL11 — `2026-11-27-510`, approved word for word).
+  bank_date_changed: "The finance officer recorded the bank's date since you opened this check. It has been reloaded — check again.",
+  same_person: "You recorded the bank's date on this claim, so another person must record this check.",
 };
 
 /** Map a refusal onto HTTP: `membership_check.<reason>` — 404 `not_found`, 400 `invalid_outcome`, else 409. */
@@ -183,9 +191,15 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
       const kyc = await claimDomain.readDeceasedKycStanding(scopeTx.tx, pariwarId, claimRow.deceasedMemberId);
       const live = await claimDomain.getLiveMembershipCheck(scopeTx.tx, pariwarId, cid);
       const gate = await claimDomain.membershipCheckApprovalState(scopeTx.tx, pariwarId, cid, claimRow.deceasedMemberId);
+      // Story 6.39a (DL6) — the bank-date record the check would CONSIDER, and the date it would compare.
+      const bankDate =
+        receipt !== null
+          ? claimDomain.considerableFeeBankDate(await claimDomain.getLiveFeeBankDate(scopeTx.tx, pariwarId, cid), receipt.receiptId)
+          : null;
+      const chosen = receipt !== null ? claimDomain.chooseFeeDate(receipt.paidAt, bankDate) : null;
       const feeOutcome =
-        deathDate.state === 'readable' && receipt !== null
-          ? claimDomain.compareFeeDateWithDeathDate(receipt.paidAt, deathDate.date)
+        deathDate.state === 'readable' && chosen !== null
+          ? claimDomain.compareFeeCalendarDateWithDeathDate(chosen.feeDate, deathDate.date)
           : null;
 
       // ⭐ Records WHO opened the certificate's date on WHICH claim — ⛔ never the date, ⛔ never the fee's date.
@@ -208,6 +222,16 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
         expected_live_review_id: deathDate.state === 'readable' ? deathDate.reviewId : null,
         date_of_death: deathDate.state === 'readable' ? deathDate.date : null,
         fee_paid_on: receipt !== null ? claimDomain.feeDateOf(receipt.paidAt) : null,
+        fee_date_source: chosen?.source ?? 'recorded',
+        fee_bank_date: bankDate
+          ? {
+              record_id: bankDate.recordId,
+              bank_credit_date: bankDate.bankCreditDate,
+              reason_code: bankDate.reasonCode,
+              recorded_by_display: bankDate.decidedByDisplay,
+              recorded_at: bankDate.decidedAt.toISOString(),
+            }
+          : null,
         fee_receipt_found: receipt !== null,
         fee_outcome: feeOutcome,
         fee_blocks_approval: feeOutcome !== null && claimDomain.MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES.includes(feeOutcome),
@@ -287,8 +311,20 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
           const receipt = await claimDomain.readJoiningFeeReceipt(scopeTx.tx, pariwarId, claimRow.deceasedMemberId);
           if (receipt === null) throw refuse('no_fee_receipt', "the member's joining receipt cannot be identified");
 
-          // ⭐ N3 — the comparison, computed HERE from the two stored facts. ⛔ Nothing from the request.
-          const feeOutcome = claimDomain.compareFeeDateWithDeathDate(receipt.paidAt, deathDate.date);
+          // ⭐ Story 6.39a (DL6) — the bank-date record considered: still the one the staff member saw (a currency token).
+          const bankDate = claimDomain.considerableFeeBankDate(
+            await claimDomain.getLiveFeeBankDate(scopeTx.tx, pariwarId, cid),
+            receipt.receiptId,
+          );
+          const seenBank = body.expected_fee_bank_date_id === null ? null : body.expected_fee_bank_date_id.toLowerCase();
+          if ((bankDate === null ? null : (bankDate.recordId as string).toLowerCase()) !== seenBank) {
+            throw refuse('bank_date_changed', 'the bank date on this claim changed after the check was opened');
+          }
+
+          // ⭐ N3 — the comparison, computed HERE from the stored facts: the EARLIER of the recorded date and the bank's
+          // (DL6), by the ONE rule (DL2). ⛔ Nothing from the request.
+          const { feeDate } = claimDomain.chooseFeeDate(receipt.paidAt, bankDate);
+          const feeOutcome = claimDomain.compareFeeCalendarDateWithDeathDate(feeDate, deathDate.date);
 
           result = await claimDomain.recordMembershipCheck(scopeTx.client, {
             claimCaseId: cid,
@@ -296,6 +332,7 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
             computedAgainstReviewId: deathDate.reviewId,
             feeReceiptId: receipt.receiptId,
             expectedLiveCheckId: body.expected_live_check_id,
+            computedAgainstFeeBankDateId: bankDate?.recordId ?? null,
             feeOutcome,
             identityOutcome: body.identity_outcome,
             identityReason,
@@ -343,6 +380,8 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
           death_certificate_review_id: result.deathCertificateReviewId,
           fee_receipt_id: result.feeReceiptId,
           fee_outcome: result.feeOutcome,
+          // Story 6.39a (DL12) — which date the outcome came from (a code).
+          fee_date_source: result.feeDateSource,
           identity_required: result.identityRequired,
           identity_outcome: result.identityOutcome,
           identity_reason: result.identityReason,

@@ -375,6 +375,9 @@ import {
   MembershipCheckPreviewResponse,
   type MembershipCheckRequest,
   MembershipCheckWriteResponse,
+  FeeBankDateListResponse,
+  type FeeBankDateRequest,
+  FeeBankDateWriteResponse,
   type DeathCertificateReviewRequest,
   ClaimDocumentUploadResponse,
   RecordNomineeBankResponse,
@@ -2171,6 +2174,21 @@ export function getMembershipCheckPreview(pariwarId: string, claimCaseId: string
 /** The District Admin RECORDS the check. ⛔ No date in the body — the server computes the comparison. */
 export function postMembershipCheck(pariwarId: string, claimCaseId: string, body: MembershipCheckRequest) {
   return apiFetch(`${claimBase(pariwarId, claimCaseId)}/membership-check`, MembershipCheckWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Story 6.39a — the finance officer's bank date for a joining fee recorded after the death ──────────────────────
+
+/** The finance officer's list — the held claims, and those whose check now passes on a recorded bank date (DL10). */
+export function getFeeBankDates(pariwarId: string) {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/fee-bank-dates`, FeeBankDateListResponse);
+}
+
+/** RECORD the bank date — behind a fresh step-up (`FEE_BANK_DATE_STEP_UP_CONTEXT`). */
+export function postFeeBankDate(pariwarId: string, claimCaseId: string, body: FeeBankDateRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/fee-bank-date`, FeeBankDateWriteResponse, {
     method: 'POST',
     body: JSON.stringify(body),
   });

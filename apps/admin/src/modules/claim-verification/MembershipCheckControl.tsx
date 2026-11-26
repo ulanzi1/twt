@@ -82,7 +82,8 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
   const [incomplete, setIncomplete] = useState(false);
 
   // ⭐ A different certificate review, or a different live check, is a different judgement: start again.
-  const fingerprint = `${preview?.expected_live_review_id ?? '-'}|${preview?.live_check?.check_id ?? '-'}|${open ? 'open' : 'closed'}`;
+  // Story 6.39a — a different bank-date record too (the comparison it feeds changed).
+  const fingerprint = `${preview?.expected_live_review_id ?? '-'}|${preview?.live_check?.check_id ?? '-'}|${preview?.fee_bank_date?.record_id ?? '-'}|${open ? 'open' : 'closed'}`;
   useEffect(() => {
     setJudgment(null);
     setReason(null);
@@ -182,11 +183,24 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
               ) : (
                 <p className="text-xs">{t.feeComputed}</p>
               )}
+              {/* Story 6.39a (DL11) — the bank's date, when the comparison used it (the SERVER says which date — DL6). */}
+              {preview.fee_date_source === 'bank' && preview.fee_bank_date ? (
+                <p className="text-sm" data-testid="membership-check-fee-bank-date">
+                  {t.feeBankDateUsed
+                    .replace('{date}', preview.fee_bank_date.bank_credit_date)
+                    .replace('{name}', preview.fee_bank_date.recorded_by_display)}
+                </p>
+              ) : null}
               {/* `-473` Q1 B — a fee paid ON the day of death counts as after: the same note (`-474` item 3). The SERVER says
-                  which outcomes stop the drive (N1 — ⛔ a second definition here; code review 2026-11-21). */}
+                  which outcomes stop the drive (N1 — ⛔ a second definition here; code review 2026-11-21). Story 6.39a (DL11):
+                  from the RECORDED date the note is the amended, record-first one; from the BANK's date today's note stands. */}
               {preview.fee_blocks_approval ? (
-                <p className="text-sm" data-testid="membership-check-fee-after-death-note">
-                  {t.feeAfterDeathNote}
+                <p
+                  className="text-sm"
+                  data-testid="membership-check-fee-after-death-note"
+                  data-source={preview.fee_date_source}
+                >
+                  {preview.fee_date_source === 'bank' ? t.feeAfterDeathNote : t.feeAfterDeathNoteRecorded}
                 </p>
               ) : null}
             </section>

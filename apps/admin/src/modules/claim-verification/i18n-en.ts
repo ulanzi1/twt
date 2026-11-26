@@ -950,6 +950,8 @@ export const verifierConsoleEn = {
     approveBlocked: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
         'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
@@ -960,6 +962,8 @@ export const verifierConsoleEn = {
     finalVoteGate: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
         'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
@@ -968,6 +972,8 @@ export const verifierConsoleEn = {
     r9Gate: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
     } as Record<string, string>,
@@ -986,6 +992,13 @@ export const verifierConsoleEn = {
       "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Please tell the Super Admin.",
     feeAfterDeathNote:
       'No drive can open for this claim. Record the check, then deny the claim with the reason "Fee paid after the death".',
+    // Story 6.39a (DL11 — `2026-11-27-510`, amending `-474` item 3 for the one case the Panel changed): a blocking outcome
+    // from the RECORDED date. Record-the-check FIRST (the finance officer can act only on a recorded check — DL5). A blocking
+    // outcome from the BANK's date keeps `feeAfterDeathNote` above, unchanged.
+    feeAfterDeathNoteRecorded:
+      'No drive can open for this claim on the recorded date. Record the check. If the member may have paid before the death, then ask the finance officer to check the Trust\'s bank statement before you deny; otherwise deny the claim with the reason "Fee paid after the death".',
+    // Story 6.39a (DL11) — when the bank's date is used. `{date}` and `{name}` are VALUES (the record's date and who recorded it).
+    feeBankDateUsed: "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}).",
     // The identity half — the details on record. DL12 for the first two routes.
     identityHeading: 'Identity',
     kycRouteLabel: 'How the identity was recorded',
@@ -1051,6 +1064,9 @@ export const verifierConsoleEn = {
       window_closed: 'A membership check can no longer be recorded on this claim.',
       invalid_outcome: 'The identity answer does not fit this claim. It has been reloaded — check again.',
       not_found: 'This claim could not be found.',
+      // Story 6.39a (DL11 — `2026-11-27-510`, approved word for word).
+      bank_date_changed: "The finance officer recorded the bank's date since you opened this check. It has been reloaded — check again.",
+      same_person: "You recorded the bank's date on this claim, so another person must record this check.",
     } as Record<string, string>,
     sessionExpired: 'Your session has ended. Sign in again, then record the check.',
     forbidden: 'You do not have permission to record the membership check on this claim.',

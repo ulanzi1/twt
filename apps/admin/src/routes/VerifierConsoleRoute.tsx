@@ -494,8 +494,15 @@ export function VerifierConsoleRoute(): ReactElement {
     const expected = membershipPreviewQ.data?.expected_live_review_id;
     if (!expected) return false;
     const expectedLiveCheckId = membershipPreviewQ.data?.live_check?.check_id ?? null;
+    // Story 6.39a (DL6) — and the bank-date record the preview showed (`null` = none).
+    const expectedFeeBankDateId = membershipPreviewQ.data?.fee_bank_date?.record_id ?? null;
     return recordMembershipCheck
-      .mutateAsync({ expected_live_review_id: expected, expected_live_check_id: expectedLiveCheckId, ...input })
+      .mutateAsync({
+        expected_live_review_id: expected,
+        expected_live_check_id: expectedLiveCheckId,
+        expected_fee_bank_date_id: expectedFeeBankDateId,
+        ...input,
+      })
       .then(() => true)
       .catch(() => false);
   };

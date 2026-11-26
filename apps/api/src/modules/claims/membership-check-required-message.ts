@@ -14,6 +14,8 @@ import type { claim } from '@twt/domain';
 const MEMBERSHIP_CHECK_REQUIRED_MESSAGES: Record<claim.MembershipCheckWaitReason, string> = {
   not_checked: 'Membership check needed before approval.',
   stale: 'The certificate changed since the membership check — check again.',
+  // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word). ⛔ `stale`: the certificate did NOT change.
+  bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
   fee_after_death:
     'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
   identity_not_confirmed: "The person's identity has not been confirmed.",

@@ -478,8 +478,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       // The pure resolver, for each fee outcome (identity confirmed, the check current).
       const outcomeOf = (feeOutcome: schema.MembershipCheckFeeOutcome) =>
         resolveMembershipCheckApprovalState({
-          liveCheck: { checkId: 'c' as never, deathCertificateReviewId: 'r' as never, feeOutcome, identityRequired: true, identityOutcome: 'confirmed' },
+          liveCheck: { checkId: 'c' as never, deathCertificateReviewId: 'r' as never, feeOutcome, feeBankDateId: null, identityRequired: true, identityOutcome: 'confirmed' },
           currentAcceptedReviewId: 'R' as never,
+          liveFeeBankDateId: null,
           kyc: null,
         });
       expect(outcomeOf('before_death')).toEqual({ passed: true });
@@ -846,6 +847,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       recordMembershipCheck(ctx.client, {
         claimCaseId: ctx.cid, pariwarId: ctx.pid, computedAgainstReviewId: randomUUID(), feeReceiptId: randomUUID(),
         expectedLiveCheckId: 'expectedLiveCheckId' in over ? over.expectedLiveCheckId! : await liveCheckId(ctx),
+        computedAgainstFeeBankDateId: null, // Story 6.39a — AC5 kind (i): the new required input
         feeOutcome: 'before_death', identityOutcome: 'confirmed', identityReason: null, noteCiphertext: null,
         actorId: DA, actorDisplay: 'Anita (District Admin)', actor: 'operator', ...over,
       });

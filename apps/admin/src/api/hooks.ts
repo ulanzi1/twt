@@ -2706,6 +2706,8 @@ export const MEMBERSHIP_CHECK_STALE_CODES: ReadonlySet<string> = new Set([
   'membership_check.window_closed',
   'membership_check.invalid_outcome',
   'membership_check.no_fee_receipt',
+  // Story 6.39a (DL6) — the finance officer recorded (or corrected) the bank's date since the preview.
+  'membership_check.bank_date_changed',
 ]);
 
 /**
@@ -2723,6 +2725,41 @@ export function usePostMembershipCheck(pariwarId: string, claimCaseId: string | 
     onSuccess: refresh,
     onError: (err: unknown) => {
       if (err instanceof ApiError && MEMBERSHIP_CHECK_STALE_CODES.has(err.code)) refresh();
+    },
+  });
+}
+
+// ── Story 6.39a — the finance officer's bank date for a joining fee recorded after the death ─────────────────────
+export const feeBankDatesKey = (pariwarId: string) => ['fee-bank-dates', pariwarId] as const;
+
+export function useFeeBankDates(pariwarId: string) {
+  return useQuery({ queryKey: feeBankDatesKey(pariwarId), queryFn: () => api.getFeeBankDates(pariwarId) });
+}
+
+/** The refusals that mean the list row moved under the finance officer — reload the list (DL11's `stale` line says so). */
+export const FEE_BANK_DATE_RELOAD_CODES: ReadonlySet<string> = new Set([
+  'fee_bank_date.stale',
+  'fee_bank_date.not_held',
+  'fee_bank_date.window_closed',
+  'fee_bank_date.not_found',
+]);
+
+/**
+ * The finance officer RECORDS a bank date. A success moves the list AND the claim's console (the membership-check preview
+ * and the packet — the gate now waits on `bank_date_recorded`), so an open console never shows the old comparison.
+ */
+export function usePostFeeBankDate(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { claimCaseId: string; body: Parameters<typeof api.postFeeBankDate>[2] }) =>
+      api.postFeeBankDate(pariwarId, args.claimCaseId, args.body),
+    onSuccess: (_r, args) => {
+      void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
+      void qc.invalidateQueries({ queryKey: membershipCheckKey(pariwarId, args.claimCaseId) });
+      void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, args.claimCaseId) });
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && FEE_BANK_DATE_RELOAD_CODES.has(err.code)) void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
     },
   });
 }

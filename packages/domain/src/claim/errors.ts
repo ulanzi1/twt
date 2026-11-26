@@ -636,7 +636,13 @@ export class DeathCertificateReviewRefusedError extends Error {
 
 /** The reasons an approval WAITS on the membership check, in PRECEDENCE order (DL5): when several apply, the FIRST is
  *  reported. ⚠ LOCKSTEP with `@twt/contracts`' `MEMBERSHIP_CHECK_WAIT_REASONS` (pinned by its lockstep test). */
-export const MEMBERSHIP_CHECK_WAIT_REASONS = ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed'] as const;
+export const MEMBERSHIP_CHECK_WAIT_REASONS = [
+  'not_checked',
+  'stale',
+  'bank_date_recorded',
+  'fee_after_death',
+  'identity_not_confirmed',
+] as const;
 export type MembershipCheckWaitReason = (typeof MEMBERSHIP_CHECK_WAIT_REASONS)[number];
 
 /** DL5 (`2026-10-31-424` Q1 (a) C, `-430` Q1 B) — a claim cannot be APPROVED without a CURRENT, PASSING membership
@@ -646,6 +652,9 @@ export type MembershipCheckWaitReason = (typeof MEMBERSHIP_CHECK_WAIT_REASONS)[n
  *   · `stale`                  — the live check was computed against a certificate review that is no longer the
  *                                current accepted one (N4), or it recorded `not_required` for an identity that
  *                                today's KYC record says nobody has checked (N2);
+ *   · `bank_date_recorded`     — Story 6.39a (DL7, N4): the finance officer recorded the bank's date for the joining fee
+ *                                after this check was computed (the check names ⛔ the claim's live bank-date record):
+ *                                the District Admin checks again. ⛔ `stale` (its words say the CERTIFICATE changed);
  *   · `fee_after_death`        — the joining fee was ⛔ paid before the date of death (after it, or ON it — `-473` Q1 B):
  *                                it can never pass (N6);
  *   · `identity_not_confirmed` — staff could not yet confirm the person who died is the member. */
@@ -672,7 +681,12 @@ export class MembershipCheckRequiredError extends Error {
  *                                  since the preview, or one appeared) — a re-check never supersedes a check unseen
  *                                  (code review 2026-11-21);
  *   · `invalid_outcome`          — the identity outcome does not fit the record (`not_required` for an unchecked
- *                                  identity, a judgment for a checked one, `not_confirmed` without a reason or note). */
+ *                                  identity, a judgment for a checked one, `not_confirmed` without a reason or note);
+ *   · `bank_date_changed`        — Story 6.39a (DL6, TR7): the bank-date record the check was computed against is ⛔ the
+ *                                  claim's live one naming the joining payment (the finance officer recorded or corrected
+ *                                  it since the preview) — its own code, as `check_changed` is its own;
+ *   · `same_person`              — Story 6.39a (DL6, N7): the actor recorded the live bank date this check considers —
+ *                                  whatever roles they hold, a Super Admin included; another person records the check. */
 export class MembershipCheckRefusedError extends Error {
   public readonly name = 'MembershipCheckRefusedError';
   public constructor(
@@ -686,7 +700,9 @@ export class MembershipCheckRefusedError extends Error {
       | 'no_fee_receipt'
       | 'check_changed'
       | 'invalid_outcome'
-      | 'missing_display',
+      | 'missing_display'
+      | 'bank_date_changed'
+      | 'same_person',
     detail: string,
   ) {
     super(`[membership-check] claim ${claimCaseId}: ${reason} — ${detail}`);

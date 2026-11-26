@@ -5,7 +5,9 @@ import { claim, schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
+  FEE_BANK_DATE_LIST_FEE_DATE_SOURCES,
   FEE_BANK_DATE_REASON_CODES,
+  MEMBERSHIP_CHECK_FEE_DATE_SOURCES,
   FEE_BANK_DATE_REFUSAL_REASONS,
   FEE_BANK_DATE_STEP_UP_CONTEXT,
   FeeBankDateListResponse,
@@ -28,6 +30,8 @@ describe('Story 6.39a — the bank-date vocabulary', () => {
   it('each contracts tuple equals the domain tuple, in order', () => {
     expect([...FEE_BANK_DATE_REASON_CODES]).toEqual([...schema.FEE_BANK_DATE_REASON_CODES]);
     expect([...FEE_BANK_DATE_REFUSAL_REASONS]).toEqual([...claim.FEE_BANK_DATE_REFUSAL_REASONS]);
+    expect([...FEE_BANK_DATE_LIST_FEE_DATE_SOURCES]).toEqual([...schema.MEMBERSHIP_CHECK_FEE_DATE_SOURCES]);
+    expect([...FEE_BANK_DATE_LIST_FEE_DATE_SOURCES]).toEqual([...MEMBERSHIP_CHECK_FEE_DATE_SOURCES]);
   });
 
   it('the step-up context is its own (⛔ a neighbour\'s — an elevation for one act never satisfies another)', () => {

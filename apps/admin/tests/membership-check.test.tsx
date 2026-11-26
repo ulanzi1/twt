@@ -77,6 +77,9 @@ const DL12 = {
   notShown: 'This reason can be used only when the membership check found the fee was not paid before the date of death.',
 } as const;
 
+/** Story 6.39a (DL7 — `2026-11-27-510`, approved word for word) — the new wait reason's sentence, the same on every surface. */
+const BANK_WAIT = "The finance officer recorded the bank's date for the joining fee — check again.";
+
 type Gate = MembershipCheckGateStatus;
 const gate = (over: Partial<Gate> = {}): Gate => ({ available: true, passed: false, reason: 'not_checked', viewer: { canCheckMembership: true }, ...over });
 
@@ -94,6 +97,9 @@ const preview = (over: Partial<MembershipCheckPreviewResponse> = {}): Membership
   latest_posting_district: 'Patna',
   live_check: null,
   gate: { passed: false, reason: 'not_checked' },
+  // Story 6.39a — AC5 kind (iii): the two new REQUIRED preview fields (the recorded date; ⛔ bank-date record).
+  fee_date_source: 'recorded',
+  fee_bank_date: null,
   ...over,
 });
 
@@ -176,7 +182,9 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     expect(inputs).toEqual(['membership-check-identity-confirmed', 'membership-check-identity-not_confirmed', 'membership-check-note']);
     expect(screen.getByTestId('membership-check-body')).toHaveTextContent(t.feeComputed);
     // A fee paid after the death: the control says what follows (record, then deny with the reason) — ⛔ a refusal of its own.
-    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNote);
+    // ⚠ Story 6.39a: from the RECORDED date (this fixture) the note is the amended one (`2026-11-27-510` DL11, amending
+    // `-474` item 3 — record the check, then ask the finance officer or deny); the same exact-text assertion.
+    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNoteRecorded);
   });
 
   it.each([
@@ -187,7 +195,7 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     // The server's `fee_blocks_approval` is what the API sends for each outcome (pinned in the API spec's preview leg).
     renderControl({ preview: preview({ fee_outcome, fee_blocks_approval: shown }) });
     const note = screen.queryByTestId('membership-check-fee-after-death-note');
-    if (shown) expect(note).toHaveTextContent(t.feeAfterDeathNote);
+    if (shown) expect(note).toHaveTextContent(t.feeAfterDeathNoteRecorded); // Story 6.39a — the amended note (the recorded date; `-510` DL11)
     else expect(note).toBeNull();
   });
 
@@ -196,7 +204,7 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     expect(screen.queryByTestId('membership-check-fee-after-death-note')).toBeNull();
     cleanup();
     renderControl({ preview: preview({ fee_outcome: 'before_death', fee_blocks_approval: true }) });
-    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNote);
+    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNoteRecorded); // Story 6.39a — the amended note (`-510` DL11)
   });
 
   it('the KYC route in words — DigiLocker (DL12), and the fail-closed routes', () => {
@@ -392,9 +400,9 @@ describe('the words of every refusal — ⛔ never a raw code (DL12, G16)', () =
     new ApiError(409, `${prefix}.membership_check_required`, 'server message', reason === undefined ? undefined : { reason });
 
   it('⭐ the approved copy is in the copy file word for word (DL12)', () => {
-    expect(t.approveBlocked).toMatchObject({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeConsole });
-    expect(t.finalVoteGate).toEqual({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeFinalVote });
-    expect(t.r9Gate).toEqual({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeR9AndClosure });
+    expect(t.approveBlocked).toMatchObject({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeConsole, bank_date_recorded: BANK_WAIT }); // Story 6.39a — kind (v)
+    expect(t.finalVoteGate).toEqual({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeFinalVote, bank_date_recorded: BANK_WAIT }); // Story 6.39a — kind (v)
+    expect(t.r9Gate).toEqual({ not_checked: DL12.notChecked, stale: DL12.stale, identity_not_confirmed: DL12.identity, fee_after_death: DL12.feeR9AndClosure, bank_date_recorded: BANK_WAIT }); // Story 6.39a — kind (v)
     expect(t.feeOutcome).toEqual({ before_death: DL12.paidBefore, same_day: DL12.paidSameDay, after_death: DL12.paidAfter });
     expect(t.kycRoute).toMatchObject({ typed_in_unchecked: DL12.typedIn, digilocker: DL12.digilocker });
     expect(verifierConsoleEn.reasonCodes.fee_paid_after_death).toBe(DL12.reasonLabel);
@@ -424,7 +432,7 @@ describe('the words of every refusal — ⛔ never a raw code (DL12, G16)', () =
     expect(feePaidAfterDeathNotShownMessage()).toBe(DL12.notShown);
     // ⛔ None of them is a raw code.
     for (const surface of ['console', 'final_vote', 'r9'] as const) {
-      for (const reason of ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed']) {
+      for (const reason of ['not_checked', 'stale', 'bank_date_recorded', 'fee_after_death', 'identity_not_confirmed']) {
         const words = membershipCheckRequiredMessage(required('x', reason), surface);
         expect(words, `${surface} / ${reason}`).not.toMatch(/membership_check|_required|server message/);
         expect(words.endsWith('.'), `${surface} / ${reason}`).toBe(true);
@@ -632,7 +640,7 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     fireEvent.click(screen.getByTestId('membership-check-submit'));
     // ⛔ live check in the preview ⇒ the token says so (`null`) — code review 2026-11-21.
     await waitFor(() =>
-      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'confirmed' }),
+      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: null, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' }),
     );
     expect(await screen.findByTestId('membership-check-recorded')).toHaveTextContent(t.recorded);
     // The console packet (its gate section, the approve gate) is refreshed.
@@ -662,7 +670,7 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     const previewReads = getMembershipCheckPreview.mock.calls.length;
     fireEvent.click(screen.getByTestId('membership-check-submit'));
     await waitFor(() =>
-      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: CHECK, identity_outcome: 'confirmed' }),
+      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: CHECK, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' }),
     );
     const alert = await screen.findByTestId('membership-check-error');
     expect(alert.getAttribute('role')).toBe('alert');

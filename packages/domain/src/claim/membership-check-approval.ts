@@ -26,7 +26,14 @@
 import { sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
-import type { ClaimId, ClaimMembershipCheckId, DeathCertificateReviewId, MemberId, PariwarId } from '../ids/index.js';
+import type {
+  ClaimFeeBankDateId,
+  ClaimId,
+  ClaimMembershipCheckId,
+  DeathCertificateReviewId,
+  MemberId,
+  PariwarId,
+} from '../ids/index.js';
 import type {
   MembershipCheckFeeOutcome,
   MembershipCheckIdentityOutcome,
@@ -86,15 +93,26 @@ export interface LiveMembershipCheck {
   readonly checkId: ClaimMembershipCheckId;
   readonly deathCertificateReviewId: DeathCertificateReviewId;
   readonly feeOutcome: MembershipCheckFeeOutcome;
+  /**
+   * Story 6.39a (DL6 / DL7) — the bank-date record the check CONSIDERED (whichever date won), or `null`: the gate's second
+   * currency token, compared with the claim's live record.
+   */
+  readonly feeBankDateId: ClaimFeeBankDateId | null;
   readonly identityRequired: boolean;
   readonly identityOutcome: MembershipCheckIdentityOutcome;
 }
 
-/** Everything the state function needs, from TWO reads (the check + KYC row; the certificate snapshot). */
+/** Everything the state function needs, from THREE reads (the check + its live bank-date record; the certificate snapshot; the KYC row). */
 export interface MembershipCheckFacts {
   readonly liveCheck: LiveMembershipCheck | null;
   /** The claim's CURRENT review iff it is an ACCEPTED one — else `null`. */
   readonly currentAcceptedReviewId: DeathCertificateReviewId | null;
+  /**
+   * Story 6.39a (DL7) — the claim's LIVE bank-date record id, or `null`. Read INSIDE the live-check statement (a scalar
+   * subquery), so the facts stay THREE counted reads (`VERIFIER_CONSOLE_MAX_READS` 36). With ⛔ live check the gate answers
+   * `not_checked` first, so `null` is right there.
+   */
+  readonly liveFeeBankDateId: ClaimFeeBankDateId | null;
   /** The deceased's KYC standing TODAY (re-read on every call — N2). */
   readonly kyc: DeceasedKycStanding | null;
 }
@@ -119,11 +137,15 @@ export const FEE_PAID_AFTER_DEATH_REASON_CODE = 'fee_paid_after_death' as const;
 export const MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES: readonly MembershipCheckFeeOutcome[] = ['after_death', 'same_day'];
 
 /**
- * ⭐ THE ONE DEFINITION of "the membership check passes" (N1). Pure. Precedence (DL5): `not_checked` → `stale` →
- * `fee_after_death` → `identity_not_confirmed`.
+ * ⭐ THE ONE DEFINITION of "the membership check passes" (N1). Pure. Precedence (DL5; Story 6.39a DL7): `not_checked` →
+ * `stale` → `bank_date_recorded` → `fee_after_death` → `identity_not_confirmed`.
  *   · `stale` — the check names a review that is ⛔ the claim's current accepted one (N4: ANY new review, even one
  *     with the same date); OR the check recorded `not_required` while TODAY's KYC record says the identity is
  *     unchecked (N2 — a record the check called "not required" can never mask an unchecked identity);
+ *   · `bank_date_recorded` (Story 6.39a, N4) — the check's `fee_bank_date_id` is ⛔ the claim's live bank-date record (null =
+ *     none; compared lower-cased): the finance officer recorded a bank date the check did not consider — or corrected it —
+ *     so the District Admin checks again. A blocking check then waits on THIS, ⛔ `fee_after_death`, so the deny guard
+ *     refuses `fee_paid_after_death` until the re-check (N4) and the cycle-freeze commit skips the claim (unchanged code);
  *   · the identity half binds only while the identity is unchecked TODAY: a `not_confirmed` recorded for a member
  *     whose record has since become DigiLocker-verified no longer holds the claim (the KYC re-read relaxes, G2).
  */
@@ -137,6 +159,9 @@ export function resolveMembershipCheckApprovalState(facts: MembershipCheckFacts)
   }
   const identityRequiredToday = isIdentityCheckRequired(facts.kyc);
   if (identityRequiredToday && check.identityOutcome === 'not_required') return { passed: false, reason: 'stale' };
+  const considered = (check.feeBankDateId as string | null)?.toLowerCase() ?? null;
+  const liveRecord = (facts.liveFeeBankDateId as string | null)?.toLowerCase() ?? null;
+  if (considered !== liveRecord) return { passed: false, reason: 'bank_date_recorded' };
   if (MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES.includes(check.feeOutcome)) {
     return { passed: false, reason: 'fee_after_death' };
   }
@@ -179,10 +204,20 @@ export async function readMembershipCheckFacts(
     check_id: string;
     death_certificate_review_id: string;
     fee_outcome: MembershipCheckFeeOutcome;
+    fee_bank_date_id: string | null;
     identity_required: boolean;
     identity_outcome: MembershipCheckIdentityOutcome;
+    live_fee_bank_date_id: string | null;
   }>(sql`
-    SELECT mc.check_id, mc.death_certificate_review_id, mc.fee_outcome, mc.identity_required, mc.identity_outcome
+    -- Story 6.39a (DL7): the claim's live bank-date record rides THIS statement as a scalar subquery (⛔ a fourth read).
+    -- The subquery's alias is its own (fbd_b) and every predicate names it: ⛔ an unqualified column that could bind the
+    -- outer row (the correlated-subquery trap).
+    SELECT mc.check_id, mc.death_certificate_review_id, mc.fee_outcome, mc.fee_bank_date_id, mc.identity_required, mc.identity_outcome,
+           (SELECT fbd_b.record_id
+              FROM claim_fee_bank_dates fbd_b
+             WHERE fbd_b.pariwar_id = ${pariwarId}::uuid
+               AND fbd_b.claim_case_id = ${claimCaseId}::uuid
+               AND fbd_b.superseded_at IS NULL) AS live_fee_bank_date_id
       FROM claim_membership_checks mc
      WHERE mc.pariwar_id = ${pariwarId}::uuid
        AND mc.claim_case_id = ${claimCaseId}::uuid
@@ -199,6 +234,7 @@ export async function readMembershipCheckFacts(
         checkId: row.check_id as ClaimMembershipCheckId,
         deathCertificateReviewId: row.death_certificate_review_id as DeathCertificateReviewId,
         feeOutcome: row.fee_outcome,
+        feeBankDateId: (row.fee_bank_date_id ?? null) as ClaimFeeBankDateId | null,
         identityRequired: row.identity_required === true,
         identityOutcome: row.identity_outcome,
       }
@@ -206,8 +242,9 @@ export async function readMembershipCheckFacts(
   const snapshot = await readDeathCertificateSnapshot(db, pariwarId, claimCaseId);
   const currentAcceptedReviewId =
     deathCertificateStatus(snapshot) === 'accepted' ? snapshot.currentReview!.reviewId : null;
+  const liveFeeBankDateId = (row?.live_fee_bank_date_id ?? null) as ClaimFeeBankDateId | null;
   const kyc = await readDeceasedKycStanding(db, pariwarId, deceasedMemberId);
-  return { liveCheck, currentAcceptedReviewId, kyc };
+  return { liveCheck, currentAcceptedReviewId, liveFeeBankDateId, kyc };
 }
 
 /**

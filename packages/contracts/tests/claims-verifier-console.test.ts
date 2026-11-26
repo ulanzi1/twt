@@ -170,7 +170,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     membershipCheckGate: {
       available: true,
       passed: false,
-      reason: 'not_checked' as 'not_checked' | 'stale' | 'fee_after_death' | 'identity_not_confirmed' | null,
+      reason: 'not_checked' as 'not_checked' | 'stale' | 'bank_date_recorded' | 'fee_after_death' | 'identity_not_confirmed' | null,
       viewer: { canCheckMembership: true },
     },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
@@ -242,7 +242,7 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     }
     expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, reason: 'denied' } }).success).toBe(false);
     expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, viewer: {} } }).success).toBe(false);
-    for (const reason of ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed']) {
+    for (const reason of ['not_checked', 'stale', 'bank_date_recorded', 'fee_after_death', 'identity_not_confirmed']) {
       expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, reason } }).success, reason).toBe(true);
     }
     expect(

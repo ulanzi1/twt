@@ -17,7 +17,7 @@
 // that is fine (ms arithmetic only breaks for *additions* spanning months, not for differences). Clamped ≥0.
 
 import { ids, member as memberDomain } from '@twt/domain';
-import type { MemberLockInStatusResponse } from '@twt/contracts';
+import type { MemberIdentityCheckNoticeResponse, MemberLockInStatusResponse } from '@twt/contracts';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -88,6 +88,29 @@ export function createMemberHomeHandlers(deps: AppDeps) {
         };
         ok = true;
         return result;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * Story 3.13a (DL5, N3, N4) — GET /api/v1/member/identity-check-notice. The SESSION's member, read inside the session's
+     * Pariwar scope (0218's RLS is Pariwar-wide; the domain read filters `member_id`). `{ notice: { reason } }` while staff
+     * could ⛔ confirm them and they still await a check; else `{ notice: null }`. A read failure THROWS (⇒ 500) — ⛔
+     * fail-soft to `null`: a silent `null` would hide a real message (the app hides the card on an error, DL6). ⛔ write.
+     */
+    async identityCheckNotice(request: FastifyRequest): Promise<MemberIdentityCheckNoticeResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const notice = await memberDomain.readMemberIdentityCheckNotice(
+          scopeTx.tx,
+          ids.pariwarId(pariwarIdStr),
+          ids.memberId(memberIdStr),
+        );
+        ok = true;
+        return { notice: notice === null ? null : { reason: notice.reason } };
       } finally {
         await closeScopeTx(scopeTx, ok);
       }

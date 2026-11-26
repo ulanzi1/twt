@@ -5,7 +5,7 @@
 // Session-guarded → automatically covered by the Story 1.14 login-wall CI gate; NOT added to the
 // allowlist (it is NOT public).
 
-import { MemberLockInStatusResponse } from '@twt/contracts';
+import { MemberIdentityCheckNoticeResponse, MemberLockInStatusResponse } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
@@ -27,5 +27,16 @@ export function registerMemberHomeRoutes(app: FastifyInstance, deps: AppDeps): v
       preHandler: [memberSession],
     },
     h.lockInStatus,
+  );
+
+  // Story 3.13a (DL5) — the member's own "could not confirm" notice: the closed reason code ONLY (N3). Session-guarded ⇒
+  // the login-wall gate covers it; ⛔ on the public allowlist; ⛔ OpenAPI entry (`-509`, as `lock-in-status`).
+  r.get(
+    '/api/v1/member/identity-check-notice',
+    {
+      schema: { response: { 200: MemberIdentityCheckNoticeResponse }, tags: [MEMBER_HOME_TAG] },
+      preHandler: [memberSession],
+    },
+    h.identityCheckNotice,
   );
 }

@@ -43,6 +43,7 @@ import {
   MemberValidityResponse,
   MedicalDisclosureStatusResponse,
   MemberFullSession,
+  MemberIdentityCheckNoticeResponse,
   MemberLockInStatusResponse,
   MemberLanguageResponse,
   ActiveContributionCardResponse,
@@ -104,6 +105,7 @@ import {
   type PostingUpdateRequest,
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
+  type MemberIdentityCheckNoticeResponse as MemberIdentityCheckNoticeResult,
   type MemberLockInStatusResponse as MemberLockInStatusResult,
   type MemberLanguageResponse as MemberLanguageResult,
   type MemberLanguageLocale,
@@ -607,6 +609,16 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberLockInStatus(): Promise<MemberLockInStatusResult> {
       return call(`${MEMBER_HOME_BASE}/lock-in-status`, MemberLockInStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── The member's "could not confirm" notice (Story 3.13a) ───────────────────
+    /**
+     * Read the member's own identity-check notice (Story 3.13a, DL5): `{ notice: { reason } }` while staff could ⛔ confirm
+     * their typed-in identity and they still await a check, else `{ notice: null }`. The reason code ONLY (N3) — the body
+     * is `schema.parse`d, so an unknown reason THROWS (the card hides; `3.13a-G3`) (auth). ⛔ Records anything.
+     */
+    memberIdentityCheckNotice(): Promise<MemberIdentityCheckNoticeResult> {
+      return call(`${MEMBER_HOME_BASE}/identity-check-notice`, MemberIdentityCheckNoticeResponse, undefined, true, 'GET');
     },
 
     // ── The member's chosen app language (Story 6.35) ────────────────────────────

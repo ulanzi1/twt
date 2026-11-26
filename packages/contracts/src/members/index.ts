@@ -21,3 +21,5 @@ export * from './known-people.js';
 export * from './assisted-code.js';
 // Story 3.13 — staff check a typed-in identity in life: the queue, the detail, the record, the audited number reveal.
 export * from './identity-check.js';
+// Story 3.13a — the member's own "could not confirm" notice (GET /member/identity-check-notice; the reason code only).
+export * from './identity-check-notice.js';

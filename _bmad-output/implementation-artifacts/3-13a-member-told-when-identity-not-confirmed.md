@@ -44,7 +44,7 @@ the deferred item's id, the row KEY.
 
 # Story 3.13a: A Member Is Told When Staff Could Not Confirm Their Identity — and Why
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -639,17 +639,26 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 — DONE: the row flipped `ready-for-dev → in-progress` with a dated comment above it; ledger `2026-11-26m` (the
         highest letter on every ref was `l`; prepended with the size-guarded write; plain `yaml.safe_load` passes, 327 rows). ⚠ Earlier
         steps of this story also wrote ledger lines (`g`, `i`–`l`), so "the ONE ledger entry" is ⛔ how it went; dev-story adds its own.
-- [ ] **Task 1 — Domain (AC2).** `readMemberIdentityCheckNotice` in `packages/domain/src/member/identity-validation.ts` (DL4: the narrow
+- [x] **Task 1 — Domain (AC2).** `readMemberIdentityCheckNotice` in `packages/domain/src/member/identity-validation.ts` (DL4: the narrow
       live-row select; `getCurrentMemberState(db, memberId)`, `getCurrentMemberModerationOverlay(db, memberId)`, the two-column KYC
       standing (`readDeceasedKycStanding` or a same-shape local read if the import cycles — ⛔ `getMemberKycProfile`);
       `identityValidationIneligibility`; `isDeathReportStanding` CALLED, ⛔ its SQL copied). ⛔ edit to any existing function there (N5).
       Unit + live-DB tests (AC2), incl. the select-list spy test.
-- [ ] **Task 2 — Contract + API + SDK (AC3).** `packages/contracts/src/members/identity-check-notice.ts` + barrel + a contract test (strict,
+      ⭐ 2026-11-26 — DONE (`7afdf47e`): `readMemberIdentityCheckNotice` appended (⛔ existing function edited; `readDeceasedKycStanding`
+      imported — ⛔ import cycle); 17 live-DB tests (`identity-check-notice.spec.ts`), every one inside `twt_app` scope. Mutants killed:
+      ⛔ eligibility call (5 red), ⛔ death check (1), ⛔ `member_id` predicate (2), "latest by `decided_at`" (1), the note in the select (1).
+      ⚠ (f) and (g) use 3.13's own fixtures (the overlay's `member.moderation.*` event arms; `seedClaim` + a raw
+      `member_found_innocent` finding) — ⛔ the moderation / death-report writers the AC names; the read sees the same rows.
+      A separate unit test was ⛔ written: the read has no pure logic beyond the call into 3.13's unit-tested rule.
+- [x] **Task 2 — Contract + API + SDK (AC3).** `packages/contracts/src/members/identity-check-notice.ts` + barrel + a contract test (strict,
       fixture); `apps/api/src/modules/member-home/` route + handler (F4 shape; the 500 on a read failure — DL5); `memberIdentityCheckNotice()`
       in `packages/api-client/src/index.ts`; OpenAPI per DL5's answer (⛔ entry ⇒ `v1.yaml` byte-identical; option (b) ⇒ a `registerPath`
       in `packages/contracts/scripts/emit-openapi.ts` + `pnpm contracts:emit-openapi`);
       `apps/api/tests/integration/member-home/identity-check-notice.spec.ts` (live DB).
-- [ ] **Task 3 — Mobile (AC4, AC5, AC6).** Read FIRST: `components/announcement-channels/useAnnouncementChannelsQuery.ts` (THE re-read
+      ⭐ 2026-11-26 — DONE (`533f3f69`): the contract (+ barrel, 8 contract tests), the route + handler (500 on a read failure), the SDK
+      method; ⛔ OpenAPI entry (DL5) — `contracts:check-openapi-determinism` green, `openapi/v1.yaml` untouched. API spec 5 tests;
+      `login-wall.spec.ts` green and RED with the route's guard removed (mutant).
+- [x] **Task 3 — Mobile (AC4, AC5, AC6).** Read FIRST: `components/announcement-channels/useAnnouncementChannelsQuery.ts` (THE re-read
       precedent — DL6), `KnownPeopleRequestEntry.tsx` + `lib/known-people.ts` `requestEntryVisible` (the card shape; and the opposite
       render rule, F6), `PeerRequestEntry.tsx`, `known-people-cache.ts`, `lib/session-context.tsx` (the four clear sites),
       `app/(helpdesk)/new.tsx` + `lib/helpdesk-draft.ts`. Then: `apps/mobile/components/identity-check/IdentityCheckNoticeCard.tsx` +
@@ -665,19 +674,33 @@ suggestions, PROPOSED).
       must forward the props a test asserts (#71 (d)); a mocked `t` must return locale-distinct words; `retry: false` in tests;
       [[project_tanstack_instant_mock_hides_notready_flip]]; [[project_tanstack_tracked_props_stale_result_current]];
       [[project_query_gctime_blinds_removal_tests]] (the sign-out clear leg); [[project_uset_fresh_closure_memo_trap]].
-- [ ] **Task 4 — Admin hint (AC7).** `i18n-en.ts` `form.reasonToldToMember` + the header comment replaced by a dated line; render in
+      ⭐ 2026-11-26 — DONE (`679c5c46`). Deviations, stated: the two key maps live in a PURE `identity-check-notice-keys.ts` (the words
+      test imports them without native code); the hook sets ⛔ `retry` (the app client's default `retry: 1` applies — production
+      unchanged; tests use `retry: false`). The "same tick" legs wait on TanStack's `setTimeout(0)` notify with `waitFor` — the query
+      stays OBSERVED, so the 0 ms gc cannot stand in for the re-read; the remount leg first waits for the `gcTime: 0` removal. AC5's
+      "a category tapped before the list arrived" is ⛔ reachable (no category button renders while the list loads or has failed); the
+      harness proves the `category !== undefined` guard by the draft leg and a pick kept across a reload, plus a leg that the preselect
+      applies only at the FIRST success. ⚠ The new once-only pin caught this story's own comment quoting the tap's call (the 10.29 pin
+      reads the FIRST occurrence) — reworded. 50 new tests in four files; 14 mutants killed (render guard on `data`, ⛔ timeout, ⛔ focus,
+      ⛔ AppState, ⛔ `gcTime: 0`, swapped how key, a title-only label, wrong category, wrong clear key, two clears dropped, the four
+      preselect guards, a `useState`-initializer preselect). Every existing home / session / helpdesk test green and UNEDITED.
+- [x] **Task 4 — Admin hint (AC7).** `i18n-en.ts` `form.reasonToldToMember` + the header comment replaced by a dated line; render in
       `IdentityCheckDetailPage.tsx` under the reason choice; admin vitest.
-- [ ] **Task 5 — Gates.** `pnpm i18n:check`; `pnpm microcopy:check`; `pnpm friction:check` (with a NEW `friction-budget.md` row, F14);
+      ⭐ 2026-11-26 — DONE (`e1137251`): the line under the select, which is `aria-describedby` it (the `select` helper gained an optional
+      last parameter); a new test file (4); `identity-checks.test.tsx` unedited and green (119 together).
+- [x] **Task 5 — Gates.** `pnpm i18n:check`; `pnpm microcopy:check`; `pnpm friction:check` (with a NEW `friction-budget.md` row, F14);
       `contracts:check-openapi-determinism`;
       the api unit suite (the source fence lives there — [[project_source_fence_lives_in_api_unit_suite]]); `login-wall.spec.ts`; the
       live-DB suites on your OWN container (`twt_dev`; a domain red hides 8 packages — re-run the whole job,
       [[project_known_livedb_test_failures]]); mobile + admin vitest; typecheck + eslint. Then the PR's GitHub CI run (AC8;
       `scripts/land.sh --dry-run <pr>` before landing — [[feedback_land_prs_by_fast_forward]]).
-- [ ] **Task 6 — Records (AC8).**
-  - [ ] 6.1 Story file: Dev Agent Record, File List (a pasted `git diff --name-only`, ⛔ recalled — #60 (a)), Change Log.
-  - [ ] 6.2 F13's comments (`member_identity_validations.ts` header: *"row `3-13a` tells …"* → *"row `3-13a` (built) tells …"*, dated).
-  - [ ] 6.3 Sprint row → `review`; ONE ledger entry (safe prepend; verify the YAML parses and the row count holds).
-  - [ ] 6.4 `deferred-work.md` PQ2: a dated line (built; Row 57 (b) waits on PQ1's ruling and AC9).
+      ⭐ 2026-11-26 — LOCAL gates ALL green (Completion Notes). ⚠ The PR's GitHub CI run is OWED AT LANDING by BigDev's answer
+      (*"At landing, after review (Recommended)"*) — AC8's CI clause stays OPEN until then (the 3.13 shape).
+- [x] **Task 6 — Records (AC8).**
+  - [x] 6.1 Story file: Dev Agent Record, File List (a pasted `git diff --name-only`, ⛔ recalled — #60 (a)), Change Log.
+  - [x] 6.2 F13's comments (`member_identity_validations.ts` header: *"row `3-13a` tells …"* → *"row `3-13a` (built) tells …"*, dated).
+  - [x] 6.3 Sprint row → `review`; ONE ledger entry (safe prepend; verify the YAML parses and the row count holds).
+  - [x] 6.4 `deferred-work.md` PQ2: a dated line (built; Row 57 (b) waits on PQ1's ruling and AC9).
 
 ## Dev Notes
 
@@ -750,13 +773,67 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.13a on worktree`, 2026-11-26.
+
 ### Debug Log References
+
+- Own container `twt-3-13a-pg` (postgres:16, `:5462`, `twt_dev`), migrated fresh; the shell's `:5432` never used.
+- Unit job: `env -u DATABASE_URL pnpm turbo run test --concurrency=4 --force` — 37 / 37 tasks.
+- Live-DB job (CI's command, `--concurrency=1`, the nine packages) — 24 / 24 tasks: domain 8989 passed + 1 skipped (pre-existing,
+  `column-transformer.integration.test.ts`), api 3460 + 1 skipped (pre-existing), jobs 2402, public 826, channels 468,
+  validity-service 284, niyamavali-engine 144, events 50, queue 4.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created (`bmad-create-story 3.13a`, 2026-11-26).
+- ⭐ 2026-11-26 — DEV-STORY COMPLETE (`bmad-dev-story 3.13a`), four code commits on `d3e94d9b`: `7afdf47e` (domain read),
+  `533f3f69` (contract + route + SDK), `679c5c46` (the card, the preselect, the words, the friction row), `e1137251` (staff hint).
+- AC2 / AC3 — live-DB specs: domain 17, api 5 (own container). AC4–AC6 — mobile 50 new tests; mobile vitest 2596 / 2596. AC7 — admin
+  4 new + 3.13's file unedited. The words: the nine `identity_check.notice.*` lines in both locales compared with the ruled Panel note
+  (`-508`) line by line — 9 / 9; the `APPROVED` table in `identity-check-notice-copy.test.ts` pins them through the real `t()`.
+- Gates: `pnpm i18n:check` ✓; `pnpm microcopy:check` ✓ (337 code / 34 copy files); `pnpm contracts:check-openapi-determinism` ✓
+  (`openapi/v1.yaml` untouched — DL5); `pnpm friction:check` ✓ AFTER the commits (*"member-facing surface touched and a declaration row
+  changed (1 added/amended)"* — before commit it reads "dormant", which proves nothing); typecheck + eslint clean on every touched
+  package; added lines scanned for raw `\u` escapes (`python3 -I`) — 0.
+- ⚠ NOT done here: the PR's GitHub CI run (owed at landing — BigDev); the Android device pass (AC9 — a GO-LIVE leg, Row 57 (b));
+  `pnpm ci:local` (optional, ⛔ run). The words are the Panel's (`-508`); ⛔ new member wording was introduced.
+- Records: Row 57 (b) and `deferred-work.md` PQ2 — dated "built on the story branch, ⛔ landed" lines; F13's schema comments dated;
+  sprint row `in-progress → review`, ledger `2026-11-26n`.
 
 ### File List
+
+(`git diff --name-only d3e94d9b..HEAD` + the records commit — pasted, ⛔ recalled.)
+
+- `_bmad-output/implementation-artifacts/3-13a-member-told-when-identity-not-confirmed.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `apps/admin/src/modules/identity-checks/IdentityCheckDetailPage.tsx`
+- `apps/admin/src/modules/identity-checks/i18n-en.ts`
+- `apps/admin/tests/identity-checks-reason-hint.test.tsx`
+- `apps/api/src/modules/member-home/handlers.ts`
+- `apps/api/src/modules/member-home/routes.ts`
+- `apps/api/tests/integration/member-home/identity-check-notice.spec.ts`
+- `apps/mobile/app/(helpdesk)/new.tsx`
+- `apps/mobile/app/(tabs)/index.tsx`
+- `apps/mobile/components/identity-check/IdentityCheckNoticeCard.tsx`
+- `apps/mobile/components/identity-check/identity-check-notice-keys.ts`
+- `apps/mobile/components/identity-check/useIdentityCheckNoticeQuery.ts`
+- `apps/mobile/lib/session-context.tsx`
+- `apps/mobile/tests/unit/helpdesk-new-preselect-render.test.ts`
+- `apps/mobile/tests/unit/identity-check-notice-card.test.ts`
+- `apps/mobile/tests/unit/identity-check-notice-copy.test.ts`
+- `apps/mobile/tests/unit/identity-check-notice-signout.test.ts`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `friction-budget.md`
+- `packages/api-client/src/index.ts`
+- `packages/contracts/src/members/identity-check-notice.ts`
+- `packages/contracts/src/members/index.ts`
+- `packages/contracts/tests/members-identity-check-notice.test.ts`
+- `packages/domain/src/member/identity-validation.ts`
+- `packages/domain/src/schema/member_identity_validations.ts`
+- `packages/domain/tests/integration/member/identity-check-notice.spec.ts`
+- `packages/i18n/locales/en/common.json`
+- `packages/i18n/locales/hi/common.json`
 
 ## Change Log
 
@@ -775,3 +852,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.10 | 2026-11-26 | ⭐⭐ The Panel RULED the note — [Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508) (Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / Q1 A / Q2 (ii) / Q3 A / confirmed all three"*), committed ALONE (`978c2c11`) before these records. PQ1 (a) A, PQ1 (b) (ii), the words APPROVED as written (by reading — ⛔ change given), PQ2 A (counsel's half open), the three confirms. ⛔ build change. Records: the note's status and ruling block (the rest unedited); Task 0.3 ticked; a ruled box over "Panel question"; roster Row 57 (b) dated line (⛔ MET — built + device pass owed); `deferred-work.md` PQ2 (under `-501`), `3.13-R1-W6` (Panel half ruled A, counsel's half open) and `3.13a-G1` (trigger FIRED; the ruling accepts the gap as a cost, ⛔ rules it unfixable; homing it is BigDev's) dated lines. Next: Task 0.4 from `-509`, then 0.5's remaining items and 0.6, then code. Row stays `ready-for-dev`. |
 | 1.11 | 2026-11-26 | BigDev: *"yes, write the 0.4 entry"* — Task 0.4 DONE: [Decision 2026-11-26-509](../../.decision-log.md#decision-2026-11-26-509) (author-commit, `659d9829`, committed ALONE before any `apps/` / `packages/` change; `-508` the highest id everywhere). DL1–DL12 as answered (DL5 ⛔ OpenAPI entry; DL6 the `isSuccess` render rule; DL8 preselect; DL9 (b); DL10 one button), built on `-508`; `-502` item 4 copied byte for byte; every other quote checked against its source. Next: Task 0.5's remaining items (Row 57 line, PQ2 line, the `3-14` and `3-16` items), 0.6 (the sprint row + the ONE ledger entry), then code. Row stays `ready-for-dev`. |
 | 1.12 | 2026-11-26 | BigDev: *"yes, finish 0.5 and 0.6"* — Task 0.5 DONE (`3.13a-G2` → row `3-14`, `3.13a-G3` → row `3-16`, both re-verified on the code; the Row 57, PQ2, R1-W6 and G1 lines already written with `-508`'s records). Task 0.6 DONE: sprint row `ready-for-dev → in-progress`, ledger `2026-11-26m`, YAML parses. **Task 0 — Governance FIRST — is complete**: every `apps/` / `packages/` file may now be touched. Status → `in-progress`. Next: `bmad-dev-story 3.13a` (Task 1). |
+| 1.13 | 2026-11-26 | `bmad-dev-story 3.13a` — Tasks 1–6 DONE: the domain read (`7afdf47e`), the contract / route / SDK (`533f3f69`), the home card + help-form preselect + the approved words + the friction row (`679c5c46`), the staff hint (`e1137251`). Unit job 37 / 37; live-DB job 24 / 24 on the story's own container; mobile 2596 / 2596; gates green. BigDev: GitHub CI *"At landing, after review"*. Deviations stated under Task 1 / Task 3 (3.13's fixtures for (f) / (g); the pure keys module; ⛔ `retry` on the hook; AC5's unreachable pre-load tap). Row 57 (b) and PQ2 dated lines; status `review`; ledger `2026-11-26n`. ⛔ Pushed. Nothing is live. |

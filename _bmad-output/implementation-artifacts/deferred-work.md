@@ -34,6 +34,8 @@ and blocks GO-LIVE through roster Row 57 (`identity-validation-live`), ⛔ the b
   - **2026-11-26 — the words RULED** ([Decision 2026-11-26-508](../../.decision-log.md#decision-2026-11-26-508); DR + KB): Q1 A, Q2 (ii),
     the words as written (by reading), the three confirms confirmed. Row `3-13a` in progress (`ready-for-dev`). Open until built and the
     device pass is recorded (Row 57 (b)).
+  - **2026-11-26 — BUILT on the story branch, ⛔ landed** (`bmad-dev-story 3.13a`; row `3-13a` → `review`): the card, the read, the
+    preselect and the staff hint. Open until it lands and the device pass is recorded (Row 57 (b); Story 3.13a AC9).
 - **PQ3 — may the District Admin and Pariwar Admin see a member's full mobile to arrange the check?** OPEN — the same note, Q3 (BigDev's
   DL8b, 2026-11-21: *"Ask Panel: show full mobile"*). Built: A (masked only — DL8). Trigger: B ⇒ one audited number read on the detail
   route; C ⇒ its own row ⇒ Row 57 (b2).

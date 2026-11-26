@@ -442,12 +442,18 @@ suggestions, PROPOSED).
      (staff can check them, as told on 21 November).
   2. On this message the member sees the reason only — ⛔ the date, ⛔ who checked, ⛔ which ID was shown (the private note is Confirm
      (iii)). Their data download, once it is live, already shows the date of each check and how and with which kind of ID it was done
-     (⛔ the private note — whether it may be downloaded is the separate question, asked at this sitting or already asked).
+     (⛔ the private note — whether it may be downloaded is the note's Q3, PQ2 below).
 - ⛔ **NOT a question:** that the member is told, and told the reason (`-502` item 4).
 - ⭐ **Asked no later than this sitting (a deadline, ⛔ optional):** the peer note `trustee-panel-routing-note-2026-11-26-3-13-staff-note-in-member-download.md`
   (`3.13-R1-W6`; on `governance/panel-sitting-2026-11-26`, ⛔ sent). `-504` item 5 and the deferred item's Trigger put it at *"the sitting
   that approves row `3-13a`'s message, or before the data export goes live, whichever is first"* ⇒ if it has ⛔ been asked before,
   it goes in the same sitting as PQ1; PQ1's note is ⛔ sent while it is unasked (F12).
+  ⭐ **2026-11-26 (v1.5) — DISCHARGED into this story's note:** BigDev, *"put the private-note question in same routing note, this session will go first."* ⇒ asked as the note's **Q3** (`c7e9e94b`), its
+  options, costs and reading kept as the separate note put them; this note goes to the Panel FIRST. The separate note (`4a48c24d`) and the
+  agenda on `governance/panel-sitting-2026-11-26` are ⛔ edited here — withdrawing or marking their copy is BigDev's (F12).
+- **PQ2 (the note's Q3) — may a member download the private note staff wrote about their check?** (`3.13-R1-W6`.) A keep it out — built
+  today, our reading subject to counsel; B put it in; C keep it out, say it exists, give it on request. The legal half (DPDP s.11(1)(a))
+  is counsel's, split out. ⛔ build change in this story: A is what `assemble.ts` does today (F1); B or C would be a new row's work.
 
 ## Acceptance Criteria
 
@@ -557,7 +563,7 @@ suggestions, PROPOSED).
         build — one question, naming DL5's OpenAPI choice and DL6's render rule with their options), DL8 (preselect vs unselected),
         DL9 (the staff hint, word for word — "will see" vs "is told"), DL10 (whole card as the button vs a separate button), and WHERE
         `3.13-R1-W6` is asked — at PQ1's sitting or earlier (the deadline is bound, F12; the sitting is BigDev's to decide and to tell
-        the peer session — ⛔ an edit to its branch). Record the answers verbatim here.
+        the peer session — ⛔ an edit to its branch). ⭐ ANSWERED 2026-11-26: *"put the private-note question in same routing note, this session will go first."* — it is the note's Q3 (`c7e9e94b`). Record the answers verbatim here.
   - [ ] 0.3 Write the Panel note from the TEMPLATE (§0 first; PQ1 (a) and (b), each with its one deciding fact and options with an
         honest cost; the words table; the two confirm lines; the two info lines; evidence LAST, E4 commands run before commit). ⛔ send it
         while `3.13-R1-W6` is still unasked — it goes in the same sitting unless it was asked earlier (F12):
@@ -570,8 +576,9 @@ suggestions, PROPOSED).
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-26-3-13a-member-told-identity-not-confirmed.md`, committed
         ALONE `ff89f047` (E4 run first; a fresh-context review of the draft applied first). The note's Q1 = PQ1 (a), Q2 = PQ1 (b), plus
         three non-blocking confirms (a reported death; app only; the reason ⛔ the private note). ⛔ SENT. Still owed before it is sent:
-        BigDev's Hindi read (⛔ done); `3.13-R1-W6` with it unless already asked; the peer agenda's *"once that work is built"* line
-        reconciled (BigDev's); and, after 0.2, the note re-checked against the answers (a changed DL that touches the words amends the
+        BigDev's Hindi read (DONE 2026-11-26, *"Hindi is ok"*); `3.13-R1-W6` (DONE 2026-11-26 — asked in this note as Q3,
+        `c7e9e94b`); the peer agenda's copy of R1-W6 and its *"once that work is built"* line withdrawn or marked (BigDev's — this note goes
+        first); and, after 0.2, the note re-checked against the answers (a changed DL that touches the words amends the
         note by a dated line, ⛔ a rewrite). The box stays unticked until it is sent.
         ⭐ 2026-11-26 — BigDev READ the Hindi (all nine lines, shown with the English): *"Hindi is ok"* — ⛔ change; recorded in the
         note's status block. ⛔ the Panel's approval — the words table stays PROPOSED until PQ1 is ruled.
@@ -585,7 +592,7 @@ suggestions, PROPOSED).
         — a new `not_confirmed` reason needs the contract, Panel-approved words and a decision on older installed apps (DL12), trigger:
         3-16's create-story; a NEW item, OPEN and unhomed — ⛔ route corrects a wrong typed-in detail for anyone (F10 (d); the 21 November
         note's info line 6; Niyamavali Part 10's correction right is counsel's to read), owner BigDev, trigger: PQ1's ruling or Row 57's
-        go-live, whichever is first (observed and escalated — ⛔ planned here); a dated line on `3.13-R1-W6` naming PQ1's sitting.
+        go-live, whichever is first (observed and escalated — ⛔ planned here); a dated line on `3.13-R1-W6` naming PQ1's sitting (⭐ WRITTEN 2026-11-26 with v1.5 — it is the note's Q3).
   - [ ] 0.6 Sprint row `3-13a-…` `ready-for-dev → in-progress` (map only; the ONE ledger entry is written at the end).
 - [ ] **Task 1 — Domain (AC2).** `readMemberIdentityCheckNotice` in `packages/domain/src/member/identity-validation.ts` (DL4: the narrow
       live-row select; `getCurrentMemberState(db, memberId)`, `getCurrentMemberModerationOverlay(db, memberId)`, the two-column KYC
@@ -715,3 +722,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.2 | 2026-11-26 | Validated (`bmad-create-story validate 3.13a`; three read-only verifiers — code / governance / premises — at `ce0737ce`; `origin/main` `f5c559d0`, records only), 29 findings, BigDev: *"all"*. Build: DL6 re-reads on home-tab focus and app foreground (the 5.14 precedent; ⛔ query re-read on focus before — the card would have stayed after a confirmation), bounded by `withTimeout`, cleared at the four account-change sites; render on `isSuccess` (the `!isError` mutation was equivalent — RUN in query-core 5.101.0), stated as the opposite of the known-people rule with its cost; DL4 reads the KYC standing as two columns and calls the three reads directly; DL5 ⛔ OpenAPI entry (hand-registered; PROPOSED); DL8 preselects after the async list loads, exactly as a tap (persisted), the tap handler unchanged; DL10 the whole card is one button; DL1's inverted ⛔ fixed and its costs stated; DL12 a new 3-16 reason does ⛔ reach the card. Tests: AC2 rebuilt one-fact-per-leg (hand-seeded where the writer cannot reach), a `suspended` positive leg, the select-list spy shape; AC3 401 `auth.session_required` for an admin; AC4 focus / foreground / timeout legs and the right mutant; AC5 list-loading / list-error / override legs and a new harness; AC6 Hindi bans; tests in `tests/unit/`. Governance: PQ1 split into (a) the promise and (b) a per-reason how line (⛔ route corrects a wrong typed-in detail — F10 (d), two new PROPOSED lines in both languages, microcopy-clean); push left out is OUR reading ⇒ a non-blocking confirm, ⛔ a told line; `3.13-R1-W6` BOUND to PQ1's sitting (`-504` item 5 quoted); told note §4 added; the Niyamavali's Part 7 R10(B) engaged; the export's fields disclosed; F9's second cover key; three new `deferred-work.md` items for Task 0.5; quote fixes (C's cell, 4.7 AC2a, the told note's send commit). Numbers: next ledger after this line's `2026-11-26i`; decision `-508`. Then a fresh-context review of the PATCH diff: 1 HIGH / 7 MEDIUM / 10 LOW, all the pass's own, all applied — `how_details` no longer hints at a fix (⛔ "in the app yet"; it keeps the show-a-matching-ID instruction) and PQ1 (b)'s costs are even; `3.13-R1-W6` is a DEADLINE (no later than PQ1's sitting), ⛔ "the same sitting"; the reason → how-key map pinned as a literal; the 10.29 `setCategory` pin protected by a distinct identifier + a once-only pin; a wrongly reported living member losing the card moved from a told line to a confirm; DL9 recommends *"The app shows the member this reason."*; the push confirm's cost in our own words; the home-test grep restored; trap numbering, cross-references, the peer tip (`92f9d95e`). Row stays `ready-for-dev`. ⛔ Code, ⛔ decision id taken, ⛔ pushed. |
 | 1.3 | 2026-11-26 | The Panel note WRITTEN at BigDev's ask (*"create a panel note separately in this story"*), before Task 0.2, and committed ALONE `ff89f047` — WRITTEN, ⛔ sent (Task 0.3). A fresh-context review of the draft (1 HIGH / 5 MEDIUM / 12 LOW) applied before commit, and its changes synced here: the Hindi `how_details` used अभी, which reads as "not yet" — now इस समय ("at this time"); the PQ1 (a) B / C rule swaps the sentence on ARRANGING it, ⛔ `how_details`' last sentence; the reason-⛔-the-note reading moved from a told line to a non-blocking confirm (iii); confirm (i) says what brings the card back (a finding that the member is alive, ⛔ a withdrawn claim); PQ1 (b)'s costs name the rulebook's correction right (counsel ⛔ asked). Words tables in the note and here compared cell by cell — identical; microcopy-clean. Row stays `ready-for-dev`. |
 | 1.4 | 2026-11-26 | BigDev read PQ1's Hindi (all nine lines, shown in the session with the English): *"Hindi is ok"* — ⛔ change. Recorded in the note's status block (owed item (1) done) and Task 0.3. The words stay PROPOSED until the Panel rules. Row stays `ready-for-dev`. |
+| 1.5 | 2026-11-26 | BigDev: *"put the private-note question in same routing note, this session will go first."* — `3.13-R1-W6` (may a member download the private note staff wrote about their check) is now Q3 of this story's Panel note (`c7e9e94b`, committed ALONE), its options, costs and reading kept as the separate note (`4a48c24d`, on `governance/panel-sitting-2026-11-26`, unsent, ⛔ edited) put them; recorded here as PQ2 (⛔ build change — A is built). Task 0.2's R1-W6 item answered; Task 0.3's owed list updated; `deferred-work.md` R1-W6 dated line written (Task 0.5's sub-item). The note stays WRITTEN, ⛔ sent; owed: the peer agenda's copy withdrawn or marked (BigDev's) and the words re-checked after 0.2. Row stays `ready-for-dev`. |

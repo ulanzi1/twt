@@ -947,7 +947,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.13a on worktree`, 2026-11
 
 ### SHA map — the rebase of 2026-11-26 (onto `origin/main` `f5c559d0`)
 
-Every branch commit got a new SHA when the story branch was rebased over the one records commit `main` gained (PR #355 conflicted). Records written before the rebase cite the OLD SHAs — including the ratified `.decision-log.md` entries and the Panel note, which are ⛔ edited (a ratified record is superseded, never rewritten). Read an old SHA through this table; the old commits are kept on the local branch `backup/3-13a-pre-rebase-2026-11-26` (tip `d3fbf833`). Only the 19 old SHAs that are cited somewhere are listed.
+Every branch commit got a new SHA when the story branch was rebased over the one records commit `main` gained (PR #355 conflicted). Records written before the rebase cite the OLD SHAs — including the ratified `.decision-log.md` entries and the Panel note, which are ⛔ edited (a ratified record is superseded, never rewritten). Read an old SHA through this table; the old commits are kept on the local branch `backup/3-13a-pre-rebase-2026-11-26` (tip `d3fbf833`) [⚠ SUPERSEDED 2026-11-26, later the same day: that backup branch was DELETED at BigDev's word, with the 3.13 and 3.13a worktrees, local story branches and containers — the old commits are on ⛔ branch now. Their objects stay in the local repository until git expires them (while they exist: `git branch <name> d3fbf833`), and the old tip was pushed to the PR branch before the rebase, so GitHub may still serve it by SHA — ⛔ guaranteed. The table below is the way to read an old SHA]. Only the 19 old SHAs that are cited somewhere are listed.
 
 | Old SHA | New SHA | Commit |
 |---|---|---|

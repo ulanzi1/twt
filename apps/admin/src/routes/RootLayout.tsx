@@ -16,6 +16,7 @@ import { hasAuditVerify, hasBreachManage, hasPariwarProvision, sessionKey, useSe
 import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
+import { feeBankDatesEn } from '../modules/fee-bank-dates/i18n-en.js';
 import { approvalWarningReasonsEn } from '../modules/approval-warning-reasons/i18n-en.js';
 import { questionnaireVersionsEn } from '../modules/questionnaire-versions/i18n-en.js';
 import { resolveEn as memorialReviewEn } from '../modules/memorial-review/i18n-en.js';
@@ -148,6 +149,13 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/certificate-reminders" params={{ pariwarId }} className="text-sm underline" data-testid="nav-certificate-reminders">
               {certificateRemindersEn.nav}
+            </Link>
+          )}
+          {/* Story 6.39a (DL10) — the finance officer's bank dates, inside a Pariwar context only. UNGATED: the server's 403 is
+              the boundary (without the link the page is reachable by a typed URL only). */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/fee-bank-dates" params={{ pariwarId }} className="text-sm underline" data-testid="nav-fee-bank-dates">
+              {feeBankDatesEn.nav}
             </Link>
           )}
           {/* Story 6.33 (QE16) — UNGATED: the server's 403 is the boundary (a Pariwar Admin proposes, the Super Admin publishes). */}

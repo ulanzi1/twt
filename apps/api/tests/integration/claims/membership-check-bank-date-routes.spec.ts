@@ -6,7 +6,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, cycleCalendar, ids, nominee } from '@twt/domain';
+import { claim, ids, nominee } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -14,7 +14,7 @@ import * as service from '../../../src/modules/auth/admin/admin-auth.service.js'
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
-import { ensurePassedMembershipCheck, seedMembershipCheck, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
 type Client = ReturnType<typeof makeClient>;
@@ -138,45 +138,11 @@ describe.skipIf(!hasDatabase)('Story 6.39a — `bank_date_recorded` at one site 
 
   type World = { pariwarId: string; claimCaseId: string; memberId: string };
 
-  /** Supersede the claim's live membership check — it then WAITS (`not_checked`). */
-  const voidCheck = (claimCaseId: string) =>
-    td.pool.query(
-      `UPDATE claim_membership_checks SET superseded_at = now(), superseded_reason = 're_checked' WHERE claim_case_id = $1 AND superseded_at IS NULL`,
-      [claimCaseId],
-    );
-  /** Replace the live check with a RAW one of the given outcome, against the claim's current accepted review. */
-  const checkOf = (w: World, over: { feeOutcome?: 'before_death' | 'same_day' | 'after_death'; identityOutcome?: 'confirmed' | 'not_confirmed' } = {}) =>
-    inScope(w.pariwarId, async (s) => {
-      const snap = await claim.readDeathCertificateSnapshot(s.tx, ids.pariwarId(w.pariwarId), ids.claimId(w.claimCaseId));
-      return seedMembershipCheck(s, {
-        pariwarId: w.pariwarId, claimCaseId: w.claimCaseId, deceasedMemberId: w.memberId, reviewId: snap.currentReview!.reviewId as string, ...over,
-      });
-    });
-  const passCheck = (w: World) => inScope(w.pariwarId, (s) => ensurePassedMembershipCheck(s, w.pariwarId, w.claimCaseId));
   const stateOf = async (claimCaseId: string) =>
     (await td.pool.query<{ current_state: string }>(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [claimCaseId])).rows[0]!.current_state;
 
   const claimBase = (p: string, c: string) => `/api/v1/p/${p}/admin/claims/${c}`;
   const errOf = (body: string) => (JSON.parse(body) as { error: { code: string; message: string; details?: Json } }).error;
-
-  /** DL12 — the staff words of each reason, AS APPROVED (the API message; the closure surfaces show it verbatim). */
-  const WORDS = {
-    not_checked: 'Membership check needed before approval.',
-    stale: 'The certificate changed since the membership check — check again.',
-    identity_not_confirmed: "The person's identity has not been confirmed.",
-    fee_after_death: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
-  } as const;
-
-  /** The ONE assertion every route makes: 409, its OWN prefix, the reason, the approved words — ⛔ a refusal. */
-  function expectWaits(res: { statusCode: number; body: string }, prefix: string, reason: keyof typeof WORDS = 'not_checked'): void {
-    expect(res.statusCode, res.body).toBe(409);
-    const err = errOf(res.body);
-    expect(err).toMatchObject({ code: `${prefix}.membership_check_required`, details: { reason } });
-    expect(err.message).toBe(WORDS[reason]);
-    expect(err.message).not.toMatch(/refused|denied/i);
-    // TR13 — ⛔ a bare `claim.membership_check_required` on any route.
-    expect(err.code.startsWith('claim.')).toBe(false);
-  }
 
   const daDecision = (da: { client: Client }, w: World, payload: Json) =>
     da.client.inject({ method: 'POST', url: `${claimBase(w.pariwarId, w.claimCaseId)}/verifier-decision`, payload });

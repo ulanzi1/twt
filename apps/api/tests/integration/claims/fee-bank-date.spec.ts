@@ -21,7 +21,7 @@ import type { AppDeps } from '../../../src/context.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
-import { DEATH, NOTE, errCode, feeBankDateWorld, j, type FeeBankDateWorld, type Json, type World } from './_fee-bank-date-world.js';
+import { DEATH, errCode, feeBankDateWorld, j, type FeeBankDateWorld, type Json, type World } from './_fee-bank-date-world.js';
 
 describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date — E2E', { timeout: 30000 }, () => {
   let td: TestDeps;

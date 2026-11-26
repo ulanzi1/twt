@@ -31,6 +31,7 @@ import {
   EscalationsPickerRoute,
 } from './routes/CorrectionClosureRoutes.js';
 import { CertificateRemindersRoute } from './routes/CertificateReminderRoutes.js';
+import { FeeBankDatesRoute } from './routes/FeeBankDatesRoute.js';
 import { ApprovalWarningReasonsRoute } from './routes/ApprovalWarningReasonsRoute.js';
 import { QuestionnaireVersionsRoute } from './routes/QuestionnaireVersionsRoute.js';
 import { WorkplaceRequestsRoute } from './routes/WorkplaceRequestsRoute.js';
@@ -380,6 +381,12 @@ const certificateRemindersRoute = createRoute({
   path: '/p/$pariwarId/certificate-reminders',
   component: CertificateRemindersRoute,
 });
+// Story 6.39a (DL10) — the finance officer's bank dates for joining fees recorded after the death.
+const feeBankDatesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/fee-bank-dates',
+  component: FeeBankDatesRoute,
+});
 // Story 6.23a (NW17) — the Super Admin's warning-reason list (add / replace; ⛔ never edit or delete).
 const approvalWarningReasonsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -559,6 +566,7 @@ const routeTree = rootRoute.addChildren([
   correctionDirectionsRoute,
   closureLettersRoute,
   certificateRemindersRoute,
+  feeBankDatesRoute,
   approvalWarningReasonsRoute,
   questionnaireVersionsRoute,
   workplacesRoute,

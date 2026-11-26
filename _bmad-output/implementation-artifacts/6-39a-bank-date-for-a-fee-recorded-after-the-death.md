@@ -60,7 +60,7 @@ note's, `2026-11-27a` the second validation's. A migration's drizzle `when` must
 ([[project_sibling_migration_when_order_shared_db]]). Every number in this file is "the next free one" at the commit that takes it —
 READ LIVE then, across branches.
 
-LETTERS: **G** = found facts (G1–G14); **DL** = build decisions (DL1–DL14 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel
+LETTERS: **G** = found facts (G1–G14); **DL** = build decisions (DL1–DL14 — ANSWERED by BigDev at Task 0.2, 2026-11-27: every one as proposed); **PQ** = Panel
 questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR14); **AC1–AC13**.
 -->
 
@@ -129,7 +129,7 @@ never opens a drive**.
 ## 📜 Policy meaning (AI-10-1)
 
 **This story CHANGES the predicate that gates a family's access to a benefit — the drive — in two ways:** it WIDENS the fee half in one
-case (the bank's date, when the finance officer records it and it is the earlier — DL6, PROPOSED — replaces the recorded date), and it ADDS one conjunct (a check computed before a
+case (the bank's date, when the finance officer records it and it is the earlier — DL6 — replaces the recorded date), and it ADDS one conjunct (a check computed before a
 bank date was recorded no longer counts — the claim waits for a re-check).
 
 *In the member's terms (ONE sentence):* **"If you paid your joining fee before the day you died but the payment was recorded only on or
@@ -299,7 +299,7 @@ or one user holding both role grants), a bank date that person records leaves th
   (6.22, live) — so the scrub of a new Tier-1 note runs for real.
 - **G13 — Numbers.** See the NUMBERS block (top).
 
-## Build decisions — PROPOSED (BigDev answers at Task 0.2)
+## Build decisions — ANSWERED (BigDev, Task 0.2, 2026-11-27 — every one as proposed; the alternatives are kept below as *"Not chosen at 0.2"*; the answers are recorded under Debug Log References)
 
 - **DL1 — ONE new record: `claim_fee_bank_dates`** (ONE migration, the next free number — `0219` at 2026-11-27; READ LIVE), copying `0212`'s shape:
   `record_id uuid PK`, `pariwar_id`, `claim_case_id` (FK `claims`), `deceased_member_id`, `fee_receipt_id` (FK `vyawastha_shulk_receipts` —
@@ -351,7 +351,7 @@ or one user holding both role grants), a bank date that person records leaves th
   (`fee_blocks_approval` is computed with `live` possibly null). So a claim nobody has checked is ⛔ on the finance officer's list and its
   POST answers `not_held`: the District Admin RECORDS the check first (for an unchecked identity that includes their `not_confirmed`
   judgment, reason and note), THEN the finance officer records the bank date, THEN the District Admin records the check AGAIN. The console
-  note says it in that order (DL11). *The other option, for BigDev at 0.2:* (b) also admits a claim with ⛔ live check whose COMPUTED
+  note says it in that order (DL11). *Not chosen at 0.2:* (b) also admits a claim with ⛔ live check whose COMPUTED
   outcome blocks (the writer computes it under the lock as the preview does — it then needs the date of death, a decrypt on the finance
   path, against N2 / TR3); cost: ⛔ second check for the District Admin, but the finance writer reads Tier-1.
   ⚠ **When a correction stops:** the record is accepted only in the window, so once the claim reaches `state_trustee_approved` (outside it)
@@ -361,9 +361,9 @@ or one user holding both role grants), a bank date that person records leaves th
   may refuse again — with the family's one appeal spent (`appeal-eligibility.ts` — one appeal journey per claim). Option: ALSO accept a
   record while the claim is in `appeal_stage_*` (record only — the re-check still waits for `reversed`, and (b) is read off the live check,
   which survives the denial). Cost: a staff write during an appeal the appeal stories do ⛔ expect; the appeal surfaces show ⛔ such record
-  (a new read on them is out of scope). PROPOSED: ⛔ (as built — the window), with the cost in PQ1.
+  (a new read on them is out of scope). ANSWERED at 0.2: ⛔ (as built — the window), with the cost in PQ1.
 - **DL6 — The membership check uses it.** `postCheck` / `getPreview` read the claim's live bank-date record (`getLiveFeeBankDate`); when one
-  exists AND names the joining receipt, the fee date is the EARLIER of its `bank_credit_date` and `istDateOf(paidAt)` (PROPOSED — see
+  exists AND names the joining receipt, the fee date is the EARLIER of its `bank_credit_date` and `istDateOf(paidAt)` (ANSWERED at 0.2 — see
   below), `fee_date_source` names which one it was (`'bank'` only when the bank date is strictly earlier), and `fee_bank_date_id` names the
   record CONSIDERED either way; with ⛔ live record it is `istDateOf(paidAt)`, `'recorded'` and `NULL`. The outcome comes from DL2's ONE rule.
   ⚠ The gate (DL7) compares the check's `fee_bank_date_id` with the live record, so the id is stored whenever a record was considered —
@@ -371,7 +371,7 @@ or one user holding both role grants), a bank date that person records leaves th
   (`'bank'` ⇒ an id), ⛔ `⇔`. *Why the earlier:* Q2 B lets staff use the bank's date when it *"shows the money arrived before the death"*;
   a bank date LATER than the recorded one (a statement's value date after a holiday) shows nothing of the kind, yet replacing the date with
   it could turn a passing claim into a held one — e.g. recorded D, death corrected on re-review to D+1, bank D+1 ⇒ `same_day`. The earlier
-  date can only help. *The other option, for BigDev at 0.2:* the bank date ALWAYS replaces the recorded one (as first written; the
+  date can only help. *Not chosen at 0.2:* the bank date ALWAYS replaces the recorded one (as first written; the
   coherence CHECK may then be `⇔`); cost: the case above, with ⛔ withdraw act to undo it (DL5). The POST body gains a REQUIRED nullable `expected_fee_bank_date_id` (the preview's
   record id). As with the review today, TWO compares: the handler compares the body's token with the record it read, and passes the
   writer `computedAgainstFeeBankDateId` (nullable — the live record it CONSIDERED, whichever date won; `null` only when ⛔ live record naming the joining receipt was considered); the
@@ -380,7 +380,7 @@ or one user holding both role grants), a bank date that person records leaves th
   `fee_bank_date_id` from what it re-read, so the outcome and the record it names can ⛔ diverge. **The same person (N7):** when the
   check considers a live bank-date record (whichever date wins), the writer refuses `membership_check.same_person` if its actor recorded that live record (`isSameActorId`
   from the leaf `claim/approver-own-visit.ts`, against the record's `decided_by_actor_id`, under the lock) — whatever roles the actor
-  holds, a Super Admin included; another person records the check. *The other option, for BigDev at 0.2:* ⛔ actor check — N7 and TL1
+  holds, a Super Admin included; another person records the check. *Not chosen at 0.2:* ⛔ actor check — N7 and TL1
   then promise a separation of ROLES only, and are reworded to say so. The preview gains `fee_date_source` and `fee_bank_date:
   { record_id, bank_credit_date, reason_code, recorded_by_display, recorded_at } | null`; `fee_paid_on` keeps meaning the RECORDED date
   (⛔ renamed — contract churn; its comment says so).
@@ -406,11 +406,11 @@ or one user holding both role grants), a bank date that person records leaves th
   `cycle.freeze` or `claim.r9_vote` (N7) — `district_admin`, `pariwar_admin` and the approvers among them. *Rejected:* the District Admin
   (the 6.39 reading in `-473`): they do not hold the Trust's statement, and the same hand would type the date AND decide the check.
   ⚠ G4: if the Trust has no finance officer at go-live, only a Super Admin can record a bank date — a go-live leg (DL13).
-- **DL9 — Step-up (PROPOSED: keep it, with a go-live leg).** The POST requires a FRESH step-up after the permission hook
+- **DL9 — Step-up (ANSWERED at 0.2: keep it, with a go-live leg).** The POST requires a FRESH step-up after the permission hook
   (`requireStepUp`, a new context constant in the contract file that the route AND the admin caller import — G9): a staff power over a
   bright line (Q2 B's cost), and this act alone moves the fee date. ⚠ Its cost, stated: in production ⛔ admin step-up code is delivered
-  (G9), so the bank date cannot be recorded there until deferral R4 is discharged — DL13 (e) holds go-live on it. *The other option, for
-  BigDev at 0.2:* ⛔ step-up, as the membership check has none (the act is then usable at go-live without R4; the power rests on the
+  (G9), so the bank date cannot be recorded there until deferral R4 is discharged — DL13 (e) holds go-live on it. *Not chosen at
+  0.2:* ⛔ step-up, as the membership check has none (the act is then usable at go-live without R4; the power rests on the
   key, the reason, the note and the audit alone). The admin page holds the write on `auth.step_up_required` and re-sends it through the
   shared `StepUpPanel` (G9) — ⛔ a second step-up UI. ⚠ In the browser pass sign-in is the cookie helper and the step-up's code comes
   from the admin stub's dev reveal ([[project_admin_browser_pass_launcher]]) — record both as limits.
@@ -446,7 +446,7 @@ or one user holding both role grants), a bank date that person records leaves th
   page is reachable by a typed URL only). The page owns the mutation and the tokens, and holds a write on `auth.step_up_required`
   through the shared `StepUpPanel` (G9); copy English only (DL11). ⛔ Name and ⛔ date of death on the page
   or its wire (N2).
-- **DL11 — Staff words (English only — BigDev approves word for word at 0.2).** The finance officer's page: title *"Joining fees to check
+- **DL11 — Staff words (English only — APPROVED word for word by BigDev at 0.2, 2026-11-27).** The finance officer's page: title *"Joining fees to check
   against the bank statement"* · intro *"These claims are held because the joining fee was recorded on or after the date of death. If the
   Trust's bank statement shows the payment arrived earlier, record the date it arrived."* · row *"Recorded on {date} · ₹{amount} ·
   reference ending {last4}"* · fields *"Payment reference, as shown on the statement"* / *"Date the money arrived, as shown on the
@@ -464,7 +464,7 @@ or one user holding both role grants), a bank date that person records leaves th
   build allows (DL5: the finance officer can act only on a RECORDED check): *"No drive can open for this claim on the recorded date. Record
   the check. If the member may have paid before the death, then ask the finance officer to check the Trust's bank statement before you deny;
   otherwise deny the claim with the reason "Fee paid after the death"."*; a blocking outcome from the BANK's date keeps today's note,
-  unchanged. (*The other option, for BigDev at 0.2:* ⛔ amendment — today's
+  unchanged. (*Not chosen at 0.2:* ⛔ amendment — today's
   note stays and the bank sentence is a separate line beside it; cost: one screen then tells the District Admin to deny and, beside it,
   that the bank could still help.) When the bank's date is used — *"The Trust's bank statement shows the payment arrived on {date}
   (recorded by {name})."*; the wait reason (DL7) and `bank_date_changed` — *"The finance officer recorded the bank's date since you
@@ -659,12 +659,16 @@ or one user holding both role grants), a bank date that person records leaves th
         worktree. ⭐ Re-read row `3-17-…`'s status and story file (G14): if it is past `backlog`, reconcile DL1's fee-date sources, the
         coherence CHECK and the guard REPLACE with it BEFORE Task 1 (TR13). Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL14 to BigDev (DL11's English verbatim, with its amended console note and the no-amendment option; DL8's rejected
+  - [x] 0.2 Put DL1–DL14 to BigDev (DL11's English verbatim, with its amended console note and the no-amendment option; DL8's rejected
         District Admin named; DL9's step-up WITH its go-live cost and the no-step-up option; DL6's same-person check and the roles-only
         option; DL3's letter-case rule; DL6's earlier-of-the-two-dates rule and the always-replaces option; DL5's record-the-check-first
         path and its no-stored-check option; DL5's record-during-the-appeal option for PQ1; DL10's two list sections). Record the answers
         here, then AMEND N7, TL1, DL13's legs, the ACs and the Tasks to the answers as given — a PROPOSED default left standing in an AC
         gets built (AC1's `'recorded'`-with-an-id leg and AC5's earlier-date leg flip under the always-replaces option).
+        ⭐ DONE 2026-11-27 — every answer was the proposed one (Debug Log References, *"Task 0.2 answers"*) ⇒ N7, TL1, DL13's legs, the
+        ACs and the Tasks stand as written; ⛔ amendment was owed. ⚠ Still OWED words (⛔ in DL11's approved list, so ⛔ approved): the
+        form's prompts for a missing or malformed field, and the page lines for `fee_bank_date.not_found`, `no_fee_receipt` and
+        `missing_display` — put them to BigDev with Task 0.4's entry, ⛔ invent them at build time.
   - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (date = the day written) — PQ1–PQ4
         and TL1–TL3; plain-English question first, THE ONE FACT (*"the bank's date helps only a family whose recorded payment reference is
@@ -862,6 +866,13 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 
 ### Debug Log References
 
+- **Task 0.2 answers (2026-11-27, BigDev, in session, through three question dialogs — each answer the option marked recommended):**
+  DL8 *"Finance officer"*; DL9 *"Yes, require it"* (the step-up, with its go-live cost); DL6 *"Yes, check the person"* (the same-person
+  refusal); DL6 *"The earlier of the two"*; DL5 *"Check first, then bank"*; DL5 / PQ1 *"No, only in review"* (⛔ record during an
+  appeal); DL11 *"Amend the note"* (the record-first wording, amending `-474` item 3); DL3 *"Trim, ignore letter case"*; DL11's words
+  *"Approve as written"* (the finance page, the console's four new lines and the gate line, as listed in DL11 / DL7); DL1, DL2, DL4,
+  DL7, DL10, DL12, DL13, DL14 *"Accept all as written"*. ⛔ Panel question was asked or answered (PQ1–PQ4 stay with the note).
+
 ### Completion Notes List
 
 - 2026-11-21 — story created by `bmad-create-story 6.39a` (ledger `2026-11-21u`): ultimate context engine analysis completed —
@@ -881,6 +892,9 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
   `21ar`). Two fresh-context verifiers (the code claims; the design), every top finding spot-checked in the code before applying: eighteen
   findings applied (Change Log v1.3). Three build decisions gained a second option for BigDev at Task 0.2 (DL5 ×2, DL6); DL10's two sections are put to him as an item. Neither
   Panel note is sent. ⛔ Code; ⛔ decision entry yet.
+- 2026-11-27 — Task 0.2 DONE (ledger `2026-11-27b`): DL1–DL14 put to BigDev in three question dialogs; every answer the proposed one
+  (Debug Log References). ⛔ AC or Task changed meaning. Owed: the words for a missing / malformed field and three refusal codes (Task 0.2's
+  note), then Task 0.3 (the note's re-read, before the next sitting) and Task 0.4 (the decision entry, `-510`, READ LIVE). ⛔ Code.
 
 ### File List
 
@@ -892,3 +906,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | 2026-11-21 | v1.1 | Validated (`bmad-create-story validate 6.39a`, BigDev: "all"; re-traced at `90535934`, `origin/main` unmoved). **Critical:** DL9's step-up cannot be completed in production (the admin step-up delivery is a stub — G9) ⇒ its cost stated, a no-step-up option, DL13 leg (e); N7 / TL1 promised two PEOPLE while the build separated ROLES (one user may hold several grants) ⇒ a same-person refusal in the check writer (DL6, AC5), TL1 reworded; AC5 / AC13's "no assertion changed" was unsatisfiable against DL6's required token and DL12's audit field ⇒ the two allowed kinds of edit named. **Added:** the three admin wait-reason maps and the contracts test's lists (G6, DL7, AC12); the console's read count resolved (G11, DL7 — stays 36); the reference compared trimmed and without regard to letter case (DL3, DL10, AC4); the list capped, joined by the live check's payment, ⛔ fee outcome on its wire (DL10, AC3); the nav link, the route component and the shared `StepUpPanel` (DL10, AC12); the console note amended for the recorded-date case, with a no-amendment option (DL11, Task 0.4); the writer's computed-against token (DL6). **Small:** AC5's defence leg says what the gate answers; valid bodies on the 401 / 403 / step-up legs (TR9); the Niyamavali cited by section, ⛔ quoted; the NUMBERS block re-read (three sibling stories want the same numbers). |
 | 2026-11-21 | v1.2 | The Panel note drafted at BigDev's ask, before Task 0.2 (WRITTEN, ⛔ sent; E4 run). PQ4 added — must a second person confirm the bank's date (`-473`: *"⛔ asked"*); it was told in TL1 / TL2, and is now asked without blocking, built A; one test names it (AC3); DL13 (b), Tasks 0.3–0.5 and the header's §0 line follow. |
 | 2026-11-27 | v1.3 | Validated again (`bmad-create-story validate 6.39a`, BigDev: "all") after REBASING onto `origin/main` `6536b8bb` (253 commits); `baseline_commit` re-pinned to it; ledger `2026-11-21w` relabelled `21ar` (3.13 landed holding `w`). **Critical:** the numbers re-read (catalog v67 / 99 keys — 3.13 took v66 with two keys; migration `0219`; decision `-510`; roster Row 58; 41 CI jobs — NUMBERS, DL1, DL8, DL13, AC8, AC13, Task 0.4); row `3-17` (`-482` item 5) will make `fee_receipt_id` nullable and add a third fee-date source on the same table and guard — G14, TR13, DL1's extensible vocabulary and one-way coherence CHECK, Task 0.1; the amended console note sent the District Admin to the finance officer before a check was stored, when the finance officer can act only on a stored one — DL5's only path stated, DL11 reworded record-first (approval at 0.2), AC3 / AC12 legs, the Policy-meaning note's list line; AC5 / AC13's "exactly two kinds of edit" could not be met — kinds (i)–(v) named file by file; TR5's leak path was wrong (the error handler logs no body; drizzle's query error carries the parameters into the 500 log) — DL3 compares in TypeScript, the insert's errors re-thrown parameter-free; AC4 / AC9's "no log line" could not fail (test servers log nothing) — a captured `logStream` with a positive control. **Added:** a direct-writer leg for the lock-protected token compare (AC5, TR7); PQ1 B's cost — the appeal is decided before any bank date can be recorded, and a failed look leaves the family with no appeal — and an option to record during the appeal (DL5); the earlier of the two dates, so a later bank date cannot hold a passing claim, with the always-replaces option (DL6, AC1, AC5), and corrections stop at `state_trustee_approved` (DL5); the finance list in two sections so a resolved claim never crowds out a held one (DL10, DL11, AC3, AC12); `rtbf-anonymize.test.ts`' three counts (G11, AC11, Task 1.2); the next sitting's agenda would send the note before Task 0.2 is answered (Task 0.3); N7's role pin widened to `claim.approve` and `claim.r9_vote`, TL1 names the first approver; one person alone strands a claim (N7, TR14, AC5, DL13 (c)). **Small:** DL12 audits only the refusals the handler raises; the microcopy gate matches whole words (G8); TR7's heading; `clampLimit`'s wording; AC5's file list separates specs from source; `-482` in the rulings table; Git intelligence and References brought to `6536b8bb`. A fresh-context review of this pass's OWN diff found eight defects, all fixed before commit (DL6's writer token kept the old meaning; DL1's CHECK still read two-way; DL10's flag; Task 4.2's "two kinds"; kind (iii) widened to the contracts / admin preview fixtures; a third erasure count; Task 0.3 brings the note's told lines 1 and 4 into line; N7's wording, the second-section heading, two counts). |
+| 2026-11-27 | v1.4 | Task 0.2 answered by BigDev — every DL as proposed (DL8 the finance officer; DL9 the step-up kept; DL6 the same-person refusal and the earlier of the two dates; DL5 check first, ⛔ record during an appeal; DL11 the amended note and every listed line approved word for word; DL3 trim and ignore letter case; the rest accepted as written). The section and each decision marked ANSWERED, each alternative kept as *"Not chosen at 0.2"*; the answers recorded under Debug Log References; Task 0.2 ticked with the words still owed. |

@@ -25,11 +25,12 @@ the deferred item's id, the row KEY.
   · THAT the member is told, AND told the reason — RULED: `2026-11-25-502` item 4 (Q2 C, Trustee-ratified). ⛔ a question.
   · WHERE the member is told — RULED as put: B's own words, *"The app tells the member, in their language"* ⇒ in the app, in the app's
     language. Leaving out SMS / WhatsApp is a MATCH of the ruled words (B's row names ⛔ channel beyond the app; the Niyamavali's Part 7
-    R10(B) makes the in-app surface the channel of record). Leaving out a PHONE NOTIFICATION (push) is OUR narrow reading — push is ⛔
+    R10(B) makes the in-app surface the official place for the Trust's word to members). Leaving out a PHONE NOTIFICATION (push) is OUR narrow reading — push is ⛔
     built (F11) — ⛔ the Panel's words: the note says so as a NON-BLOCKING confirm (PQ1's confirm line), ⛔ a told line
     ([[feedback_told_line_must_not_carry_panel_choice]]; the `-295` §8 / `-296` "build as ruled + non-blocking confirm" shape).
   · WHAT "the reason staff recorded" is — the closed list, ⛔ the private note: OUR reading, TOLD to the Panel in
-    `trustee-panel-told-2026-11-25-3-13-identity-check-as-built.md` §3 (SENT 2026-11-25), ⛔ objected to. ⛔ a question.
+    `trustee-panel-told-2026-11-25-3-13-identity-check-as-built.md` §3 (SENT 2026-11-25), ⛔ objected to. It NARROWS what the member is
+    told ⇒ put to the Panel as a NON-BLOCKING confirm (the note's Confirm 3), ⛔ a told line (v1.3).
   · THE MEMBER'S WORDS (Hindi + English) — the Panel's, by its own ruling: `-502` item 4 quotes B's cost *"New words for members, in
     Hindi and English, which you would approve"*, and the told note §3 promised *"The member's message, in Hindi and English, will come to
     you for approval as its own piece of work."* ⇒ PQ1 (one note, Task 0.3), built on the PROPOSED words until approved; it blocks
@@ -78,8 +79,8 @@ that decides whether a MESSAGE is shown (DL2) — it moves ⛔ state, ⛔ flag, 
 **In the member's terms (the message's own meaning, for the record):** *"If the Trust's staff tried to check your identity and could not,
 the app tells you so, tells you why, and tells you how to arrange the check. Once staff confirm you, the message goes away."*
 **Checked against the Niyamavali (2026-11-26, section numbers only — the rulebook copy is git-ignored):** two clauses are engaged, ⛔
-conflict with either. §2.1 (b) requires the verification itself (3.13 built it). Part 7 R10(B) makes the in-app surface the channel of
-record for official communications — consistent with DL1 (an in-app card). ⛔ clause speaks to telling a member about a step of their
+conflict with either. §2.1 (b) requires the verification itself (3.13 built it). Part 7 R10(B) makes the in-app surface the official place
+for the Trust's word to members for official communications — consistent with DL1 (an in-app card). ⛔ clause speaks to telling a member about a step of their
 own verification. (Part 10 lists a correction right — relevant to PQ1 (b)'s wrong-detail case; counsel's, ⛔ a blocker.)
 ⚠ **What this note does ⛔ cover:** the lock-in-end consequence for a member staff never confirm (they stop being covered) is row
 `3-14`'s and belongs in ITS note — and the home screen's existing lock-in lines already promise cover (F9: `lock_in.rationale` and
@@ -398,11 +399,13 @@ suggestions, PROPOSED).
     was shown — and say plainly that a wrong detail cannot be changed at present). *Cost:* three lines to approve instead of one;
     `how_details` tells the member about a gap the Trust has not closed, and a member whose detail WAS wrong who asks for help gets
     nothing staff can do; a photo mismatch that came from the record (⛔ the person's ID) still gets the "show an ID" line, which cannot
-    finish it.
+    finish it. The rulebook (Part 10) gives a correction right; counsel has ⛔ been asked whether "cannot be changed" fits it.
   - **(iii):** per reason as (ii), but `how_details` ⛔ mentions that a wrong detail cannot be changed. *Cost:* the same as (ii) for a
-    member with a wrong detail — they ask, and staff have nothing to offer — and they are ⛔ told why.
-  - Under PQ1 (a) B or C the `how` / `how_not_reached` / `how_details` lines change their last sentence to that option's words; under
-    (a) B, `how` and `how_not_reached` become the same line.
+    member with a wrong detail — they ask, and staff have nothing to offer — and they are ⛔ told why; the same open question on the correction right.
+  - Under PQ1 (a) B or C the sentence on ARRANGING it (*"Staff may phone you to arrange it, or you can ask for help here."* / *"You can
+    ask for help here to arrange it."*) changes to that option's words — `how_details` keeps its last sentence about a wrong detail;
+    under (a) B, `how` and `how_not_reached` become the same line; under (a) C, `how_not_reached` also says *"The Trust's staff will
+    phone you to arrange it."*
   - **The words themselves (Hindi and English) — approve as written, or change them:** the table below. ⚠ The Hindi is the session's
     draft — BigDev reads it before the note is sent (BigDev, 2026-11-26: *"I will read hindi"*; Task 0.3). ⛔ read yet.
 
@@ -415,7 +418,7 @@ suggestions, PROPOSED).
 | `identity_check.notice.reason.member_not_reached` | Reason: we could not reach you. | कारण: हम आपसे संपर्क नहीं कर सके। |
 | `identity_check.notice.how` (PQ1 (a) A; (b) (ii): photo, no ID shown) | To finish this, show an original government photo ID (for example your Aadhaar card, PAN card or voter ID card) to the Trust's staff, in person or on a video call. Staff may phone you to arrange it, or you can ask for help here. | इसे पूरा करने के लिए, अपना कोई मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर दिखाएँ। कर्मचारी समय तय करने के लिए आपको फ़ोन कर सकते हैं, या आप यहाँ मदद माँग सकते हैं। |
 | `identity_check.notice.how_not_reached` (PQ1 (b) (ii)) | To finish this, show an original government photo ID (for example your Aadhaar card, PAN card or voter ID card) to the Trust's staff, in person or on a video call. You can ask for help here to arrange it. | इसे पूरा करने के लिए, अपना कोई मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर दिखाएँ। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। |
-| `identity_check.notice.how_details` (PQ1 (b) (ii)) | To finish this, show the Trust's staff an original government photo ID whose details match the ones you gave when you joined (for example your Aadhaar card, PAN card or voter ID card), in person or on a video call. You can ask for help here to arrange it. If a detail you gave was wrong, it cannot be changed at present. | इसे पूरा करने के लिए, ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर अपना कोई ऐसा मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) दिखाएँ, जिसका विवरण जुड़ते समय दिए गए आपके विवरण से मेल खाता हो। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। अगर आपका दिया कोई विवरण गलत था, तो उसे अभी बदला नहीं जा सकता। |
+| `identity_check.notice.how_details` (PQ1 (b) (ii)) | To finish this, show the Trust's staff an original government photo ID whose details match the ones you gave when you joined (for example your Aadhaar card, PAN card or voter ID card), in person or on a video call. You can ask for help here to arrange it. If a detail you gave was wrong, it cannot be changed at present. | इसे पूरा करने के लिए, ट्रस्ट के कर्मचारियों को आमने-सामने या वीडियो कॉल पर अपना कोई ऐसा मूल सरकारी फ़ोटो पहचान पत्र (जैसे आधार कार्ड, पैन कार्ड या वोटर आईडी कार्ड) दिखाएँ, जिसका विवरण जुड़ते समय दिए गए आपके विवरण से मेल खाता हो। समय तय करने के लिए आप यहाँ मदद माँग सकते हैं। अगर आपका दिया कोई विवरण गलत था, तो उसे इस समय बदला नहीं जा सकता। |
 | `identity_check.notice.ask_help` | Ask for help | मदद माँगें |
 
   - ⚠ Every line is checked against what is built: the six ID kinds are 3.13 DL7's (`-502` item 1 — *"An original government photo ID,
@@ -428,16 +431,19 @@ suggestions, PROPOSED).
     (2026-11-26); re-run after any change BigDev or the Panel makes.
 - **Confirm — does ⛔ hold the build (object if you want it otherwise):** (i) once a claim is filed for the member's death the message
   stops showing — the identity is then checked on the claim, as you ruled on 31 October; a member still alive whose death was wrongly
-  reported stops seeing it until the report is cleared (OUR reading — it narrows who is told). (ii) The message is in the app only. A text message is left out as
-  your words say (*"The app tells the member"*). A phone notification is left out because the app cannot send one yet — that is OUR
-  reading, ⛔ your words; adding one later would be its own piece of work. The cost: a member who never opens the app is not told.
+  reported stops seeing it until staff record that the member is alive (a `member_found_innocent` finding); a claim only withdrawn or
+  refused does ⛔ bring it back (OUR reading — it narrows who is told). (ii) The message is in the app only. A text message is left out —
+  your words name only the app (*"The app tells the member"*). A phone notification is left out because the app cannot send one yet — that is OUR
+  reading, ⛔ your words; adding one later would be its own piece of work. The cost: a member who never opens the app is not told. (iii) "The
+  reason" is the one staff pick from the list, ⛔ the private note — our reading, told on 25 November; object if you want the note
+  shown.
 - **Shown for information — ⛔ asked (object if you disagree)** (each is a MATCH or the narrow side — [[feedback_told_line_must_not_carry_panel_choice]]: ⛔ a choice the Panel must make):
   1. It shows only while the member is still waiting for a check, and goes away once staff confirm them. A suspended member is told too
      (staff can check them, as told on 21 November).
-  2. On this message the member sees the reason from the list only — ⛔ the date, ⛔ who checked, ⛔ the private note (as told on 25
-     November). Their data download, once it is live, already shows the date of each check and how and with which kind of ID it was done
+  2. On this message the member sees the reason only — ⛔ the date, ⛔ who checked, ⛔ which ID was shown (the private note is Confirm
+     (iii)). Their data download, once it is live, already shows the date of each check and how and with which kind of ID it was done
      (⛔ the private note — whether it may be downloaded is the separate question, asked at this sitting or already asked).
-- ⛔ **NOT a question:** that the member is told, and told the reason (`-502` item 4); what "the reason" is (told §3).
+- ⛔ **NOT a question:** that the member is told, and told the reason (`-502` item 4).
 - ⭐ **Asked no later than this sitting (a deadline, ⛔ optional):** the peer note `trustee-panel-routing-note-2026-11-26-3-13-staff-note-in-member-download.md`
   (`3.13-R1-W6`; on `governance/panel-sitting-2026-11-26`, ⛔ sent). `-504` item 5 and the deferred item's Trigger put it at *"the sitting
   that approves row `3-13a`'s message, or before the data export goes live, whichever is first"* ⇒ if it has ⛔ been asked before,
@@ -560,6 +566,13 @@ suggestions, PROPOSED).
         ⭐ 2026-11-26 — ANSWERED at create-story (BigDev: *"I will read hindi"*): BigDev reads the Hindi column before the note is sent;
         record their changes in the words table (and the story's PQ1 table) BEFORE the note is committed. ⛔ "Hindi reviewed" until they
         have read it. ⚠ v1.2 added two lines (`how_not_reached`, `how_details`) in BOTH languages — they are in the same read.
+        ⭐ 2026-11-26 — WRITTEN at BigDev's ask (*"create a panel note separately in this story"*), BEFORE 0.2:
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-26-3-13a-member-told-identity-not-confirmed.md`, committed
+        ALONE `ff89f047` (E4 run first; a fresh-context review of the draft applied first). The note's Q1 = PQ1 (a), Q2 = PQ1 (b), plus
+        three non-blocking confirms (a reported death; app only; the reason ⛔ the private note). ⛔ SENT. Still owed before it is sent:
+        BigDev's Hindi read (⛔ done); `3.13-R1-W6` with it unless already asked; the peer agenda's *"once that work is built"* line
+        reconciled (BigDev's); and, after 0.2, the note re-checked against the answers (a changed DL that touches the words amends the
+        note by a dated line, ⛔ a rewrite). The box stays unticked until it is sent.
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`, re-grepped on every ref just before writing): DL1–DL12 as answered, the §0
         split, `-502` item 4 quoted byte for byte, the AI-10-1 line (⛔ benefit gate), PQ1 (a) and (b) open + built on PQ1 (a) A and PQ1 (b) (ii); committed ALONE.
         ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
@@ -698,3 +711,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.0 | 2026-11-26 | Created by `bmad-create-story 3.13a` in its own worktree, branch `story/3-13a-member-told-when-identity-not-confirmed` off `origin/main` `ce0737ce` (upstream unset). §0 applied: telling + the reason + the app are RULED (`-502` item 4); the reason = the closed list is TOLD (§3); the member's words and what "how to arrange it" promises are PQ1 (one note at Task 0.3, ⛔ written yet); DL1–DL12 PROPOSED for Task 0.2. AI-10-1: ⛔ benefit gate. Row `backlog → ready-for-dev`; the `epics.md` Story 3.13a block added. ⛔ Decision id taken, ⛔ code, ⛔ pushed. |
 | 1.1 | 2026-11-26 | BigDev: *"I will read hindi"* — BigDev reads PQ1's Hindi column before the note is sent (Task 0.3, PQ1). ⛔ read yet. |
 | 1.2 | 2026-11-26 | Validated (`bmad-create-story validate 3.13a`; three read-only verifiers — code / governance / premises — at `ce0737ce`; `origin/main` `f5c559d0`, records only), 29 findings, BigDev: *"all"*. Build: DL6 re-reads on home-tab focus and app foreground (the 5.14 precedent; ⛔ query re-read on focus before — the card would have stayed after a confirmation), bounded by `withTimeout`, cleared at the four account-change sites; render on `isSuccess` (the `!isError` mutation was equivalent — RUN in query-core 5.101.0), stated as the opposite of the known-people rule with its cost; DL4 reads the KYC standing as two columns and calls the three reads directly; DL5 ⛔ OpenAPI entry (hand-registered; PROPOSED); DL8 preselects after the async list loads, exactly as a tap (persisted), the tap handler unchanged; DL10 the whole card is one button; DL1's inverted ⛔ fixed and its costs stated; DL12 a new 3-16 reason does ⛔ reach the card. Tests: AC2 rebuilt one-fact-per-leg (hand-seeded where the writer cannot reach), a `suspended` positive leg, the select-list spy shape; AC3 401 `auth.session_required` for an admin; AC4 focus / foreground / timeout legs and the right mutant; AC5 list-loading / list-error / override legs and a new harness; AC6 Hindi bans; tests in `tests/unit/`. Governance: PQ1 split into (a) the promise and (b) a per-reason how line (⛔ route corrects a wrong typed-in detail — F10 (d), two new PROPOSED lines in both languages, microcopy-clean); push left out is OUR reading ⇒ a non-blocking confirm, ⛔ a told line; `3.13-R1-W6` BOUND to PQ1's sitting (`-504` item 5 quoted); told note §4 added; the Niyamavali's Part 7 R10(B) engaged; the export's fields disclosed; F9's second cover key; three new `deferred-work.md` items for Task 0.5; quote fixes (C's cell, 4.7 AC2a, the told note's send commit). Numbers: next ledger after this line's `2026-11-26i`; decision `-508`. Then a fresh-context review of the PATCH diff: 1 HIGH / 7 MEDIUM / 10 LOW, all the pass's own, all applied — `how_details` no longer hints at a fix (⛔ "in the app yet"; it keeps the show-a-matching-ID instruction) and PQ1 (b)'s costs are even; `3.13-R1-W6` is a DEADLINE (no later than PQ1's sitting), ⛔ "the same sitting"; the reason → how-key map pinned as a literal; the 10.29 `setCategory` pin protected by a distinct identifier + a once-only pin; a wrongly reported living member losing the card moved from a told line to a confirm; DL9 recommends *"The app shows the member this reason."*; the push confirm's cost in our own words; the home-test grep restored; trap numbering, cross-references, the peer tip (`92f9d95e`). Row stays `ready-for-dev`. ⛔ Code, ⛔ decision id taken, ⛔ pushed. |
+| 1.3 | 2026-11-26 | The Panel note WRITTEN at BigDev's ask (*"create a panel note separately in this story"*), before Task 0.2, and committed ALONE `ff89f047` — WRITTEN, ⛔ sent (Task 0.3). A fresh-context review of the draft (1 HIGH / 5 MEDIUM / 12 LOW) applied before commit, and its changes synced here: the Hindi `how_details` used अभी, which reads as "not yet" — now इस समय ("at this time"); the PQ1 (a) B / C rule swaps the sentence on ARRANGING it, ⛔ `how_details`' last sentence; the reason-⛔-the-note reading moved from a told line to a non-blocking confirm (iii); confirm (i) says what brings the card back (a finding that the member is alive, ⛔ a withdrawn claim); PQ1 (b)'s costs name the rulebook's correction right (counsel ⛔ asked). Words tables in the note and here compared cell by cell — identical; microcopy-clean. Row stays `ready-for-dev`. |

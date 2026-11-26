@@ -261,6 +261,13 @@ own verification. (Part 10 lists a correction right — relevant to PQ1 (b)'s wr
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
+> ⭐ **2026-11-26 — ANSWERED (Task 0.2), BigDev verbatim: *"Build questions as recommended"*.** Each DL is taken as written below, on
+> its recommended side: DL1 the home card (app only); DL2 / DL3 as written; DL4 as written; DL5 ⛔ OpenAPI entry (`openapi/v1.yaml`
+> byte-identical — ⛔ option (b)); DL6 the render rule `q.isSuccess && q.data.notice !== null` (a failed re-read hides the card — ⛔
+> option (b)); DL7 the app's language; DL8 PRESELECT `kyc-trouble` (⛔ option (b)); DL9 option **(b)** — *"The app shows the member
+> this reason."* (the one the text recommends); DL10 the WHOLE card is ONE button (⛔ option (b)); DL11 / DL12 as written. `3.13-R1-W6`:
+> asked as Q3 of this story's note (answered earlier). The section's "PROPOSED" now reads ANSWERED; the text below is kept as written.
+
 - **DL1 — Where: the app only, a card on the HOME screen.** A new self-suppressing card `IdentityCheckNoticeCard`
   (`apps/mobile/components/identity-check/`), mounted in `app/(tabs)/index.tsx` between `<AnnouncementChannelsCard />` and
   `<LockInClockWidget />` — directly ABOVE the lock-in widget (F6) and therefore BELOW `ActiveContributionCard` (8.2's topmost AC); the
@@ -562,11 +569,19 @@ suggestions, PROPOSED).
         rows `3-14` / `3-16`: if either has started, read its story for a change to DL4's eligibility or a new reason, and reconcile N1
         BEFORE 0.2. Re-read the peer's `governance/panel-sitting-2026-11-26` agenda (has it been sent? does item 9 still name R1-W6?).
         Re-check row `3-16`'s reason list if it has started (DL12).
-  - [ ] 0.2 Put DL1–DL12 to BigDev (the question dialog; recommended option first): DL1 (where), DL2 + DL3 (when / what), DL4–DL7 (the
+        ⭐ 2026-11-26 (partial, before 0.2): `git fetch origin` — `origin/main` = `f5c559d0`; `ce0737ce` IS an ancestor of HEAD;
+        `git diff --name-only ce0737ce..origin/main -- packages apps` EMPTY (⛔ F-fact moved); the branch lacks only `f5c559d0`
+        (records-only) — ⛔ rebased (the note cites this branch's SHAs); ⛔ `3-14` / `3-16` branch on any ref. The agenda re-read: ⛔
+        sent; item 9 now MARKED withdrawn (`041889ae`). Still owed in 0.1: the next decision id and ledger letter, re-read just before 0.4.
+  - [x] 0.2 Put DL1–DL12 to BigDev (the question dialog; recommended option first): DL1 (where), DL2 + DL3 (when / what), DL4–DL7 (the
         build — one question, naming DL5's OpenAPI choice and DL6's render rule with their options), DL8 (preselect vs unselected),
         DL9 (the staff hint, word for word — "will see" vs "is told"), DL10 (whole card as the button vs a separate button), and WHERE
         `3.13-R1-W6` is asked — at PQ1's sitting or earlier (the deadline is bound, F12; the sitting is BigDev's to decide and to tell
         the peer session — ⛔ an edit to its branch). ⭐ ANSWERED 2026-11-26: *"put the private-note question in same routing note, this session will go first."* — it is the note's Q3 (`c7e9e94b`). Record the answers verbatim here.
+        ⭐ 2026-11-26 — DL1–DL12 ANSWERED: *"Build questions as recommended"* (each side named in the box under "Build decisions").
+        The peer agenda marked at BigDev's word (*"mark that this file come before"*) — `041889ae` on `governance/panel-sitting-2026-11-26`
+        (no peer session was running — ListAgents empty — and the edit is BigDev's ask, so the "⛔ an edit to its branch" line above is
+        superseded by BigDev's word, ⛔ reinterpreted).
   - [ ] 0.3 Write the Panel note from the TEMPLATE (§0 first; PQ1 (a) and (b), each with its one deciding fact and options with an
         honest cost; the words table; the two confirm lines; the two info lines; evidence LAST, E4 commands run before commit). ⛔ send it
         while `3.13-R1-W6` is still unasked — it goes in the same sitting unless it was asked earlier (F12):
@@ -589,6 +604,9 @@ suggestions, PROPOSED).
         BigDev reads it before the note is sent. The other eight lines stand as read.
         ⭐ 2026-11-26 (v1.8) — BigDev READ the changed sentence (shown with the English): *"Hindi is ok"* — ⛔ change; the Hindi read is
         DONE again; recorded in the note's status block.
+        ⭐ 2026-11-26 (v1.9) — EVERY owed item before sending is DONE: the Hindi read; `3.13-R1-W6` (Q3); the peer agenda marked
+        (`041889ae`); the note re-checked against 0.2's answers — ⛔ word changed (a dated line in its status block). The box stays
+        unticked until BigDev sends it.
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`, re-grepped on every ref just before writing): DL1–DL12 as answered, the §0
         split, `-502` item 4 quoted byte for byte, the AI-10-1 line (⛔ benefit gate), PQ1 (a) and (b) open + built on PQ1 (a) A and PQ1 (b) (ii); committed ALONE.
         ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
@@ -733,3 +751,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | 1.6 | 2026-11-26 | The Panel note said the wrong-detail gap *"is recorded as owed work"* (What is at stake) and *"Recorded in `deferred-work.md` as owed (Story 3.13a, Task 0.5)"* (E2) before any such item existed — a record ahead of its evidence ([[feedback_record_unattested_no_backfill]]). BigDev: *"write the deferred-work entry and fix both lines"* ⇒ `deferred-work.md` `3.13a-G1` WRITTEN (Task 0.5's wrong-detail sub-item; OPEN, unhomed, owner BigDev; observed and escalated, ⛔ planned). It quotes what binds a fix: `-109` row 2 (a recorded, staff-executed correction on a helpdesk ticket; ⛔ general profile editor; the correction-vs-falsification question un-analysed), `-424` Q2 (b)'s addition, the 21 November info line 6, DPDP Act s.12(2) and s.8(3) (counsel's to read) and the Niyamavali Part 10 (⛔ ratified). Re-verified: 10.21's `recordCorrection` RECORDS and ⛔ writes, so `applied` is ⛔ an honest outcome for a wrong name or date of birth. The note's two lines now name `3.13a-G1`; E4 gains its grep. ⛔ change to the questions, options, words or reading. The note stays WRITTEN, ⛔ sent. Row stays `ready-for-dev`. |
 | 1.7 | 2026-11-26 | BigDev: *"yes add both to the note and commit"* — (1) `how_details`' last sentence *"If a detail you gave was wrong, it cannot be changed at present."* / *"…तो उसे इस समय बदला नहीं जा सकता।"* is REPLACED by *"If a detail you gave was wrong, ask for help here too."* / *"अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें।"* — the old line read as the Trust refusing a correction and gave the member no way to ask; a request made through the help request can be RECORDED by the Pariwar Admin (10.21's `recordCorrection`, `member.data_rights`; `-109` row 2), ⛔ applied (`3.13a-G1`). (2) DPDP Act s.12(2) and s.8(3) quoted beside the Niyamavali Part 10 in PQ1 (b)'s costs and the note's E3; `-109` row 2 added to the note's E1 and E2. PQ1 (b) (ii) / (iii) costs and the note's reading, words-check line, plain English, trust section, status block and E4 updated to match. Microcopy re-run on the new line in both languages (`checkTone`, `checkVocabulary` with the member terms, `checkNumerals`) — clean; note and story `how_details` compared cell by cell — identical. ⚠ BigDev's Hindi read (Task 0.3 item 1) is REOPENED for that one sentence. ⛔ build change beyond the one copy value (the key, the reason → how-key map and every AC stand). The note stays WRITTEN, ⛔ sent. Row stays `ready-for-dev`. |
 | 1.8 | 2026-11-26 | BigDev read v1.7's changed Hindi sentence (*"अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें।"*, shown with the English): *"Hindi is ok"* — ⛔ change. Task 0.3's Hindi read DONE again; a dated line in the note's status block. The words stay PROPOSED until the Panel rules. Still owed before the note is sent: the peer agenda's copy withdrawn or marked (BigDev's) and the re-check after Task 0.2. Row stays `ready-for-dev`. |
+| 1.9 | 2026-11-26 | BigDev: *"mark that this file come before"* ⇒ the peer agenda MARKED on `governance/panel-sitting-2026-11-26` (`041889ae`): a dated status line (this note goes before the sitting), item 9 and Part C's member-message line WITHDRAWN (kept as written), the separate private-note note (`4a48c24d`) marked DO NOT SEND. BigDev: *"Build questions as recommended"* ⇒ Task 0.2 DONE — DL1–DL12 on their recommended sides (DL5 ⛔ OpenAPI entry; DL6 the `isSuccess` render rule; DL8 preselect; DL9 (b) *"The app shows the member this reason."*; DL10 the whole card one button); a dated box under "Build decisions". Task 0.1's drift check run (⛔ F-fact moved; ⛔ rebase — records-only `f5c559d0`). The note re-checked against the answers — ⛔ word changed — and its status block says nothing more is owed before sending; its E3 line updated. Next: Task 0.1's numbers re-read, then 0.4 (the author-commit decision entry) before any code. Row stays `ready-for-dev`. |

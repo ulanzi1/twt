@@ -15044,6 +15044,12 @@ Observed and escalated, ⛔ planned here ([[feedback_gap_analysis_observational]
     such a member today: the 3.13a card (Q2 (ii)) tells them the detail *"cannot be changed at present"*; a help request reaches a
     helpline operator, who can hand it to a District Admin or the Pariwar Admin, who can only record "could not confirm" again; the
     member stays unconfirmed with no end. How many members this is: unknown (⛔ member uses the system).
+  - **2026-11-26 — wording correction (3.13a code review):** the "Who it hits" paragraph above describes the earlier draft,
+    ⛔ the approved or implemented card. Decision `2026-11-26-508` approved *"If a detail you gave was wrong, ask for help here too."*
+    / *"अगर आपका दिया कोई विवरण गलत था, तो उसके लिए भी यहाँ मदद माँगें।"* (`identity_check.notice.how_details` in
+    `packages/i18n/locales/{en,hi}/common.json`). The card invites a correction request; it does ⛔ say *"cannot be changed at present"*.
+    Staff can record that request but still cannot apply the identity correction. G1 remains OPEN and unhomed; its owner and trigger
+    below are unchanged. The earlier description is kept as the historical draft.
   - **What binds a fix (quoted, ⛔ read further here):**
     - `2026-08-14-109` row 2 (Trustee-ratified): *"a **recorded, staff-executed correction process carried on a helpdesk ticket** is
       sufficient"*; and *"⛔ **No general admin member-profile editor is built** — that carries its own RBAC surface, its own PII

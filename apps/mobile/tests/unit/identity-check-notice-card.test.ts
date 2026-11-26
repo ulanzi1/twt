@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Story 3.13a (Task 3; AC4, DL1, DL3, DL6, DL7, DL10) — "We could not confirm your identity yet": the home card and its read,
-// EXECUTED against a REAL `QueryClient` (`retry: false`; the app's posture — ⛔ refetch on window focus / reconnect) and the REAL
+// EXECUTED against a REAL `QueryClient` (production `retry: 1`; ⛔ refetch on window focus / reconnect) and the REAL
 // `t()` in BOTH locales ([[feedback_stub_must_call_not_transcribe]]). Stubbed: the transport, the session, the AppState listener,
 // the navigator's focus and the tamagui primitives (the mock FORWARDS `accessibilityLabel` / `accessibilityRole` — #71 (d)).
 // Native layout, Hindi wrapping and a real TalkBack still need the device pass (AC9 — a go-live leg).
@@ -97,7 +97,7 @@ const app = () =>
 const card = () => screen.queryByTestId('identity-check-notice-card')
 
 beforeEach(() => {
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false } } })
+  client = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, refetchOnReconnect: false } } })
   mock.session = { memberId: 'm-1', pariwarId: 'p-1' }
   mock.get.mockReset()
   mock.appState.clear()
@@ -147,7 +147,8 @@ describe('<IdentityCheckNoticeCard> renders NOTHING unless a SUCCESSFUL read car
     expect(client.getQueryData(identityCheckNoticeKey('p-1', 'm-1'))).toEqual(notice('details_do_not_match')) // the data is KEPT
   })
 
-  it('⭐ a re-read that HANGS past `CALL_TIMEOUT_MS` hides it (fake timers — the transport has ⛔ timeout of its own)', async () => {
+  it('⭐ a re-read that HANGS past `CALL_TIMEOUT_MS` hides it despite the production client default `retry: 1`', async () => {
+    expect(client.getDefaultOptions().queries?.retry).toBe(1)
     mock.get.mockResolvedValueOnce(notice('no_document_shown'))
     app()
     await waitFor(() => expect(card()).not.toBeNull())
@@ -174,6 +175,11 @@ describe('<IdentityCheckNoticeCard> renders NOTHING unless a SUCCESSFUL read car
     await drain()
     expect(client.getQueryState(identityCheckNoticeKey('p-1', 'm-1'))?.status).toBe('error')
     expect(card()).toBeNull()
+    await act(async () => {
+      vi.advanceTimersByTime(CALL_TIMEOUT_MS * 2)
+    })
+    await drain()
+    expect(mock.get).toHaveBeenCalledTimes(2) // mount + one re-read; ⛔ retry after the deadline
   })
 })
 

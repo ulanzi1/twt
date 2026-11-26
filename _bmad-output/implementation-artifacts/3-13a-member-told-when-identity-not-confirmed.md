@@ -44,7 +44,7 @@ the deferred item's id, the row KEY.
 
 # Story 3.13a: A Member Is Told When Staff Could Not Confirm Their Identity — and Why
 
-Status: review
+Status: done
 
 ## Story
 
@@ -523,7 +523,9 @@ suggestions, PROPOSED).
    `'active'` — three legs, each asserted in the tick the re-read settles ([[project_query_gctime_blinds_removal_tests]] applies to the
    sign-out clear leg: spy `removeQueries`). Tests use `retry: false` (the client default `retry: 1` adds a delay) and hold the read open
    to see the in-flight state ([[project_tanstack_instant_mock_hides_notready_flip]]; in `renderHook`, read tracked props inside the
-   callback — [[project_tanstack_tracked_props_stale_result_current]]). The query options are `{ gcTime: 0, staleTime: 0 }` (a pin test
+   callback — [[project_tanstack_tracked_props_stale_result_current]]). The timeout regression also runs with the production client's
+   `retry: 1` default; the hook overrides it with `retry: false` so the first failure hides the notice within `CALL_TIMEOUT_MS`.
+   The query options are `{ gcTime: 0, staleTime: 0 }` (a pin test
    imports `IDENTITY_CHECK_NOTICE_CACHE_OPTIONS` — the ⛔-persisted marker, F7) and the key carries `pariwarId` and `memberId`;
    `clearIdentityCheckNoticeCache` is called in all four account-change paths, each right after `clearAnnouncementChannelsCache` (a
    source pin). The card is mounted between `<AnnouncementChannelsCard />` and `<LockInClockWidget />` — so BELOW
@@ -702,6 +704,17 @@ suggestions, PROPOSED).
   - [x] 6.3 Sprint row → `review`; ONE ledger entry (safe prepend; verify the YAML parses and the row count holds).
   - [x] 6.4 `deferred-work.md` PQ2: a dated line (built; Row 57 (b) waits on PQ1's ruling and AC9).
 
+### Review Findings
+
+Code review 2026-11-26 — baseline `ce0737ce`, reviewed HEAD `13c7c8e3`; Blind Hunter, Edge Case Hunter and Acceptance Auditor completed. Two patch findings, no decision-needed or deferred findings; two speculative candidates dismissed (the prescribed in-flight refetch joining and the pre-existing helpdesk category-cache policy).
+
+- [x] [Review][Patch][P2] Production retries keep the stale notice visible beyond AC4's timeout. [apps/mobile/components/identity-check/useIdentityCheckNoticeQuery.ts:59] — `withTimeout` bounds each attempt, but the production query client supplies `retry: 1`. After the first 15-second timeout, TanStack keeps `isSuccess: true` and the previous notice during backoff and a second attempt; a hung re-read can therefore retain the card for about 31 seconds. The timeout test uses `retry: false`, masking this AC4 / DL6 / N6 gap. Enforce the stated deadline in production and exercise the timeout with production retry settings. Verified with the installed QueryObserver: the first rejected refetch attempt retains success and the notice; the second rejection changes status to error.
+- [x] [Review][Patch][P3] G1 still describes the discarded member wording as current behavior. [_bmad-output/implementation-artifacts/deferred-work.md:15044] — the "Who it hits" paragraph says the card tells the member a detail "cannot be changed at present". The approved and implemented `identity_check.notice.how_details` instead says "If a detail you gave was wrong, ask for help here too." Add a dated correction distinguishing the historical wording from the shipped behavior; the underlying correction gap remains open.
+
+Initial review validation: focused mobile suites 83/83, admin suites 119/119, contract suite 8/8 passed. Live domain/API database tests were inspected but not re-run: the story's `twt-3-13a-pg` container was unavailable. Android/TalkBack remains the disclosed AC9 go-live leg, and GitHub CI remains owed at landing.
+
+2026-11-26 — both patches applied at BigDev's choice **1** (apply every patch). P2: the hook now sets `retry: false`; the card suite uses the production client's `retry: 1` default. The hung-refetch regression was run before the fix and failed (`success` instead of `error` after the deadline), then passed after the fix, including no transport retry after the deadline. P3: G1 has a dated correction quoting the approved English and Hindi and preserving the earlier wording as history; the correction gap stays OPEN. Re-validation: all six focused mobile suites 83/83, mobile typecheck and targeted ESLint passed. Review findings resolved; story and sprint row → `done` (ledger `2026-11-26o`). This is review completion, ⛔ landing or go-live; GitHub CI at landing and AC9 remain owed.
+
 ## Dev Notes
 
 ### Traps
@@ -839,6 +852,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.13a on worktree`, 2026-11
 
 | Version | Date | Change |
 |---|---|---|
+| 1.14 | 2026-11-26 | `bmad-code-review 3.13a` — three review layers completed; two patches applied (BigDev **1**). The notice hook disables retries so the first failed or hung re-read hides the card within 15 seconds; regression uses the production client's `retry: 1`, failed before the fix and passed after it. G1 gains a dated wording correction; the underlying correction gap remains OPEN. Mobile focused suites 83/83, typecheck and targeted ESLint passed. Story and sprint row → `done`; ledger `2026-11-26o`. GitHub CI remains owed at landing; Android/TalkBack AC9 remains a go-live leg. ⛔ Committed, pushed or landed here. |
 | 1.0 | 2026-11-26 | Created by `bmad-create-story 3.13a` in its own worktree, branch `story/3-13a-member-told-when-identity-not-confirmed` off `origin/main` `ce0737ce` (upstream unset). §0 applied: telling + the reason + the app are RULED (`-502` item 4); the reason = the closed list is TOLD (§3); the member's words and what "how to arrange it" promises are PQ1 (one note at Task 0.3, ⛔ written yet); DL1–DL12 PROPOSED for Task 0.2. AI-10-1: ⛔ benefit gate. Row `backlog → ready-for-dev`; the `epics.md` Story 3.13a block added. ⛔ Decision id taken, ⛔ code, ⛔ pushed. |
 | 1.1 | 2026-11-26 | BigDev: *"I will read hindi"* — BigDev reads PQ1's Hindi column before the note is sent (Task 0.3, PQ1). ⛔ read yet. |
 | 1.2 | 2026-11-26 | Validated (`bmad-create-story validate 3.13a`; three read-only verifiers — code / governance / premises — at `ce0737ce`; `origin/main` `f5c559d0`, records only), 29 findings, BigDev: *"all"*. Build: DL6 re-reads on home-tab focus and app foreground (the 5.14 precedent; ⛔ query re-read on focus before — the card would have stayed after a confirmation), bounded by `withTimeout`, cleared at the four account-change sites; render on `isSuccess` (the `!isError` mutation was equivalent — RUN in query-core 5.101.0), stated as the opposite of the known-people rule with its cost; DL4 reads the KYC standing as two columns and calls the three reads directly; DL5 ⛔ OpenAPI entry (hand-registered; PROPOSED); DL8 preselects after the async list loads, exactly as a tap (persisted), the tap handler unchanged; DL10 the whole card is one button; DL1's inverted ⛔ fixed and its costs stated; DL12 a new 3-16 reason does ⛔ reach the card. Tests: AC2 rebuilt one-fact-per-leg (hand-seeded where the writer cannot reach), a `suspended` positive leg, the select-list spy shape; AC3 401 `auth.session_required` for an admin; AC4 focus / foreground / timeout legs and the right mutant; AC5 list-loading / list-error / override legs and a new harness; AC6 Hindi bans; tests in `tests/unit/`. Governance: PQ1 split into (a) the promise and (b) a per-reason how line (⛔ route corrects a wrong typed-in detail — F10 (d), two new PROPOSED lines in both languages, microcopy-clean); push left out is OUR reading ⇒ a non-blocking confirm, ⛔ a told line; `3.13-R1-W6` BOUND to PQ1's sitting (`-504` item 5 quoted); told note §4 added; the Niyamavali's Part 7 R10(B) engaged; the export's fields disclosed; F9's second cover key; three new `deferred-work.md` items for Task 0.5; quote fixes (C's cell, 4.7 AC2a, the told note's send commit). Numbers: next ledger after this line's `2026-11-26i`; decision `-508`. Then a fresh-context review of the PATCH diff: 1 HIGH / 7 MEDIUM / 10 LOW, all the pass's own, all applied — `how_details` no longer hints at a fix (⛔ "in the app yet"; it keeps the show-a-matching-ID instruction) and PQ1 (b)'s costs are even; `3.13-R1-W6` is a DEADLINE (no later than PQ1's sitting), ⛔ "the same sitting"; the reason → how-key map pinned as a literal; the 10.29 `setCategory` pin protected by a distinct identifier + a once-only pin; a wrongly reported living member losing the card moved from a told line to a confirm; DL9 recommends *"The app shows the member this reason."*; the push confirm's cost in our own words; the home-test grep restored; trap numbering, cross-references, the peer tip (`92f9d95e`). Row stays `ready-for-dev`. ⛔ Code, ⛔ decision id taken, ⛔ pushed. |

@@ -58,7 +58,9 @@ export function useIdentityCheckNoticeQuery() {
     queryKey: identityCheckNoticeKey(pariwarId, memberId),
     queryFn: () => withTimeout(memberAuth.memberIdentityCheckNotice(), CALL_TIMEOUT_MS),
     enabled,
-    // ⛔ a `retry` here: the app client's default (`retry: 1`, `lib/query-client.ts`) applies, and a test's `retry: false` can.
+    // A failed attempt must hide the retained notice within CALL_TIMEOUT_MS (AC4 / N6).
+    // The client's retry keeps `isSuccess` true during backoff and another attempt, beyond that deadline.
+    retry: false,
   })
   const { refetch } = q
   const reread = useCallback(() => {

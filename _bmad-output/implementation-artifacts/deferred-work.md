@@ -11,6 +11,10 @@ WRITTEN 2026-11-21, brought into line with the build decisions 2026-11-27, ⛔ s
 pre-rebase `06a80355` the sitting agenda names). Non-blocking for the build and the merge; each holds go-live (roster Row 58 (b)).
 Recorded under author-commit [Decision 2026-11-27-510](../../.decision-log.md#decision-2026-11-27-510). Owner: the Panel. Read with the
 fee-optional note (`-482` item 5): if the fee becomes optional, most of these matter only while the fee is required.
+**2026-11-27, later — the note was SENT and RULED: all four DISCHARGED as questions** by [Decision 2026-11-27-511](../../.decision-log.md#decision-2026-11-27-511) (Trustee-ratified,
+DR + KB — *"Q1 B, Q2 A, Q3 A, Q4 A"*; the 27 November version, `f01b7c24`; channel and time ⛔ recorded). Each answer is the side
+Story 6.39a builds ⇒ ⛔ build owed beyond the story itself; roster Row 58 (b) is MET when row `6-39a-…` lands. The items below are kept as
+written.
 
 - **PQ1 — a family already refused** (the note's Q1). Not addressed — routed to the Panel. Built **B**: a bank date can be recorded
   once an appeal sends a refused claim back (`reversed` is in the review window; the appeal stages and `denied` are ⛔). The cost stated
@@ -18,18 +22,23 @@ fee-optional note (`-482` item 5): if the fee becomes optional, most of these ma
   refused again with the family's one appeal spent.
   - **Trigger:** the Panel's ruling. A means a new rule refusing the record on a `reversed` claim that was refused for its fee; C (reopen
     without an appeal) is a new build; B needs nothing. The one test that names PQ1 (Story 6.39a AC6) follows the answer.
+  - **DISCHARGED 2026-11-27** by `-511` Q1 **B** — as built.
 - **PQ2 — a payment reference that does not match** (the note's Q2). Not addressed — routed to the Panel. Built **A**: only the member's
   recorded reference counts (trimmed, letter case ignored — the author's); a member whose recorded reference is wrong cannot be helped.
   - **Trigger:** the Panel's ruling. B (match by amount, day and name, with a second person) is a new build and shows the finance
     officer the member's name. The test that names PQ2 (AC4) follows the answer.
+  - **DISCHARGED 2026-11-27** by `-511` Q2 **A** — as built. Its cost (a member whose recorded reference is wrong has ⛔ remedy) is
+    accepted; the corrected-UTR item stays open, its trigger unchanged.
 - **PQ3 — a bank date ON the day of death** (the note's Q3). Not addressed — routed to the Panel. Built **A**: it counts as after
   (`same_day`, one rule with `-473` Q1 B).
   - **Trigger:** the Panel's ruling. B means a second line for "before the death", for bank dates only. The test that names PQ3 (AC5)
     follows the answer.
+  - **DISCHARGED 2026-11-27** by `-511` Q3 **A** — as built.
 - **PQ4 — whether one person's reading is enough** (the note's Q4; asked beyond `-474` item 1's three — `-473` records it as *"⛔
   asked"*). Not addressed — routed to the Panel. Built **A**: one finance officer's record is enough; ⛔ second confirmation.
   - **Trigger:** the Panel's ruling. B (a second person with the statement confirms) or C (keep a copy of the statement line) is a new
     build; C also needs counsel (other payers' data). The test that names PQ4 (AC3) follows the answer.
+  - **DISCHARGED 2026-11-27** by `-511` Q4 **A** — as built.
 
 ---
 

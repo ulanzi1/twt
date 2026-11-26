@@ -136,6 +136,8 @@ bank date was recorded no longer counts — the claim waits for a re-check).
 after that day, the Trust's finance officer can look at the Trust's own bank statement — and if it shows your payment, under the same
 payment reference that was recorded for you, arrived on a day before the day of your death, your family's claim can go ahead; if the
 reference recorded for you is not on the statement, or the money arrived only on the day of your death or later, it cannot."**
+⭐ Since the Panel's ruling (`2026-11-27-511`, Q1 B) the sentence as recorded there adds, after *"can go ahead"*: *"even after a refusal
+once your family's appeal is allowed"* — the same predicate, its appeal edge now ruled.
 
 *What that sentence deliberately does ⛔ promise:* that anyone LOOKS. Q2 B says staff **may**; nothing in this story makes the bank check
 happen before a refusal — the console tells the District Admin to record the check and then ask (DL11), and the finance officer's page
@@ -508,7 +510,7 @@ or one user holding both role grants), a bank date that person records leaves th
   officer (N2); ⛔ the bank date on the cycle-freeze page or the R9 panel (the gate's words carry it); ⛔ a requirement that the bank be
   looked at before a fee refusal (Q2 B says "may"; the console's line asks — DL11); ⛔ the Niyamavali §2.2 15-day lock-in.
 
-## Panel questions — PROPOSED (one non-blocking note at Task 0.3)
+## Panel questions — RULED 2026-11-27 (`2026-11-27-511`, Trustee-ratified, DR + KB: *"Q1 B, Q2 A, Q3 A, Q4 A"* — every one as built; the questions below are kept as put)
 
 - **PQ1 — After a refusal: can the bank's date still help a family whose claim was already refused?** (`-473` "does NOT cover": *"Before a
   denial only …, or also after a `fee_paid_after_death` refusal, or on its appeal"*.) A family may be refused before anyone looks at the
@@ -521,17 +523,18 @@ or one user holding both role grants), a bank date that person records leaves th
   carries an option to record during the appeal). **C** — staff may reopen a refused claim
   directly, without an appeal (cost: a new way to undo a refusal, a new build). Suggest **B** (the remedy the Panel gave has ⛔ time limit in
   its words, and the appeal is the family's existing second look). **Built: B** — the record is allowed in the review window, which already
-  holds an appeal-reversed claim (G5); A would need a new rule. ONE test names PQ1 (AC6).
+  holds an appeal-reversed claim (G5); A would need a new rule. ONE test names PQ1 (AC6). ✅ **RULED B** (`-511`).
 - **PQ2 — A payment reference that does not match.** The reference a member (or the family) types is never checked against a bank; if it
   was mistyped, no line on the statement carries it (G2 — and a corrected one typed later is kept nowhere). Options: **A** — only a
   statement line carrying the SAME reference counts (cost: a member who really paid but whose reference was recorded wrongly cannot be
   helped; nothing can correct the recorded reference today). **B** — staff may match by amount, day and the payer's name instead, and a
   second staff member must agree (cost: a judgment between many ₹110 payments; the finance officer must see the member's name — a new
   disclosure; another person's payment could be taken for the member's). Suggest **A** (the reference is the only thing on a statement that
-  ties a payment to this member). **Built: A** (N3). ONE test names PQ2 (AC4).
+  ties a payment to this member). **Built: A** (N3). ONE test names PQ2 (AC4). ✅ **RULED A** (`-511`).
 - **PQ3 — The bank's date ON the day of death.** Options: **A** — counts as after, as the recorded date does since your 21 November ruling
   (cost: a member whose money arrived that morning gets ⛔ drive). **B** — counts as before (cost: two different lines for "before the
   death" — one for the recorded date, one for the bank's). Suggest **A** (one line). **Built: A** (N1). ONE test names PQ3 (AC5).
+  ✅ **RULED A** (`-511`).
 - **PQ4 — Is one person's reading of the statement enough?** (`-473` "does NOT cover": *"whether a second person must agree was ⛔
   asked"*.) The finance officer types the date, and nobody else checks it against the statement (TL2). Options: **A** — one finance
   officer's record is enough; the District Admin's re-check and the final vote follow, but neither sees the statement (cost: one person's
@@ -540,7 +543,7 @@ or one user holding both role grants), a bank date that person records leaves th
   Trust's bank statements, when even one finance officer is ⛔ settled — G4; slower for the family; a new build). **C** — keep a copy of
   the statement line with the record (cost: a store of other payers' names and VPAs — DL3's rejected upload; counsel has ⛔ looked at
   it). Suggest **A** (the record names the statement, the line and the reason under the finance officer's name, so it can be checked
-  afterwards). **Built: A** (DL3, DL8). ONE test names PQ4 (AC3).
+  afterwards). **Built: A** (DL3, DL8). ONE test names PQ4 (AC3). ✅ **RULED A** (`-511`).
 - **TOLD LINES (⛔ asked — the note states them so the Panel can object):**
   - **TL1 — Who.** The Trust's finance officer records the bank's date; the District Admin then checks the claim again, and the final
     vote follows as always. The system refuses that re-check from the person who typed the date, whatever roles they hold (N7). The
@@ -931,6 +934,9 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
   remaining staff words (form prompts, three refusal lines, the 400 / 401 lines) approved and added to DL11. Next: Task 0.5 (records). ⛔ Code.
 - 2026-11-27 — Task 0.5 DONE (ledger `2026-11-27e`): roster Row 58 + Row 46's dated line; `deferred-work.md` PQ1–PQ4 open and the
   corrected-UTR item's dated note; row and story `ready-for-dev → in-progress`. Task 0 complete; ⛔ code yet.
+- 2026-11-27 — the Panel RULED the note (ledger `2026-11-27f`): `2026-11-27-511` (Trustee-ratified, DR + KB — *"Q1 B, Q2 A, Q3 A, Q4 A"*),
+  committed ALONE as `50e28068`; every answer as built ⇒ ⛔ AC or Task changes. The note's ruling block filled; `deferred-work.md` PQ1–PQ4
+  DISCHARGED as questions; roster Row 58 (b) dated (MET with (a)). ⛔ Code.
 
 ### File List
 
@@ -946,3 +952,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | 2026-11-27 | v1.5 | Task 0.3 done: the Panel note re-read against the Task 0.2 answers — status line, §0, Q1 A's cost, told lines 1 and 4 corrected (the first approver; record the check, then ask), told line 7 added (= new TL4, DL6's earlier date), the "Before sending" paragraph removed, E2 / E3 re-stated and E4 re-run at `6536b8bb` (six commands added); the questions and options unchanged; WRITTEN, ⛔ sent. Task 0.3 ticked; the agenda's `06a80355` pointer flagged as stale. |
 | 2026-11-27 | v1.6 | Task 0.4 done: decision `2026-11-27-510` (author-commit, BigDev) committed ALONE as `22770eb0`; DL11 gains the words approved with it (the form's five prompts; the not-found, no-joining-payment and no-display-name refusals; the 400 and 401 lines); Task 0.2's owed-words note marked approved; Task 0.4 ticked. |
 | 2026-11-27 | v1.7 | Task 0.5 done: roster Row 58 `fee-bank-date-live` (legs (a)–(e), all open) and a dated line on Row 46; `deferred-work.md` — PQ1–PQ4 open with their triggers, the corrected-UTR item's dated *"Not addressed by 6.39a"* note, a dated line under 6.39's PQ1 (b); Status `ready-for-dev → in-progress`; Task 0 complete. |
+| 2026-11-27 | v1.8 | The Panel ruled the note — `2026-11-27-511` (Trustee-ratified, DR + KB: *"Q1 B, Q2 A, Q3 A, Q4 A"*; the 27 November version, `f01b7c24`), every answer the built side: the Panel-questions heading and PQ1–PQ4 marked RULED (the questions kept as put); the Policy-meaning note gains the sentence's appeal clause as recorded in `-511`; ⛔ AC, Task or DL change. |

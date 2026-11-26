@@ -1,6 +1,7 @@
 # Trustee Panel routing note — the bank's date for a joining fee: a family already refused, a reference that does not match, the day of death, and whether one person's word is enough
 
-> **Status: WRITTEN 2026-11-21; ⛔ SENT (BigDev sends).** Written from Story 6.39a (its Task 0.3), which builds your 21 November
+> **Status: WRITTEN 2026-11-21; brought into line 2026-11-27; SENT (BigDev — the 27 November version, as committed at `f01b7c24`;
+> channel and time ⛔ recorded); RULED 2026-11-27 — `2026-11-27-511` (DR + KB).** The status as first written: Written from Story 6.39a (its Task 0.3), which builds your 21 November
 > answer to Question 2 — *staff may use the bank's date*. No member uses the system yet. Nothing waits on this note to be built or
 > merged; members' claims going live waits on your answers. Brought into line on 27 November with the build decisions BigDev made
 > that day (Story 6.39a Task 0.2); the four questions are unchanged.
@@ -18,11 +19,19 @@ that in time? And is one person reading the bank statement enough?"* — questio
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, it is transcribed into this block **and** into `.decision-log.md` as a
-> new decision id. Everything below is then kept **unedited** as the questions **as they were put**
-> ([[feedback_supersede_never_reinterpret]]).
+> **Verbatim as relayed:** *"by DR and KB / Q1 B, Q2 A, Q3 A, Q4 A"* — recorded as [`2026-11-27-511`](../../.decision-log.md#decision-2026-11-27-511),
+> committed ALONE (`50e28068`).
+>
+> - **Q1 — B.** The bank's date also helps a family once its appeal sends a refused claim back (our suggestion; as built).
+> - **Q2 — A.** Only a statement line carrying the same reference counts (our suggestion; as built).
+> - **Q3 — A.** A bank date on the day of death counts as after — no drive (our suggestion; as built).
+> - **Q4 — A.** One finance officer's record is enough (our suggestion; as built).
+> - The told lines 1–7: ⛔ objection recorded — and ⛔ that is NOT a ratification; they stay ours, as built. Each option's cost, as put
+>   below, is accepted with it.
+>
+> Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

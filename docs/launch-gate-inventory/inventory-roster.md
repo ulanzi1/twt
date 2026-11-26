@@ -1313,4 +1313,7 @@ observes these.
   is MET; Row 46 gets a dated line then. **(4)** Row `3-17` (the fee-optional switch) touches the same table and guard; if the Panel makes
   the fee optional, most of this row matters only while the fee is required.
 - **dated lines (appended later — the criteria above are never edited, [[feedback_supersede_never_reinterpret]]):**
-  - (none yet)
+  - **2026-11-27 — leg (b): the Panel half RULED**, [Decision 2026-11-27-511](../../.decision-log.md#decision-2026-11-27-511) (Trustee-ratified, DR + KB;
+    relayed by BigDev: *"by DR and KB / Q1 B, Q2 A, Q3 A, Q4 A"*) — the note as committed at `f01b7c24`. Every answer is the side the
+    story builds (B on Q1, A on Q2–Q4). (b) is ⛔ MET yet: its "reflected in code" half waits on row `6-39a-…` landing — (b) is MET with
+    (a). (a), (c), (d), (e) unchanged.

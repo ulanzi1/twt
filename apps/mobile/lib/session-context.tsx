@@ -36,6 +36,7 @@ import { clearPeerRequestsCache } from '../components/peer-request/peer-request-
 import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
 // Story 5.14 — the announcement channels' member read (keyed per account) and the home card's once-for-good dismissal.
 import { clearAnnouncementChannelsCache } from '../components/announcement-channels/useAnnouncementChannelsQuery'
+import { clearIdentityCheckNoticeCache } from '../components/identity-check/useIdentityCheckNoticeQuery'
 import { clearAnnouncementCardDismissal } from './announcement-channels-dismissal'
 import { clearNomineeLinksCache } from '../components/nominee-links/nominee-links-cache'
 import { clearAnswerKeys } from '../components/workplace/suggestion-answer-key-cache'
@@ -115,6 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
       clearKnownPeopleCache(queryClient)
       clearAnnouncementChannelsCache(queryClient)
+      clearIdentityCheckNoticeCache(queryClient)
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
@@ -135,6 +137,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       setSession(null)
       clearKnownPeopleCache(queryClient)
       clearAnnouncementChannelsCache(queryClient)
+      clearIdentityCheckNoticeCache(queryClient)
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
@@ -154,6 +157,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     clearAnnouncementChannelsCache(queryClient)
+    clearIdentityCheckNoticeCache(queryClient)
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
     // Story 3.15b — the announcement repeat counter (its keys are announced strings, which can hold a name).
@@ -178,6 +182,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     clearAnnouncementChannelsCache(queryClient)
+    clearIdentityCheckNoticeCache(queryClient)
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
     clearSavedNames()

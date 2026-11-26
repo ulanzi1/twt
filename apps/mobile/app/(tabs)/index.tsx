@@ -25,6 +25,7 @@ import { KnownPeopleRequestEntry } from 'components/known-people/KnownPeopleRequ
 import { NomineeLinkRequestEntry } from 'components/nominee-links/NomineeLinkRequestEntry'
 import { HomePromptCards } from 'components/home/HomePromptCards'
 import { AnnouncementChannelsCard } from 'components/home/AnnouncementChannelsCard'
+import { IdentityCheckNoticeCard } from 'components/identity-check/IdentityCheckNoticeCard'
 import { AnnouncementChannelsEntry } from 'components/notifications/AnnouncementChannelsEntry'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
@@ -87,6 +88,10 @@ export default function YogdaanTab() {
         {/* Story 5.14 (FS9 (a), FS11 (a)) — the ONE calm ask to follow the Trust's announcement channels: its own query, shown once per
             phone per account, and NOTHING while the channels are off or no link is set. Directly after the prompt cards. */}
         <AnnouncementChannelsCard />
+        {/* Story 3.13a (DL1, `-508` / `-509`) — "We could not confirm your identity yet": renders NOTHING unless staff could ⛔
+            confirm the member's typed-in identity and they still await a check; the reason + how to arrange it, one button to ask
+            for help. Directly ABOVE the lock-in widget (BELOW the My Pool card). In the app only — ⛔ SMS, push, WhatsApp. */}
+        <IdentityCheckNoticeCard />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />

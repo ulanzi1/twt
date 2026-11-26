@@ -15,11 +15,11 @@
 // (a second tap that lands before React re-renders `disabled`), by letting the server collapse a
 // duplicate request into the original ticket instead of creating a second one.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
@@ -102,6 +102,28 @@ export default function HelpdeskNewScreen(): React.ReactElement {
       ? [...registrySubCategories, DPDPA_DATA_RIGHTS_SUBCATEGORY]
       : registrySubCategories
   const canSubmit = !!category && subject.trim().length > 0 && body.trim().length > 0 && !busy
+
+  // ── Story 3.13a (DL8, `-509`) — an optional `category` route parameter PRESELECTS a category ────────────────────
+  // The "We could not confirm your identity yet" home card opens this form with `category=kyc-trouble`. Applied ONCE, when the
+  // category list FIRST loads, and ONLY if (i) the value names a category in that in-force list (a per-Pariwar override may
+  // drop it) and (ii) the member has ⛔ category yet (neither from the draft nor picked on this visit). ⛔ in the `useState`
+  // initializer: the list is ⛔ loaded then. While the list loads or has failed, nothing is preselected (the form as before).
+  // It does EXACTLY what a tap on that category does — the same four steps, the draft saved — under its OWN identifier
+  // (`preselect`, ⛔ `c`): the Story 10.29 source pin finds the tap's inline handler by its FIRST category-set call on `c`,
+  // so ⛔ write that call anywhere above the tap — not even in a comment.
+  const { category: categoryParam } = useLocalSearchParams<{ category?: string | string[] }>()
+  const preselect = typeof categoryParam === 'string' ? categoryParam : undefined
+  const preselectSettled = useRef(false)
+  useEffect(() => {
+    if (preselectSettled.current || !categoriesQuery.isSuccess) return
+    preselectSettled.current = true
+    if (preselect === undefined || category !== undefined) return
+    if (!categoriesQuery.data.categories.some((x) => x.category === preselect)) return
+    setCategory(preselect)
+    setSubCategory(undefined)
+    setStaffMediation(false)
+    persist({ category: preselect, subCategory: undefined, staffMediation: false })
+  }, [categoriesQuery.isSuccess, categoriesQuery.data, preselect, category, persist])
 
   async function pickPhoto(): Promise<void> {
     if (files.length >= MAX_FILES) {

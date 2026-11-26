@@ -86,6 +86,8 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Note:** `trustee-panel-routing-note-2026-11-26-3-13-staff-note-in-member-download.md`.
 - ⛔ **2026-11-26 — WITHDRAWN from this sitting:** asked instead as **Q3** of the Story 3.13a note, which is sent before this sitting
   (status block). ⛔ send the note named above; it is kept as written.
+- ⭐ **2026-11-26 — ANSWERED there: A** (Decision `2026-11-26-508` item 4, DR + KB — on branch
+  `story/3-13a-member-told-when-identity-not-confirmed` until it lands). Counsel's half is still open.
 
 **10. The code-escrow mirror's security check** *(⚠ we have no record of whether this was sent to you in August — BigDev to confirm)*
 - **Question:** four questions about the copy of the Trust's code kept with the escrow holder: should the record admit that one written

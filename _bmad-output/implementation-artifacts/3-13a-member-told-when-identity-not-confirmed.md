@@ -253,7 +253,7 @@ It blocks GO-LIVE (Row 57 (b)), ⛔ the build or the merge. Built on option A's 
   - **C:** only the phone call — *"The Trust's staff will phone you to arrange it."* *Cost:* a promise the Trust must keep for every such
     member; ⛔ way for the member to start it; "will" is ⛔ true today (nothing schedules a call).
   - **The words themselves (Hindi and English) — approve as written, or change them:** the table below. ⚠ The Hindi is the session's
-    draft — it needs a Hindi reader's eye before it is sent (Task 0.3).
+    draft — BigDev reads it before the note is sent (BigDev, 2026-11-26: *"I will read hindi"*; Task 0.3). ⛔ read yet.
 
 | Key (`common`) | English (PROPOSED) | Hindi (PROPOSED — session's draft) |
 |---|---|---|
@@ -345,6 +345,9 @@ It blocks GO-LIVE (Row 57 (b)), ⛔ the build or the merge. Built on option A's 
         words table; the four info lines; evidence LAST, E4 commands run before commit):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-3-13a-member-told-identity-not-confirmed.md`. ⚠ The Hindi
         column is the session's draft: ask BigDev (in 0.2) who reads the Hindi before it goes out, and record the answer. Commit it ALONE.
+        ⭐ 2026-11-26 — ANSWERED at create-story (BigDev: *"I will read hindi"*): BigDev reads the Hindi column before the note is sent;
+        record their changes in the words table (and the story's PQ1 table) BEFORE the note is committed. ⛔ "Hindi reviewed" until they
+        have read it.
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`, re-grepped on every ref just before writing): DL1–DL12 as answered, the §0
         split, `-502` item 4 quoted byte for byte, the AI-10-1 line (⛔ benefit gate), PQ1 open + built on A's words; committed ALONE.
         ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
@@ -454,3 +457,4 @@ Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, 
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-26 | Created by `bmad-create-story 3.13a` in its own worktree, branch `story/3-13a-member-told-when-identity-not-confirmed` off `origin/main` `ce0737ce` (upstream unset). §0 applied: telling + the reason + the app are RULED (`-502` item 4); the reason = the closed list is TOLD (§3); the member's words and what "how to arrange it" promises are PQ1 (one note at Task 0.3, ⛔ written yet); DL1–DL12 PROPOSED for Task 0.2. AI-10-1: ⛔ benefit gate. Row `backlog → ready-for-dev`; the `epics.md` Story 3.13a block added. ⛔ Decision id taken, ⛔ code, ⛔ pushed. |
+| 1.1 | 2026-11-26 | BigDev: *"I will read hindi"* — BigDev reads PQ1's Hindi column before the note is sent (Task 0.3, PQ1). ⛔ read yet. |

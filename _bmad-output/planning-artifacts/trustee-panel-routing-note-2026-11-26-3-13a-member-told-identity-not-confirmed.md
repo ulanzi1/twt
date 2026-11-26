@@ -21,6 +21,8 @@
 > asks the member to say so through the help request (Q2 (ii), the words table, "How much to trust this note"). The DPDP Act's s.12(2)
 > and s.8(3) are now cited beside the rulebook (Q2's costs, E3). ⚠ **(1) is REOPENED for that one Hindi sentence** — BigDev reads it
 > before the note is sent; the other Hindi lines are unchanged.
+> **2026-11-26 — (1) DONE again:** BigDev read the changed Hindi sentence (shown in the session with the English beside it) —
+> *"Hindi is ok"*. ⛔ change. BigDev's read of the draft, ⛔ the Panel's approval of the words. (2) is done; (3) is still owed.
 
 ## §0 — the gate
 

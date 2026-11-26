@@ -15089,3 +15089,50 @@ Observed and escalated, ⛔ planned here ([[feedback_gap_analysis_observational]
   item 2) is the likely first to add one. Owner: row `3-16`. Trigger: 3-16's create-story — a new reason needs the contract, its
   member words in both languages (Panel-approved, as `-508` approved the four), the how-line map (`IDENTITY_CHECK_HOW_KEY_BY_REASON`)
   and a decision on what an older installed app does.
+
+---
+
+## Deferred from: code review of story 3-13a-member-told-when-identity-not-confirmed, round 2 (2026-11-26, HEAD `39917138`)
+
+Three findings, all PRE-EXISTING and shared with older code, so none is 3.13a's to fix. Each is OBSERVED and ESCALATED here, ⛔ planned or
+homed; owner BigDev. The story's `### Review Findings` block carries them as 3.13a-R2-W1 .. 3.13a-R2-W3.
+
+- **3.13a-R2-W1 — three labelled home cards are a tamagui `Button` with no explicit `accessible={true}` (checklist family 13 (a)). OPEN, unhomed.**
+  `PeerRequestEntry`, `KnownPeopleRequestEntry` and `NomineeLinkRequestEntry` (`apps/mobile/components/peer-request/`, `known-people/`,
+  `nominee-links/`) each put `accessibilityLabel` and `accessibilityRole` on a `Button` whose children are `Text`s, and none sets
+  `accessible`. 3.13a's `IdentityCheckNoticeCard` copied their shape (DL10) and was the FOURTH — it now sets the prop (R2-P1); the first
+  version of this entry still counted it among the four, which round 3's Acceptance Auditor corrected. Two in-repo facts disagree: `HomeReminderCard.tsx`'s
+  header comment (Story 5.14 code review, G3-P3) says "a tamagui `Button` is a plain RN View" and gives every card on that frame the prop;
+  Tamagui 2.1.0's source (`@tamagui/web` `getSplitStyles.tsx`, "set accessible when tabIndex is 0") sets `accessible ??= true` on native
+  for a `tabIndex: 0` element, and its `Button` frame sets `tabIndex: 0`. READ, ⛔ run on a device. If the default holds, the gap is only that the
+  checklist asks for the prop explicitly; if the comment is right, TalkBack may read the child `Text`s separately and skip the label.
+  Owner: BigDev. Trigger: the Android / TalkBack pass (3.13a AC9, Row 57 (b)) — read the three cards and 3.13a's own once each, and Epic
+  11b.8's accessibility audit.
+- **3.13a-R2-W2 — the help form's category list can be a week-old persisted cache. OPEN, unhomed.** `useHelpdeskCategoriesQuery`
+  (`apps/mobile/components/helpdesk/useHelpdeskQueries.ts`) sets no `staleTime` / `gcTime` of its own, and the Provider's dehydration filter
+  persists every successful query except `gcTime: 0` ones, so on mount the list can be the 7-day cache. A member's tap, and 3.13a's
+  `category=kyc-trouble` preselect, act on that list; a per-Pariwar override that has since dropped a category would still show it. What the
+  server then does with a no-longer-in-force category is ⛔ traced here. Round 1 dismissed this as the helpdesk's own cache policy; this entry
+  stops a third review finding it again. Owner: BigDev. Trigger: the next change to the helpdesk categories read or a per-Pariwar routing
+  override that REMOVES a category.
+- **3.13a-R2-W3 — `withTimeout` never aborts the request it gave up on. OPEN, unhomed.** `apps/mobile/lib/with-timeout.ts` rejects after
+  `CALL_TIMEOUT_MS` (15 s) but cannot cancel the call, so against a hung server each home-tab focus or app foreground leaves one more
+  request in flight (3.13a's notice re-read is one more such caller). The TRANSPORT already supports cancellation — `call(..., signal?)` in
+  `packages/api-client/src/index.ts`, and `byLink` and the known-people `list` already take `opts.signal` — but `memberIdentityCheckNotice()`
+  forwards none, and `withTimeout` takes a promise, ⛔ an `AbortController`. (The first version of this entry said the api-client had no
+  signal option: wrong, corrected 2026-11-26 after round 3's Acceptance Auditor read `index.ts`.) Owner: BigDev. Trigger: the next caller that
+  needs a bounded read on a flaky network — `withTimeout` taking an abort signal, as `byLink` / `list` do — or a hung-server incident.
+
+---
+
+## Observed on the Android device pass of story 3-13a-member-told-when-identity-not-confirmed (2026-11-26)
+
+- **3.13a-DP-W1 — Metro warns of a require cycle: `lib/session-context.tsx` → `components/identity-check/useIdentityCheckNoticeQuery.ts` →
+  `lib/session-context.tsx`. OPEN, unhomed.** Seen in the device log (a dev-only warning — the "Open debugger to view warnings" toast):
+  `session-context` imports `clearIdentityCheckNoticeCache` from the hook (used inside the sign-out and account-change paths) and the hook
+  imports `useSession` from `session-context` (used inside the hook). It is the SAME shape as its 5.14 twin
+  (`useAnnouncementChannelsQuery.ts` — `clearAnnouncementChannelsCache`), which logs the same warning; 3.13a copied that pattern (DL6).
+  No effect was observed — both imports are read inside functions, ⛔ at module load — so the card, the sign-out clear and the re-reads all
+  worked on the device; Metro's own text is that such cycles "can result in uninitialized values". Observed and escalated here, ⛔ planned.
+  Owner: BigDev. Trigger: a third hook cleared from `session-context`, or any change that makes one of the three read an imported value at
+  module load.

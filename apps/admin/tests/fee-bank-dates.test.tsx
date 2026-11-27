@@ -452,49 +452,68 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     expect(postFeeBankDate.mock.calls[1]![2]).toMatchObject({ expected_live_record_id: RECORD });
   });
 
-  it('⭐⭐ round 2 (HIGH) + round 3 — the tokens are the row AS OPENED: a refetch that swaps them under the form is SAID (DL11\'s `stale` line, the typed fields kept); until then a press sends the OLD ones, after it the shown ones', async () => {
+  it('⭐⭐ round 2 (HIGH) + round 4 — a reload that swaps the open row\'s tokens CLOSES the form with DL11\'s `stale` line, focused — ⛔ token adopted; a re-open takes the row as now shown', async () => {
     // BOTH tokens move under the form: another finance officer's record AND a District Admin's re-check (still blocking). The
-    // refetched row also shows a NEW district — a rendered change to wait on (⛔ a sync point the old row already had).
+    // refetched row also shows a NEW district — a rendered change to wait on.
     const CHECK_2 = '00000000-0000-4000-8000-0000000000c2';
     let refetched = false;
     getFeeBankDates.mockImplementation(async () =>
       refetched ? list({ held: [row({ latest_posting_district: 'Gaya', expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }) : list(),
     );
-    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.stale', 'x'));
+    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: randomUUID(), superseded_record_id: RECORD, event_version: 10 });
     wrap(<FeeBankDatesRoute />);
     const form = await openForm();
     fill(form, VALID);
-    // ⛔ refetch yet: the press sends the tokens AS OPENED.
-    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
-    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(1));
-    expect(postFeeBankDate.mock.calls[0]![2]).toMatchObject({ expected_live_check_id: CHECK, expected_live_record_id: null });
-    await screen.findByTestId('fee-bank-date-refused');
-    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull()); // `stale` reloads ⇒ closes
-    getFeeBankDates.mockReset();
-    getFeeBankDates.mockImplementation(async () => list());
-    cleanup();
-    // A fresh page: open, type — then the tokens move under the form.
-    refetched = false;
-    getFeeBankDates.mockImplementation(async () =>
-      refetched ? list({ held: [row({ latest_posting_district: 'Gaya', expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }) : list(),
-    );
-    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: randomUUID(), superseded_record_id: RECORD, event_version: 10 });
-    wrap(<FeeBankDatesRoute />);
-    const form2 = await openForm();
-    fill(form2, VALID);
-    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
     refetched = true;
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await waitFor(() => expect(screen.getByTestId(`fee-bank-date-row-${CLAIM}`)).toHaveTextContent('Gaya')); // the refetch RENDERED
-    // SAID: DL11's `stale` line, naming the claim; the form stays, with what was typed.
-    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
-    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form2);
-    expect(within(form2).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference);
-    // The next press is on what was SHOWN — the new tokens.
-    fireEvent.click(within(form2).getByTestId('fee-bank-date-submit'));
-    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(2));
-    expect(postFeeBankDate.mock.calls[1]![2]).toMatchObject({ expected_live_check_id: CHECK_2, expected_live_record_id: RECORD });
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull()); // CLOSED — ⛔ adopted
+    const line = screen.getByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    expect(postFeeBankDate).not.toHaveBeenCalled();
+    // A deliberate re-open is on the row as shown — its tokens are the new ones.
+    const again = await openForm();
+    fill(again, VALID);
+    fireEvent.click(within(again).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(1));
+    expect(postFeeBankDate.mock.calls[0]![2]).toMatchObject({ expected_live_check_id: CHECK_2, expected_live_record_id: RECORD });
+  });
+
+  it('round 4 — the step-up RETRY in flight keeps the list frozen and the form locked: a reload that moves the row meanwhile does ⛔ close the form or drop the answer', async () => {
+    let moved = false;
+    getFeeBankDates.mockImplementation(async () =>
+      moved ? list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }) : list({ held: [row(), row({ claim_case_id: CLAIM_2, reference_last4: '3333' })] }),
+    );
+    let release: (v: unknown) => void = () => undefined;
+    postFeeBankDate
+      .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step-up required'))
+      .mockReturnValueOnce(new Promise((res) => (release = res)));
+    requestStepUp.mockResolvedValueOnce({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockResolvedValueOnce({ elevated: true, elevatedUntil: '2026-11-27T12:00:00.000Z' });
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const hold = await screen.findByTestId('fee-bank-date-step-up');
+    fireEvent.click(within(hold).getByRole('button', { name: stepUpEn.send }));
+    fireEvent.change(await screen.findByTestId('fee-bank-date-step-up-code'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByTestId('fee-bank-date-step-up-verify'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(2)); // the retry is IN FLIGHT
+    expect(within(form).getByTestId('fee-bank-date-fields')).toBeDisabled();
+    expect(within(screen.getByTestId(`fee-bank-date-row-${CLAIM_2}`)).getByTestId('fee-bank-date-open')).toBeDisabled();
+    moved = true;
+    const before = getFeeBankDates.mock.calls.length;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form); // frozen — ⛔ closed mid-retry
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+    release({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
+    expect(await screen.findByTestId('fee-bank-date-recorded')).toHaveTextContent(DL11.recorded); // the answer is SHOWN
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull(); // ⛔ "changed" over the officer's own record
   });
 
   it('round 3 — a CORRECTABLE refusal (the form stays open), then a reload that moves the row: the old line is REPLACED by DL11\'s `stale` line (⛔ "check the reference" for a form that is gone)', async () => {

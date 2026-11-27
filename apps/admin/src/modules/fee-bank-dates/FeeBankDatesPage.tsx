@@ -81,7 +81,7 @@ interface RowFormProps {
   onBusyChange: (busy: boolean) => void;
   /** The officer edited a field — the list retires this row's outcome line. */
   onEdited: () => void;
-  /** The open row's tokens changed under the form (a reload) — the list says so (DL11's `stale` line). */
+  /** The open row's tokens changed under the form (a reload) — the list closes it with DL11's `stale` line. */
   onTokensChanged: () => void;
 }
 
@@ -95,19 +95,23 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
   const [prompt, setPrompt] = useState<{ field: Field; text: string; seq: number } | null>(null);
   const [pending, setPending] = useState<PendingWrite>(null);
   const id = row.claim_case_id;
-  const busy = record.isPending || pending !== null;
+  // `sending` (round 4): set by the press itself, cleared by the write's own callbacks — so `busy` cannot read false between the
+  // step-up panel clearing its hold and the retry's `isPending` reaching React (the freeze must not lapse mid-retry).
+  const [sending, setSending] = useState(false);
+  const busy = sending || record.isPending || pending !== null;
   // ⭐ The currency tokens are the row AS IT WAS when the form opened (code review round 2, 2026-11-27): the list refetches on
   // window focus — the officer reading the bank statement in another tab is the normal case — and a token read at PRESS time
   // would follow a record or a check the officer never saw, turning `stale` into a silent correction (and a lost write's
   // re-send into a duplicate). Any answer that reloads the list closes the form, so a re-open takes the fresh tokens.
-  const [seen, setSeen] = useState(() => ({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id }));
-  // ⭐ Round 3 — when a reload CHANGES the open row's tokens in place (another officer's record, a District Admin's re-check;
-  // a re-open before the reload landed), the form SAYS so with DL11's `stale` line and then takes the new tokens: the officer has
-  // been told and sees the new record line above the form, so the next press is a deliberate act on what is shown (⛔ refused
-  // `stale` for ever, ⛔ silent). The typed fields stay. While a write is busy the list is frozen, so this never fires mid-write.
+  const [seen] = useState(() => ({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id }));
+  // ⭐ Round 4 (superseding round 3's "say it, then take the new tokens" — the line it relied on is retired by the next
+  // keystroke, so the officer could press on tokens never consciously seen): a reload that CHANGES the open row's tokens in
+  // place (another officer's record, a District Admin's re-check, a re-open before the reload landed) CLOSES the form with
+  // DL11's `stale` line — as a move or a drop does. ⛔ token is ever adopted client-side: a re-open takes the row as then shown,
+  // and a press racing the close still carries the tokens AS OPENED (the server answers `stale`, DL5 (e)). The list is frozen
+  // while a write is busy, so this never fires mid-write.
   useEffect(() => {
     if (row.expected_live_check_id === seen.checkId && row.expected_live_record_id === seen.recordId) return;
-    setSeen({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id });
     onTokensChanged();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the row's tokens alone
   }, [row.expected_live_check_id, row.expected_live_record_id]);
@@ -146,10 +150,12 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
 
   const send = (body: Parameters<typeof record.mutate>[0]['body']) => {
     onBusyChange(true); // ⛔ an effect later: the list freezes in the SAME commit as the press (code review round 2)
+    setSending(true);
     record.mutate(
       { claimCaseId: id, body },
       {
         onSuccess: () => {
+          setSending(false);
           // ⛔ The Tier-1 note or the typed reference kept anywhere once written: the form state, the mutation (reset; the hook's
           // gcTime is 0), the retry closure (the hold is gone).
           setNote('');
@@ -158,6 +164,7 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
           onOutcome('recorded', t.recorded, true);
         },
         onError: (err) => {
+          setSending(false); // a hold keeps `busy` through `pending`
           if (needsStepUp(err)) {
             record.reset(); // the held body lives in the retry closure alone (⛔ also in the mutation's `variables`)
             setPending(holdOnce({ owner: 'bank-date', target: id, id: Date.now(), label: t.submit, retry: () => send(body) }));
@@ -392,7 +399,10 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
     setOpenFor(id);
     if (id !== null) setNotice(null);
   };
-  const tokensChangedFor = (row: FeeBankDateListRow) => () => setNotice((prev) => staleNotice(row.claim_case_id, row.reference_last4, prev));
+  const tokensChangedFor = (row: FeeBankDateListRow) => () => {
+    setNotice((prev) => staleNotice(row.claim_case_id, row.reference_last4, prev));
+    setOpenFor(null);
+  };
   // An edit in the row's form retires that row's outcome line (the officer is correcting it — an old refusal must not stand).
   const editedFor = (id: string) => () => setNotice((prev) => (prev !== null && prev.claimCaseId === id ? null : prev));
 

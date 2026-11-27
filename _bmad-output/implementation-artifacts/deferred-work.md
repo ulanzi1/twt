@@ -63,6 +63,7 @@ section); the 500 path with no live leg (dev section); and the `pg_trigger_depth
   approved it as the refusal of a write. True for a move and a token change; for a DROPPED row (denied, window closed, ⛔ longer held) "check
   again" points at a row no longer listed, where DL11's `not_held` / `window_closed` lines would be exact but the page cannot tell which.
   A **scope question for BigDev**, with `-512` D2's widening (round 2). **Trigger:** BigDev's next look at the page's words.
+  - **2026-11-27 — DISCHARGED** by [`2026-11-27-514`](../../.decision-log.md#decision-2026-11-27-514) item 2 (author-commit, BigDev: *"Approve all three as built"*): the page shows DL11's stale line when a reload moves, drops or re-tokens the open row. ⛔ deleted — the item stands as the question that was put.
 - **An open row pushed past the list's cap reads as a change** — newer held claims can push it off the first section (its cap); the form
   closes with the `stale` line though the claim did not change, and the row is no longer reachable on screen. **Trigger:** the list's cap
   is reached in practice.
@@ -75,8 +76,10 @@ section); the 500 path with no live leg (dev section); and the `pg_trigger_depth
   date may not have been recorded. The list has been reloaded …"*: `-512` approved it for a write with ⛔ typed answer (a lost response, a
   5xx). True (nothing is lost by the reload) but WIDER than the decision. A **scope question for BigDev** — approve the widening, or give
   words for a refused-without-reason answer. **Trigger:** BigDev's next look at the page's words (with the unapproved labels).
+  - **2026-11-27 — DISCHARGED** by [`2026-11-27-514`](../../.decision-log.md#decision-2026-11-27-514) item 1 (BigDev: *"Approve all three as built"*): the lost-write line is shown for any answer the page has no line for (a 429, a 4xx with no bank-date code, a 5xx, a lost response). ⛔ deleted.
 - **A CSRF 403 (`auth.csrf_origin`) reads DL11's "You do not have permission to record bank dates."** — the status-only branch.
   **Trigger:** the same.
+  - **2026-11-27 — DISCHARGED** by [`2026-11-27-514`](../../.decision-log.md#decision-2026-11-27-514) item 3: a CSRF 403 shows DL11's no-permission line. A leg that names `auth.csrf_origin` was added with it (`f70d3c32`) — before that the status-only branch was pinned for other 403 codes only. ⛔ deleted.
 
 ## Deferred from: the fix-diff review of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
@@ -89,6 +92,7 @@ section); the 500 path with no live leg (dev section); and the `pg_trigger_depth
 - **A 429 or a route-level 4xx with ⛔ bank-date code reads "The bank date may not have been recorded …"** — true but loose (such a write
   did not land); `-512` D2's line is for a write with ⛔ typed answer, and the page has ⛔ approved line for these. **Trigger:** BigDev gives
   words for a rate-limited or an unknown refusal.
+  - **2026-11-27 — DISCHARGED** by [`2026-11-27-514`](../../.decision-log.md#decision-2026-11-27-514) item 1 (the same approval as the round-2 item above). ⛔ deleted.
 - **A field the SERVER refuses (`reference_mismatch`, `in_future`, `before_joining`) gets ⛔ `aria-invalid`** — the list's alert names the
   problem, the focus returns to the submit button; only the form's own prompts sit on their field. **Trigger:** an accessibility pass
   of the staff screens.
@@ -121,6 +125,7 @@ section); the 500 path with no live leg (dev section); and the `pg_trigger_depth
   - **2026-11-27 — the trigger was OVERTAKEN (fix-diff review round 2):** the real-browser pass RAN before BigDev read these labels
     (roster Row 58 (d) MET is the pass, ⛔ an approval of these words). The item stays OPEN; its trigger is now *BigDev reads them —
     before go-live* (Row 58 is the go-live gate).
+  - **2026-11-27 — DISCHARGED** by [`2026-11-27-513`](../../.decision-log.md#decision-2026-11-27-513) item 2 (author-commit, BigDev: *"Approve all as written"*): the ten labels — *Loading…*, *The list could not be loaded.*, *District*, *Bank date recorded*, *by*, *Record the bank date* (open and submit), *Close*, *Checking your session…*, *Redirecting to sign in…* — and the outcome line's prefix are approved as written; their copy file marks them and the story's admin spec pins each as a literal. ⛔ deleted.
 - **AC5's list of allowed edits to 6.39's specs missed one case.** Three assertions in `apps/admin/tests/membership-check.test.tsx` pinned
   today's console note under a blocking RECORDED date — the case `2026-11-27-510` DL11 AMENDED (`-474` item 3). They now pin the amended
   note, the same exact-text check (⛔ loosened). Recorded, ⛔ a new rule. Owner: BigDev. **Trigger:** the story's code review.

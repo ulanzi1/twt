@@ -81,9 +81,11 @@ interface RowFormProps {
   onBusyChange: (busy: boolean) => void;
   /** The officer edited a field — the list retires this row's outcome line. */
   onEdited: () => void;
+  /** The open row's tokens changed under the form (a reload) — the list says so (DL11's `stale` line). */
+  onTokensChanged: () => void;
 }
 
-function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }: RowFormProps): ReactElement {
+function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, onTokensChanged }: RowFormProps): ReactElement {
   const record = usePostFeeBankDate(pariwarId);
   const navigate = useNavigate();
   const [reference, setReference] = useState('');
@@ -98,7 +100,17 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
   // window focus — the officer reading the bank statement in another tab is the normal case — and a token read at PRESS time
   // would follow a record or a check the officer never saw, turning `stale` into a silent correction (and a lost write's
   // re-send into a duplicate). Any answer that reloads the list closes the form, so a re-open takes the fresh tokens.
-  const [seen] = useState(() => ({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id }));
+  const [seen, setSeen] = useState(() => ({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id }));
+  // ⭐ Round 3 — when a reload CHANGES the open row's tokens in place (another officer's record, a District Admin's re-check;
+  // a re-open before the reload landed), the form SAYS so with DL11's `stale` line and then takes the new tokens: the officer has
+  // been told and sees the new record line above the form, so the next press is a deliberate act on what is shown (⛔ refused
+  // `stale` for ever, ⛔ silent). The typed fields stay. While a write is busy the list is frozen, so this never fires mid-write.
+  useEffect(() => {
+    if (row.expected_live_check_id === seen.checkId && row.expected_live_record_id === seen.recordId) return;
+    setSeen({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id });
+    onTokensChanged();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the row's tokens alone
+  }, [row.expected_live_check_id, row.expected_live_record_id]);
 
   useEffect(() => {
     onBusyChange(busy);
@@ -267,9 +279,10 @@ interface RowProps {
   onOutcome: RowFormProps['onOutcome'];
   onBusyChange: RowFormProps['onBusyChange'];
   onEdited: RowFormProps['onEdited'];
+  onTokensChanged: RowFormProps['onTokensChanged'];
 }
 
-function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, onEdited }: RowProps): ReactElement {
+function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, onEdited, onTokensChanged }: RowProps): ReactElement {
   return (
     <li className="flex flex-col gap-1 border-b py-2" data-testid={`fee-bank-date-row-${row.claim_case_id}`}>
       <p className="text-sm" data-testid="fee-bank-date-row-line">
@@ -287,7 +300,7 @@ function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, on
         </p>
       ) : null}
       {open ? (
-        <RowForm pariwarId={pariwarId} row={row} onClose={() => onOpen(null)} onOutcome={onOutcome} onBusyChange={onBusyChange} onEdited={onEdited} />
+        <RowForm pariwarId={pariwarId} row={row} onClose={() => onOpen(null)} onOutcome={onOutcome} onBusyChange={onBusyChange} onEdited={onEdited} onTokensChanged={onTokensChanged} />
       ) : (
         <button
           type="button"
@@ -309,6 +322,11 @@ export interface FeeBankDatesListProps {
   recorded: readonly FeeBankDateListRow[];
   heldTruncated: boolean;
   recordedTruncated: boolean;
+}
+
+/** DL11's approved `stale` line as the outcome line for `claimCaseId` — a reload changed or moved the open row. */
+function staleNotice(claimCaseId: string, referenceLast4: string, prev: FeeBankDateNotice | null): FeeBankDateNotice {
+  return { claimCaseId, referenceLast4, kind: 'refused', text: t.refused['stale']!, seq: (prev?.seq ?? 0) + 1 };
 }
 
 /** The two sections (DL10). ONE form open at a time; ONE outcome line for the page. */
@@ -356,12 +374,8 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
       return;
     }
     if (openSection === null || (openedIn.current !== null && openedIn.current !== openSection)) {
-      const id = openFor;
-      setNotice((prev) =>
-        prev !== null && prev.claimCaseId === id
-          ? prev
-          : { claimCaseId: id, referenceLast4: openedLast4.current, kind: 'refused', text: t.refused['stale']!, seq: (prev?.seq ?? 0) + 1 },
-      );
+      // ALWAYS the `stale` line (round 3): an older line for this claim (a correctable refusal) was about the form now gone.
+      setNotice((prev) => staleNotice(openFor, openedLast4.current, prev));
       setOpenFor(null);
       return;
     }
@@ -378,6 +392,7 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
     setOpenFor(id);
     if (id !== null) setNotice(null);
   };
+  const tokensChangedFor = (row: FeeBankDateListRow) => () => setNotice((prev) => staleNotice(row.claim_case_id, row.reference_last4, prev));
   // An edit in the row's form retires that row's outcome line (the officer is correcting it — an old refusal must not stand).
   const editedFor = (id: string) => () => setNotice((prev) => (prev !== null && prev.claimCaseId === id ? null : prev));
 
@@ -391,6 +406,7 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
       onOpen={open}
       onOutcome={outcomeFor(row)}
       onEdited={editedFor(row.claim_case_id)}
+      onTokensChanged={tokensChangedFor(row)}
       onBusyChange={setBusy}
     />
   );

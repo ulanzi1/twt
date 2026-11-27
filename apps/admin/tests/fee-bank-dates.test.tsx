@@ -174,8 +174,12 @@ beforeEach(() => {
   postFeeBankDate.mockReset();
   requestStepUp.mockReset();
   verifyStepUp.mockReset();
+  postMembershipCheck.mockReset();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  focusManager.setFocused(undefined); // round 3 — a failed leg must ⛔ leave the focus forced for the next one
+});
 
 describe('the finance officer’s page (DL10, DL11)', () => {
   it('⭐ the copy is DL11 word for word', () => {
@@ -448,26 +452,85 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     expect(postFeeBankDate.mock.calls[1]![2]).toMatchObject({ expected_live_record_id: RECORD });
   });
 
-  it('⭐⭐ round 2 (HIGH) — the tokens are the row AS OPENED: a focus refetch while the officer types swaps the row\'s tokens, and the press still sends the OLD ones (the server answers `stale`, ⛔ a silent correction)', async () => {
-    // BOTH tokens move under the form: another finance officer's record AND a District Admin's re-check (still blocking).
+  it('⭐⭐ round 2 (HIGH) + round 3 — the tokens are the row AS OPENED: a refetch that swaps them under the form is SAID (DL11\'s `stale` line, the typed fields kept); until then a press sends the OLD ones, after it the shown ones', async () => {
+    // BOTH tokens move under the form: another finance officer's record AND a District Admin's re-check (still blocking). The
+    // refetched row also shows a NEW district — a rendered change to wait on (⛔ a sync point the old row already had).
     const CHECK_2 = '00000000-0000-4000-8000-0000000000c2';
-    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [row({ expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }));
+    let refetched = false;
+    getFeeBankDates.mockImplementation(async () =>
+      refetched ? list({ held: [row({ latest_posting_district: 'Gaya', expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }) : list(),
+    );
     postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.stale', 'x'));
     wrap(<FeeBankDatesRoute />);
     const form = await openForm();
     fill(form, VALID);
-    const before = getFeeBankDates.mock.calls.length;
-    focusManager.setFocused(false);
-    focusManager.setFocused(true);
-    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
-    await waitFor(() => expect(screen.getByTestId(`fee-bank-date-row-${CLAIM}`)).toHaveTextContent('Patna'));
-    focusManager.setFocused(undefined);
-    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form); // same section — the form stays, typed
+    // ⛔ refetch yet: the press sends the tokens AS OPENED.
     fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
     await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(1));
     expect(postFeeBankDate.mock.calls[0]![2]).toMatchObject({ expected_live_check_id: CHECK, expected_live_record_id: null });
-    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.stale);
-    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull()); // a reload code closes it
+    await screen.findByTestId('fee-bank-date-refused');
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull()); // `stale` reloads ⇒ closes
+    getFeeBankDates.mockReset();
+    getFeeBankDates.mockImplementation(async () => list());
+    cleanup();
+    // A fresh page: open, type — then the tokens move under the form.
+    refetched = false;
+    getFeeBankDates.mockImplementation(async () =>
+      refetched ? list({ held: [row({ latest_posting_district: 'Gaya', expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }) : list(),
+    );
+    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: randomUUID(), superseded_record_id: RECORD, event_version: 10 });
+    wrap(<FeeBankDatesRoute />);
+    const form2 = await openForm();
+    fill(form2, VALID);
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+    refetched = true;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(screen.getByTestId(`fee-bank-date-row-${CLAIM}`)).toHaveTextContent('Gaya')); // the refetch RENDERED
+    // SAID: DL11's `stale` line, naming the claim; the form stays, with what was typed.
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
+    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form2);
+    expect(within(form2).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference);
+    // The next press is on what was SHOWN — the new tokens.
+    fireEvent.click(within(form2).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(2));
+    expect(postFeeBankDate.mock.calls[1]![2]).toMatchObject({ expected_live_check_id: CHECK_2, expected_live_record_id: RECORD });
+  });
+
+  it('round 3 — a CORRECTABLE refusal (the form stays open), then a reload that moves the row: the old line is REPLACED by DL11\'s `stale` line (⛔ "check the reference" for a form that is gone)', async () => {
+    let moved = false;
+    getFeeBankDates.mockImplementation(async () =>
+      moved ? list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }) : list(),
+    );
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.reference_mismatch', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.reference_mismatch);
+    await waitFor(() => expect(within(form).getByTestId('fee-bank-date-fields')).toBeEnabled());
+    moved = true;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await screen.findByTestId('fee-bank-dates-recorded');
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    expect(screen.getByTestId('fee-bank-date-refused')).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
+  });
+
+  it('round 3 — a reload that DROPS the open row while the officer types: the form closes with DL11\'s `stale` line, focused', async () => {
+    let dropped = false;
+    getFeeBankDates.mockImplementation(async () => (dropped ? list({ held: [] }) : list()));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, { reference: '123' });
+    dropped = true;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await screen.findByTestId('fee-bank-dates-empty');
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    const line = screen.getByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
+    await waitFor(() => expect(document.activeElement).toBe(line));
   });
 
   it('round 2 — a reload that MOVES the open row while the officer types (⛔ write): the form closes WITH DL11\'s `stale` line, focused', async () => {
@@ -577,7 +640,8 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     await waitFor(() => expect(within(form).getByTestId('fee-bank-date-fields')).toBeEnabled());
     expect(document.activeElement).not.toBe(line);
     // ⚠ The focus RETURNS to the submit button (real Chrome drops it to <body> on the disabled fieldset — the browser pass
-    // 2026-11-27 proved the fix there; jsdom keeps focus on a disabled control, so this leg alone is weak).
+    // 2026-11-27 proved the fix there). The button was never focused before the press (asserted above), so only the refocus puts
+    // the focus here — the leg can fail (round 3: the old "weak" note is gone with the pre-focus).
     expect(document.activeElement).toBe(submit);
     fill(form, { reference: '1' });
     expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();

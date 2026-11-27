@@ -1435,6 +1435,59 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
     502) ⇒ `-512` D2's line (an alert) FOCUSED, the form CLOSED (the typed note gone from the page), the list reloaded with the record
     the write made — and the database holds exactly ONE record for that claim (one live). The sweep again clean (43 log lines; ⛔ note,
     reference, bank date, name). The launcher and the dev servers removed afterwards.
+- **The real-browser pass of the LANDED tree (2026-11-27, after the landing — roster Row 58 (d) and Row 46 (d); BigDev: "run the real-browser pass"):**
+  the installed **Google Chrome 158.0.8127.38** driven by Playwright 1.60 (headless) from the shell. ⚠ NOT the agent's Chrome extension: its only
+  connected browser was a Windows machine, and the probe page on `127.0.0.1:5199` showed Chrome's error page there — it cannot reach this Mac's
+  `localhost` ([[project_agent_chrome_cannot_reach_localhost]]); the project's own fallback was used. Tree: the worktree at `fe85f048` (the code is
+  `78f07317`'s; `fe85f048` changes records only). The admin Vite dev server (`localhost:3001`) and the API (`:3000`, fake WebAuthn, fake KMS) on
+  the story container `twt-6-39a-pg`; an uncommitted launcher seeded ONE Pariwar with 12 claims held on a fee recorded 10 May (death 1 May — each
+  claim in its OWN district, so the District Admin was given all 12 district grants directly in the throwaway database), signed the finance
+  officer and the District Admin in through the REAL passkey routes (⛔ a real passkey — the cookie helper), and mirrored the step-up code from
+  the capturing delivery stub. The script (`pass.mjs`, in the scratchpad, ⛔ committed) records pass / fail with what the page shows, one claim a
+  leg. **The run that counts is the third, on a freshly seeded world: 72 PASS, 0 FAIL.** Two earlier runs of the SAME script had defects of
+  the script, each found by reading the failing leg's screenshot and the database, none of the product: run 1 (52 / 7) — a default
+  parameter turned "no reason chosen" into a real submit, and every `page.route` filtered on `fee-bank-dates` while the write's path is
+  `…/fee-bank-date`, so no route ever fired (two writes landed unhindered); run 2 (63 / 2) — `page.unroute` with a new function never removed the
+  lost-write route (it turned the next valid write into a 502), and Chrome ignored a route-level `Origin` override. The sweep's first form read a
+  launcher log of six lines (the API's logger was off) and "passed" on nothing; it now reads the API's own request log (`buildServer`'s test-only
+  `logStream`) and fails unless that log holds at least 40 lines and one naming `fee-bank-date`. Each route-based leg now counts its own
+  handler, so a route that never fires cannot pass.
+  - **Observed, each in the page's DOM:** **F1** (claim 0 and the last of 12) opening a row puts the focus in its FIRST field; the form is
+    a `role=group` named by the row's line, the reasons a `radiogroup` of three, the buttons described by that line; an empty press ⇒ the reference
+    prompt word for word, an alert, `aria-invalid` + `aria-describedby` on the field, the focus STAYS on the button; an edit retires it; 11 digits ⇒
+    the shape prompt; no reason ⇒ the reason prompt on the radiogroup; a note of ONLY invisible characters (U+200B ×2, U+2800, U+3164, U+FEFF,
+    U+00AD) ⇒ the note prompt and ZERO bank-date requests; Close ⇒ the form gone and the focus on THAT row's "Record the bank date". **F2** the
+    held write (an un-stepped-up officer): the fields `:disabled`, every other row's button disabled, the focus INSIDE the panel, no `aria-busy`
+    on the group or the panel; the District Admin re-checked the claim meanwhile (201); a window-focus refetch DID fire (one list GET) and the
+    form, the typed note and the panel all STAYED (the list is frozen); verified ⇒ the SAME body re-sent ⇒ the `stale` answer ⇒ DL11's line word
+    for word, the form closed, the typed note GONE from the page, the line focused, an alert above the sections; the database holds no live record
+    for the claim. **F3** a delayed write (the route fired once): the fields `aria-busy="true"` and disabled, the group NOT busy, the other rows
+    locked, the focus on `<body>` (real Chrome drops it from a disabled control) — and back on the submit button afterwards; a reference one digit off
+    ⇒ DL11's line word for word, ONE line on the page, INSIDE the open row (K4), the form open with what was typed, `aria-busy` off; an edit retires the
+    line; a second refusal then Close ⇒ the line retired, the form closed, the focus on the row's open button (K5). **F4** the lost write (forwarded,
+    its answer replaced by a 502; the route fired once): `-512` D2's line word for word, an alert, focused, the form closed, the typed note gone, the list
+    reloaded and the row now SHOWING the record the write made; the database holds exactly ONE live record. **F5** a valid record ⇒ "Recorded. …" as a
+    status, focused, the form closed, the row's line naming the bank date, the reason and *"Meera (Finance Officer)"*, every row unlocked. **F6**
+    (`-514` item 2) the District Admin re-checks while the officer types, a window-focus refetch ⇒ the form CLOSES with DL11's `stale` line, an alert,
+    focused. **F7** (`-514` item 3) the admin app loaded from `http://[::1]:3001` — an origin the API does not allow — so the write carried that
+    `Origin` and the API ITSELF answered 403 `auth.csrf_origin` (no faked answer); nothing was written; the page shows *"You do not have permission
+    to record bank dates."* with the reference ending, the form still open, the line inside the row, the focus on the submit button. **F8** the
+    session cleared before a press ⇒ the page goes to `/login`. **C0–C3** the console as the District Admin: a claim with no bank date ⇒ the
+    standing result on the RECORDED date and ⛔ the K1-P line; the 25 April claim ⇒ BEFORE the re-check the preview already rests on the bank
+    date and shows `-513` item 1's line word for word, while the recorded check still says "Paid after the death" and the gate says *"The finance
+    officer recorded the bank's date … — check again."*; the re-check (201) ⇒ the recorded check "Paid before the death", the gate *"The membership
+    check has passed."*, the K1-P line DIRECTLY after the outcome line (its previous sibling is the outcome), the bank date and the officer's name
+    shown; the 12 May claim (not earlier) ⇒ stays "Paid after the death" on the recorded date, ⛔ the K1-P line; the finance officer's page then lists the
+    passing claim under "already recorded on claims whose check now passes" and the other still held. **Sweep** the API's request log (160 lines
+    since the pass began, 23 naming `fee-bank-date`): ⛔ planted note, ⛔ typed reference, ⛔ display name, ⛔ bank date; no uncaught page error. The
+    one console error that is not an expected 401 / 403 / 502 is the browser's `/favicon.ico` 404 (the admin app links no favicon; it appears on the
+    signed-out login page too — ⛔ this story's), plus the console's document viewer failing to open the fixture's `memory://` URL (a test storage).
+  - **⚠ NOT observed:** the Pariwar switch (`key={pariwarId}` — one Pariwar; its component leg stands); a screen reader (roles, `aria-*` and focus read
+    from the DOM — ⛔ heard); any browser but Chrome 158 (no Safari, Firefox or phone); a headed window (headless; screenshots only); a real passkey;
+    the real step-up SMS (R4 stays the always-stub delivery — a go-live gate).
+  - **⚠ One new finding (LOW):** the page's outcome lines — refused, lost-write, stale, no-permission and "Recorded" — are ONE plain `<p>` (`noticeNode`):
+    no colour, no icon, only a `role`; the step-up panel on the same form and the `workplaces` module's alerts use `text-status-fail-fg`. jsdom cannot
+    show colour, so no earlier test or pass saw it. Styling, ⛔ copy. Recorded in `deferred-work.md` as `6.39a-BP-W1`, ⛔ fixed here.
 - **`ci:local` (2026-11-27, the code-review fix pass — the story container recreated from scratch, migrated through `0219` as edited;
   `DATABASE_URL` = its port):** 41 of 41 jobs green, `integration-tests` included (11m30s for that job).
 - **`ci:local` (2026-11-27, fix-diff review round 2 — the container recreated from scratch again):** 41 of 41 jobs green,
@@ -1633,3 +1686,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 | 2026-11-27 | v1.17 | Review of the M-pass delta (BigDev: "2", then "1" apply every patch; ledger `2026-11-27o`): three layers on the 244-line delta — 0 decision-needed, 10 patch, 1 defer (the ground-inspection note rule is still a deny-list — another story's code), 5 dismissed; the Auditor: no AC, DL, decision or invariant violated, no new words. N1 (real notes in any script still pass — the symbol arm is now pinned), N2 (four more blank glyphs named), N3–N10 applied, each mutation-checked; N7's leg (e2) RUNS the Super Admin unknown-claim claim (403, same code) — 6.18's doc block is now attested; N12 (a latent race in a pre-existing admin leg, found by the full-suite run) fixed. Closure wording corrected: "nothing above LOW" was the Auditor's grading, not every layer's. K1-P still open. Status stays `in-progress`. Nothing committed. |
 | 2026-11-27 | v1.18 | Open items closed (BigDev: "close all open items, why are we even holding up?"; ledger `2026-11-27p`): K1-P BUILT on the owner's words ([`2026-11-27-513`](../../.decision-log.md#decision-2026-11-27-513) item 1, committed alone first); the page's ten labels and the outcome prefix approved as written (item 2); three scope widenings approved as built ([`2026-11-27-514`](../../.decision-log.md#decision-2026-11-27-514), committed alone) — five `deferred-work.md` items DISCHARGED by dated lines; a named `auth.csrf_origin` leg added (the entry's "already pins the three" was loose for that case — stated). Status `in-progress → review`. What stays deferred, and why, is in the dispositions. |
 | 2026-11-27 | v1.19 | LANDED on `main` by fast-forward (`scripts/land.sh 356`; PR #356, `6536b8bb..78f07317`, 33 commits, SHAs unchanged by the push; ledger `2026-11-27q`). Evidence: the PR run `ci.yml` 45981502873 = 41/41 success on exactly `78f07317` (its `integration-tests` job about 26 min); the push to `main`: `ci.yml` run 45985371339 = 41/41 success on exactly `78f07317` (about 30 min; `integration-tests` about 29 min); `code-escrow-mirror` (45985371304) red as on every push — its log still says `MIRROR_DESTINATION_URL` and `MIRROR_PUSH_CREDENTIAL` are unset (Story 0.3 Task 8) — not part of the gate. Roster Row 58 (a) and (b) MET, (d) stands for the code-review pass's tree ONLY; Row 46 (b) MET and (d) re-opened by its own rule (dated lines). Row `6-39a-…` review → done. |
+| 2026-11-27 | v1.20 | The real-browser pass RAN on the landed tree (BigDev: "run the real-browser pass"; ledger `2026-11-27r`): the installed Chrome 158 driven by Playwright — ⚠ not the agent's Chrome extension (its browser was a Windows machine that could not reach this Mac's `localhost`); the run that counts is the third, on a freshly seeded world — 72 PASS / 0 FAIL (two earlier runs had defects of the script, listed in the Debug Log). Roster Row 58 (d) MET for the landed tree and Row 46 (d) MET (dated lines; the re-opened (d) closes). One new LOW finding, `6.39a-BP-W1` (the outcome lines carry no visual emphasis), recorded in `deferred-work.md`, ⛔ fixed. Also recorded: the landing-records commit `fe85f048` passed GitHub CI (`ci.yml` 45989764523 = 41/41 success on exactly `fe85f048`). Records only — no code changed. |

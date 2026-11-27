@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Observed on the real-browser pass of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+Story section: *Debug Log → "The real-browser pass of the LANDED tree"*.
+
+- **6.39a-BP-W1 — the finance page's outcome lines carry no visual emphasis. OPEN, unhomed, LOW.** Seen in the real-browser pass screenshots
+  (Chrome 158): the refusal, lost-write, stale, no-permission and "Recorded" lines are ONE node — `FeeBankDatesPage.tsx`'s `noticeNode`, a plain
+  `<p>` with a `role` (`alert` / `status`) and no class — so a sighted officer sees ordinary body text under the form (the mismatch, lost-write
+  and "Recorded" lines were seen plain in the screenshots; the stale and no-permission lines render through the same node, by reading the code).
+  The step-up panel on the same form (its error lines) and the `workplaces` module's alerts — seven lines in all — use `text-status-fail-fg`.
+  jsdom cannot show colour, which is why no test or earlier pass saw it. It is styling, ⛔ copy: every sentence is the approved one, and the
+  lines sit where K4 put them. Observed and escalated here, ⛔ planned. Owner: BigDev (a styling choice, not a Panel matter). Trigger: the next
+  story that touches this page, or an admin-wide pass over alert styling.
+
+---
+
 ## Deferred from: code review, second pass, of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 Story section: *Review Findings → "Code review, second pass"* (K15–K30). Re-found by this pass and NOT re-listed, because each is already recorded

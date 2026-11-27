@@ -12,6 +12,7 @@
 >
 > **This question is NON-BLOCKING.** The build of Story 13.1a goes ahead on the answer we recommend (option A). What waits for the
 > Panel is going live with field-worker registration (roster Row 48, leg (i)) — nothing is live today.
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 4); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Sent AGAIN: BigDev reported a first send on 2026-11-05 (above); this is a second send, still unanswered. Awaiting ruling. Every line above is kept as written.
 
 ---
 

@@ -3,6 +3,7 @@
 > **Status: WRITTEN 2026-11-26; ⛔ NOT YET SENT** (BigDev sends). Prepared for the Panel sitting of late November 2026 as part of
 > the agenda `trustee-panel-sitting-2026-11-26-agenda.md`.
 > **Prepared by:** BigDev (Solo Builder).
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 6); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
 
 ---
 

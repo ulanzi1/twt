@@ -3,6 +3,7 @@
 > **Status: DRAFT for BigDev to send.** ⛔ Sent by the session. Written 2026-10-28 by Story 6.32 (Task 0.4) under
 > [`-413`](../../.decision-log.md#decision-2026-10-28-413) IQ7 (A). Non-blocking: the story is built either way, and the answers are ⛔ collected in
 > production until counsel's basis is recorded (roster Row 42 (a)).
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 7); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
 
 ## §0 — the gate
 

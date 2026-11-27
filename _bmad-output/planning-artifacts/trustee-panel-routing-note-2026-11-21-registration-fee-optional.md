@@ -4,6 +4,7 @@
 > `sprint-change-proposal-2026-11-21-registration.md`; author-commit `2026-11-21-482` decision 5). ⛔ Member uses the system yet. ⛔ Nothing
 > waits on this note to be built or merged: the change is built as a switch that stays **off** — the fee stays required, exactly as you
 > have ruled — until you rule.
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 2); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
 
 ## §0 — the gate
 

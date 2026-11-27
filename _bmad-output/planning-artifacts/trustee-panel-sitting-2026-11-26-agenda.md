@@ -11,6 +11,9 @@
 > kept as written. If the 3.13a note has been ruled by the time of this sitting, item 9 is already answered there.
 > **2026-11-27 — still PREPARED, ⛔ NOT YET SENT.** Items 1 and 9 are answered and their stories have landed on `main` (dated lines
 > under each); the sitting carries items 2–8, 10 and 11.
+> **2026-11-27 — SENT** (BigDev: *"agenda sent"*), with every note it names for items 2–8, 10 and 11 (BigDev confirmed all of
+> them went). ⚠ The channel, the time and the exact text sent are NOT recorded. Each note carries its own dated SENT line; the
+> "PREPARED, NOT YET SENT" lines above are kept as written.
 
 **How to read this:** each item gives the question in one sentence, our suggestion, and what is waiting on your answer. Nothing below
 is live for members today. Every item can be answered by option letter, the way you answered the 21 November notes.

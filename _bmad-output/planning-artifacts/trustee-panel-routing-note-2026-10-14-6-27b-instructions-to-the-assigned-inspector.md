@@ -2,6 +2,7 @@
 
 > **Status: WRITTEN, ⛔ not sent.** Raised by the code review of Story 6.27b (round 2, item Y2). BigDev chose to put option B to the
 > Panel and to keep option A in the code until the Panel rules. ⛔ No engineering choice is bundled into this note.
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 8); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
 
 ---
 

@@ -12,6 +12,7 @@
 > **This question is NON-BLOCKING.** The build of Story 13.1b goes ahead on the answer we recommend (option A). What waits for the
 > Panel is switching the text on (the go-live checklist's item for your confirm). Nothing is live today. Registering and approving field workers does not wait
 > for this note: an officer reading the code out is the route already built, and its permission is before you in the keys note.
+> **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 5); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
 
 ---
 

@@ -8,6 +8,8 @@
 **Occasion:** Recorded at `.decision-log.md#decision-2026-09-04-199` as a **recommended** disclosure —
 ⛔ not a required one.
 
+**2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 11); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Its first send: written 2026-09-04, never sent before (BigDev, 2026-11-26). For information; no answer required. Every line above is kept as written.
+
 > ### 📖 **Panel members — [Appendix A: In plain words](#appendix-a--in-plain-words) is complete on its own.**
 
 > ⭐⛔ **WHY THIS NOTE EXISTS.** On 4 September you ruled — as clause 3 of `2026-09-04-190` — that

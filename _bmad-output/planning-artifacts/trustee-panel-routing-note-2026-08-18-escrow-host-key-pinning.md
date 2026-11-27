@@ -14,6 +14,8 @@ leaving **130** numbered headings over **129** distinct numbers — the `+1` is 
 current head — *(⚠ **re-verify the head at ruling time**)*. Per Decision `2026-08-09-095` the entry
 must **label per-clause provenance**.
 
+**2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 10); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Whether it was ALSO sent in August is still NOT recorded (the agenda asked BigDev to confirm); ⛔ backfilled. Awaiting ruling. Every line above is kept as written.
+
 > ⚠ **Every recommendation in this note is NON-BINDING.**
 
 > ⛔ **ADR-0002 is RATIFIED and is NOT edited by this note or by any ruling on it.** Its status line

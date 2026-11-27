@@ -361,6 +361,10 @@ describe('the form (DL3, DL9, DL11)', () => {
     expect(feeBankDateErrorMessage(new ApiError(400, 'request.validation', 'x'))).toBe('Something in the form is not right. Check each field and try again.');
     expect(feeBankDateErrorMessage(new ApiError(401, 'auth.session_required', 'x'))).toBe('Your session has ended. Sign in again, then record the bank date.');
     expect(feeBankDateErrorMessage(new ApiError(403, 'rbac.forbidden', 'x'))).toBe(DL11.noAccess);
+    // `2026-11-27-514` item 3 — a CSRF origin refusal (the API's `auth.csrf_origin`, a 403 with no bank-date code) reads the no-permission
+    // line too, by name: the status-only branch is what shows it, and this leg is what stops a change to that branch from losing it.
+    expect(feeBankDateErrorMessage(new ApiError(403, 'auth.csrf_origin', 'Origin not allowed'))).toBe(DL11.noAccess);
+    expect(isAnsweredFeeBankDateRefusal(new ApiError(403, 'auth.csrf_origin', 'Origin not allowed'))).toBe(true); // an answered refusal — ⛔ the lost-write line, ⛔ a reload
   });
 
   it('⭐ `stale` shows its line and RELOADS the list', async () => {

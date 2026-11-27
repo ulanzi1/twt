@@ -23,7 +23,7 @@ import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { usePostFeeBankDate } from '../../api/hooks.js';
+import { FEE_BANK_DATE_RELOAD_CODES, isAnsweredFeeBankDateRefusal, usePostFeeBankDate } from '../../api/hooks.js';
 import { holdKey, holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '../workplaces/StepUpPanel.js';
 import { feeBankDateErrorMessage } from './errors.js';
 import { feeBankDatesEn as t } from './i18n-en.js';
@@ -94,6 +94,11 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
   const [pending, setPending] = useState<PendingWrite>(null);
   const id = row.claim_case_id;
   const busy = record.isPending || pending !== null;
+  // ⭐ The currency tokens are the row AS IT WAS when the form opened (code review round 2, 2026-11-27): the list refetches on
+  // window focus — the officer reading the bank statement in another tab is the normal case — and a token read at PRESS time
+  // would follow a record or a check the officer never saw, turning `stale` into a silent correction (and a lost write's
+  // re-send into a duplicate). Any answer that reloads the list closes the form, so a re-open takes the fresh tokens.
+  const [seen] = useState(() => ({ checkId: row.expected_live_check_id, recordId: row.expected_live_record_id }));
 
   useEffect(() => {
     onBusyChange(busy);
@@ -104,6 +109,14 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
   // its submit button — the officer corrects the SAME form.
   const submitRef = useRef<HTMLButtonElement>(null);
   const refocus = useRef(false);
+  // A HELD write moves the focus into the step-up panel (its first control — "Send the code"): the locked fieldset has just
+  // dropped it to <body> in real Chrome (code review round 2).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const heldKey = pending === null ? null : holdKey(pending);
+  useEffect(() => {
+    if (pending !== null) panelRef.current?.querySelector<HTMLElement>('button, input')?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per hold
+  }, [heldKey]);
   useEffect(() => {
     if (!busy && refocus.current) {
       refocus.current = false;
@@ -120,6 +133,7 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
   };
 
   const send = (body: Parameters<typeof record.mutate>[0]['body']) => {
+    onBusyChange(true); // ⛔ an effect later: the list freezes in the SAME commit as the press (code review round 2)
     record.mutate(
       { claimCaseId: id, body },
       {
@@ -142,8 +156,10 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
             void navigate({ to: '/login' });
             return;
           }
-          refocus.current = true;
-          onOutcome('refused', feeBankDateErrorMessage(err), false);
+          // An answer that RELOADS the list (a reload code; a lost write — `-512` D2) closes the form: its tokens are spent.
+          const reloads = !isAnsweredFeeBankDateRefusal(err) || FEE_BANK_DATE_RELOAD_CODES.has(err.code);
+          if (!reloads) refocus.current = true;
+          onOutcome('refused', feeBankDateErrorMessage(err), reloads);
         },
       },
     );
@@ -161,8 +177,8 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
       bank_credit_date: date,
       reason_code: reason!,
       note: note.trim(),
-      expected_live_check_id: row.expected_live_check_id,
-      expected_live_record_id: row.expected_live_record_id,
+      expected_live_check_id: seen.checkId,
+      expected_live_record_id: seen.recordId,
     });
   };
 
@@ -223,6 +239,7 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
         </div>
       </fieldset>
       {pending !== null ? (
+        <div ref={panelRef} className="contents">
         <StepUpPanel
           key={holdKey(pending)}
           context={FEE_BANK_DATE_STEP_UP_CONTEXT}
@@ -234,6 +251,7 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }:
           }}
           testId="fee-bank-date-step-up"
         />
+        </div>
       ) : null}
     </div>
   );
@@ -303,13 +321,17 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
   // focus refetch while the officer reads the step-up code; another actor's commit) could move or drop the row, and a moved row
   // is a NEW component (two lists) — its form would unmount and take the write's answer, the held step-up and the typed fields
   // with it, with ⛔ word. The fresh list renders once the outcome is shown.
-  const [frozen, setFrozen] = useState<{ held: readonly FeeBankDateListRow[]; recorded: readonly FeeBankDateListRow[] } | null>(null);
+  const [frozen, setFrozen] = useState<Pick<FeeBankDatesListProps, 'held' | 'recorded' | 'heldTruncated' | 'recordedTruncated'> | null>(null);
   useEffect(() => {
-    setFrozen((prev) => (busy ? (prev ?? { held: props.held, recorded: props.recorded }) : null));
+    setFrozen((prev) =>
+      busy ? (prev ?? { held: props.held, recorded: props.recorded, heldTruncated: props.heldTruncated, recordedTruncated: props.recordedTruncated }) : null,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the snapshot is taken when `busy` turns on, ⛔ on each new list
   }, [busy]);
   const held = frozen?.held ?? props.held;
   const recorded = frozen?.recorded ?? props.recorded;
+  const heldTruncated = frozen?.heldTruncated ?? props.heldTruncated;
+  const recordedTruncated = frozen?.recordedTruncated ?? props.recordedTruncated;
 
   // The outcome line takes the focus when the form that held it is GONE (a success closes it; a refused row may leave or
   // move on the reload) — family 13 (d). A refusal whose form is still open keeps the focus in the form being corrected
@@ -319,18 +341,27 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
   }, [notice, openFor]);
   // A form whose row has LEFT the list, or MOVED section, closes. The sections are two lists, so a moved row is a NEW
   // component: its form would re-open EMPTY (the typed fields and any held step-up dropped without a word) — fix-diff
-  // review 2026-11-27. Closing says so: the outcome line stays, and the row's "open" is one press away.
+  // review 2026-11-27. Closing says so: an outcome line already shown stays; a form closed with ⛔ outcome (a reload while the
+  // officer was typing) gets DL11's approved `stale` line — "This claim changed since you opened it. It has been reloaded —
+  // check again." — the very case it names (code review round 2).
   const heldIds = held.map((r) => r.claim_case_id);
   const sectionOf = (id: string): 'held' | 'recorded' | null =>
     heldIds.includes(id) ? 'held' : recorded.some((r) => r.claim_case_id === id) ? 'recorded' : null;
   const openSection = openFor === null ? null : sectionOf(openFor);
   const openedIn = useRef<'held' | 'recorded' | null>(null);
+  const openedLast4 = useRef('');
   useEffect(() => {
     if (openFor === null) {
       openedIn.current = null;
       return;
     }
     if (openSection === null || (openedIn.current !== null && openedIn.current !== openSection)) {
+      const id = openFor;
+      setNotice((prev) =>
+        prev !== null && prev.claimCaseId === id
+          ? prev
+          : { claimCaseId: id, referenceLast4: openedLast4.current, kind: 'refused', text: t.refused['stale']!, seq: (prev?.seq ?? 0) + 1 },
+      );
       setOpenFor(null);
       return;
     }
@@ -343,6 +374,7 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
   };
   const open = (id: string | null) => {
     openedIn.current = null; // set by the effect for the row now open
+    openedLast4.current = [...held, ...recorded].find((r) => r.claim_case_id === id)?.reference_last4 ?? '';
     setOpenFor(id);
     if (id !== null) setNotice(null);
   };
@@ -385,7 +417,7 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
         ) : (
           <ul>{held.map(rowOf)}</ul>
         )}
-        {props.heldTruncated ? (
+        {heldTruncated ? (
           <p role="status" className="text-xs" data-testid="fee-bank-dates-held-truncated">
             {t.truncated}
           </p>
@@ -397,7 +429,7 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
             {t.recordedHeading}
           </h2>
           <ul>{recorded.map(rowOf)}</ul>
-          {props.recordedTruncated ? (
+          {recordedTruncated ? (
             <p role="status" className="text-xs" data-testid="fee-bank-dates-recorded-truncated">
               {t.truncated}
             </p>

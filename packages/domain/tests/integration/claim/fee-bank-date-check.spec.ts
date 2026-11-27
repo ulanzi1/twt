@@ -263,7 +263,8 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
   describe('AC6 — PQ1 (`2026-11-27-511` Q1 B): the bank date helps after a refusal, once the appeal sends the claim back', () => {
     it('⭐⭐ PQ1 — denied `fee_paid_after_death` ⇒ `window_closed`; the appeal reverses it ⇒ accepted in `reversed`; the re-check passes ON THE EARLIER BANK DATE (the ONE rule); the final vote approves; the refusal no longer stands; then corrections STOP at `state_trustee_approved`', async () => {
       // ⭐ Code review 2026-11-27 — the dates are CONSISTENT: death 5 days ago; the payment RECORDED today (⇒ `after_death`);
-      // the bank's date 7 days ago (⇒ `before_death`). Every outcome below is COMPUTED by the rule, ⛔ handed in.
+      // the bank's date 7 days ago (⇒ `before_death`). Each outcome below is computed by the ONE rule from these dates, as the
+      // handler computes it, then handed to the writer (the handler's own use of the rule is AC5's route spec — round 2 wording).
       const day = (n: number) => istDateOf(new Date(Date.now() - n * 86_400_000));
       const DEATH = day(5);
       const ctx = await claimAt('verifier_review', 'after_death', { deathDate: DEATH });

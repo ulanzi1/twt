@@ -189,8 +189,14 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     expect(errCode(j(res))).toBe('fee_bank_date.window_closed');
     expect(await W.records(w)).toEqual([]);
     expect(rejected(w).map((e) => (e.context as Json).reason)).toEqual(['window_closed']);
-    // ⭐ The list's window filter (code review 2026-11-27): a denied claim whose live check still blocks is ⛔ listed — a
-    // control first: the same claim WAS held before the denial would have been listed (its live check blocks).
+    // ⭐ The list's window filter (code review 2026-11-27): a denied claim whose live check still blocks is ⛔ listed. ⚠ Round 2:
+    // the denied claim's OWN live check is asserted to survive the denial and still block — so "not listed" can come only from the
+    // window filter — and a second claim in the same Pariwar is the positive control (held ⇒ listed).
+    const live = await td.pool.query<{ fee_outcome: string }>(
+      `SELECT fee_outcome FROM claim_membership_checks WHERE claim_case_id = $1 AND superseded_at IS NULL`,
+      [w.claimCaseId],
+    );
+    expect(live.rows.map((r) => r.fee_outcome)).toEqual(['after_death']);
     const viewer = await W.staff(w, ['finance_officer']);
     const list = j(await viewer.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })) as { held: Json[]; recorded: Json[] };
     expect([...list.held, ...list.recorded].map((r) => r.claim_case_id)).not.toContain(w.claimCaseId);

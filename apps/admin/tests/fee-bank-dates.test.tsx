@@ -13,8 +13,10 @@
 // The network is the only thing faked (`api/client.js`, function by function). DL11's words are pinned HERE as literals,
 // so a reword of the copy file fails this test.
 
+import { randomUUID } from 'node:crypto';
+
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -38,6 +40,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 const getFeeBankDates = vi.fn();
 const postFeeBankDate = vi.fn();
+const postMembershipCheck = vi.fn();
 const requestStepUp = vi.fn();
 const verifyStepUp = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
@@ -47,13 +50,14 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getSession: async () => ({ userId: '11111111-1111-4111-8111-111111111111', nationalGrants: [] }),
     getFeeBankDates: (...a: unknown[]) => getFeeBankDates(...a),
     postFeeBankDate: (...a: unknown[]) => postFeeBankDate(...a),
+    postMembershipCheck: (...a: unknown[]) => postMembershipCheck(...a),
     requestStepUp: (...a: unknown[]) => requestStepUp(...a),
     verifyStepUp: (...a: unknown[]) => verifyStepUp(...a),
   };
 });
 
 const { ApiError } = await import('../src/api/client.js');
-const { MEMBERSHIP_CHECK_STALE_CODES, isAnsweredFeeBankDateRefusal } = await import('../src/api/hooks.js');
+const { MEMBERSHIP_CHECK_STALE_CODES, isAnsweredFeeBankDateRefusal, usePostMembershipCheck } = await import('../src/api/hooks.js');
 const { FeeBankDatesRoute } = await import('../src/routes/FeeBankDatesRoute.js');
 const { RootLayout } = await import('../src/routes/RootLayout.js');
 const { feeBankDatesEn: t, feeBankDateErrorMessage } = await import('../src/modules/fee-bank-dates/index.js');
@@ -144,8 +148,11 @@ const list = (over: Partial<FeeBankDateListResponse> = {}): FeeBankDateListRespo
   ...over,
 });
 
+/** The last `wrap`'s client — for the cache / invalidation legs. */
+let lastClient: QueryClient;
 function wrap(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  lastClient = client;
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
@@ -417,6 +424,81 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     expect(feeBankDateErrorMessage(new TypeError('Failed to fetch'))).toBe(DL11.lostWrite);
   });
 
+  it('⭐ round 2 — a LOST write closes the form and reloads the console too; a re-open carries the FRESH tokens (⛔ a duplicate correction from the old form)', async () => {
+    // The write LANDED: the reload shows the new record (the row still held — the check still blocks).
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [row({ expected_live_record_id: RECORD })] }));
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(502, 'upstream', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const spy = vi.spyOn(lastClient, 'invalidateQueries');
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.lostWrite);
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    const keys = spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey?: unknown }).queryKey));
+    expect(keys).toEqual(expect.arrayContaining([JSON.stringify(['fee-bank-dates', PARIWAR])]));
+    expect(keys.some((k) => k.includes('membership') && k.includes(CLAIM))).toBe(true);
+    expect(keys.some((k) => k.includes('verifier') && k.includes(CLAIM))).toBe(true);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(1));
+    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: randomUUID(), superseded_record_id: RECORD, event_version: 10 });
+    const again = await openForm();
+    fill(again, VALID);
+    fireEvent.click(within(again).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(2));
+    expect(postFeeBankDate.mock.calls[1]![2]).toMatchObject({ expected_live_record_id: RECORD });
+  });
+
+  it('⭐⭐ round 2 (HIGH) — the tokens are the row AS OPENED: a focus refetch while the officer types swaps the row\'s tokens, and the press still sends the OLD ones (the server answers `stale`, ⛔ a silent correction)', async () => {
+    // BOTH tokens move under the form: another finance officer's record AND a District Admin's re-check (still blocking).
+    const CHECK_2 = '00000000-0000-4000-8000-0000000000c2';
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [row({ expected_live_check_id: CHECK_2, expected_live_record_id: RECORD })] }));
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.stale', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    const before = getFeeBankDates.mock.calls.length;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
+    await waitFor(() => expect(screen.getByTestId(`fee-bank-date-row-${CLAIM}`)).toHaveTextContent('Patna'));
+    focusManager.setFocused(undefined);
+    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form); // same section — the form stays, typed
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(1));
+    expect(postFeeBankDate.mock.calls[0]![2]).toMatchObject({ expected_live_check_id: CHECK, expected_live_record_id: null });
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.stale);
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull()); // a reload code closes it
+  });
+
+  it('round 2 — a reload that MOVES the open row while the officer types (⛔ write): the form closes WITH DL11\'s `stale` line, focused', async () => {
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, { reference: '123' });
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await screen.findByTestId('fee-bank-dates-recorded');
+    focusManager.setFocused(undefined);
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    const line = screen.getByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(`reference ending 9012 — ${DL11.refused.stale}`);
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    expect(postFeeBankDate).not.toHaveBeenCalled();
+  });
+
+  it('round 2 — a HELD write puts the focus in the step-up panel (its first control), and the mutation cache holds ⛔ note or reference while held', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step-up required'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const panel = await screen.findByTestId('fee-bank-date-step-up');
+    await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
+    const cached = lastClient.getMutationCache().getAll().map((m) => JSON.stringify(m.state.variables ?? null));
+    expect(cached.some((v) => v.includes(VALID.note) || v.includes(VALID.reference))).toBe(false);
+  });
+
   it('D2 — an UNTYPED 4xx (a 429, a 404 with ⛔ bank-date code) shows the lost-write line, so it RELOADS too (the hook and the line share one test)', async () => {
     getFeeBankDates.mockResolvedValue(list());
     postFeeBankDate.mockRejectedValueOnce(new ApiError(429, 'rate_limited', 'x'));
@@ -486,7 +568,9 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     const form = await openForm();
     fill(form, VALID);
     const submit = within(form).getByTestId('fee-bank-date-submit');
-    submit.focus();
+    // ⛔ `submit.focus()` first (round 2): jsdom keeps the focus on a disabled control, so a pre-focused button made this leg
+    // unable to fail. A click does not move the focus in jsdom — only the refocus can put it on the button.
+    expect(document.activeElement).not.toBe(submit);
     fireEvent.click(submit);
     const line = await screen.findByTestId('fee-bank-date-refused');
     expect(line).toHaveTextContent(DL11.refused.reference_mismatch);
@@ -514,6 +598,19 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     expect(within(form).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference); // the typed fields stay
   });
 
+  it('round 2 — a District Admin\'s RECORDED check reloads the finance officer\'s list (`feeBankDatesKey`)', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = vi.spyOn(client, 'invalidateQueries');
+    postMembershipCheck.mockResolvedValueOnce({});
+    const { result } = renderHook(() => usePostMembershipCheck(PARIWAR, CLAIM), {
+      wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    await act(async () => {
+      await result.current.mutateAsync({} as never);
+    });
+    expect(spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey?: unknown }).queryKey))).toContain(JSON.stringify(['fee-bank-dates', PARIWAR]));
+  });
+
   it('a 401 on the write goes to sign-in (as the list\'s 401 does)', async () => {
     getFeeBankDates.mockResolvedValue(list());
     postFeeBankDate.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'x'));
@@ -537,7 +634,8 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     expect(ref).toHaveAttribute('aria-describedby', first.id);
     submit();
     expect(within(form).getByTestId('fee-bank-date-prompt')).not.toBe(first);
-    fill(form, { reference: '1' });
+    // ANY field's edit clears it (round 2 — the prompt names the reference; the officer edits the DATE).
+    fill(form, { date: '2026-04-01' });
     expect(within(form).queryByTestId('fee-bank-date-prompt')).toBeNull();
     expect(ref).not.toHaveAttribute('aria-invalid');
   });

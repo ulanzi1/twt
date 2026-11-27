@@ -1000,6 +1000,9 @@ export const verifierConsoleEn = {
     // outcome from the BANK's date keeps `feeAfterDeathNote` above, unchanged.
     feeAfterDeathNoteRecorded:
       'No drive can open for this claim on the recorded date. Record the check. If the member may have paid before the death, then ask the finance officer to check the Trust\'s bank statement before you deny; otherwise deny the claim with the reason "Fee paid after the death".',
+    // ⭐ Story 6.39a, K1-P (`2026-11-27-513` item 1, approved word for word) — when the bank's date DECIDES the outcome (`fee_date_source`
+    // is `bank`), under the outcome line: the "paid on" line above it keeps the RECORDED date (DL6), so say which date the result rests on.
+    feeBankDateResultNote: "This result uses the bank's date shown below, not the date the fee was recorded.",
     // Story 6.39a (DL11) — when the bank's date is used. `{date}` and `{name}` are VALUES (the record's date and who recorded it).
     feeBankDateUsed: "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}).",
     // ⭐ Story 6.39a (`2026-11-27-512` D1, approved word for word) — a bank date was CONSIDERED but is ⛔ earlier than the recorded

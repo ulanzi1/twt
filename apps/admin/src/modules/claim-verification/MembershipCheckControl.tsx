@@ -181,6 +181,12 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
                   {t.feeOutcome[preview.fee_outcome]}
                 </p>
               ) : null}
+              {/* Story 6.39a, K1-P (`2026-11-27-513` item 1): the result rests on the BANK's date, not the "paid on" date above. */}
+              {preview.fee_date_source === 'bank' ? (
+                <p className="text-sm" data-testid="membership-check-fee-bank-result-note">
+                  {t.feeBankDateResultNote}
+                </p>
+              ) : null}
               {!preview.fee_receipt_found ? (
                 <p role="alert" data-testid="membership-check-no-joining-fee">
                   {t.noFeeReceipt}

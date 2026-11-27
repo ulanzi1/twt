@@ -129,6 +129,21 @@ const DL11 = {
   // `2026-11-27-512` — D1 and D2, approved word for word.
   notEarlier: "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}) — not earlier than the recorded date, so the recorded date is used.",
   lostWrite: 'The bank date may not have been recorded. The list has been reloaded — check the claim before you record it again.',
+  // `2026-11-27-513` item 1 (K1-P), approved word for word — under the outcome line, only when the bank's date decides.
+  bankResultNote: "This result uses the bank's date shown below, not the date the fee was recorded.",
+  // `2026-11-27-513` item 2 — the page's ten control labels, approved as written (the open and submit buttons share one).
+  labels: {
+    loading: 'Loading…',
+    loadError: 'The list could not be loaded.',
+    district: 'District',
+    liveRecord: 'Bank date recorded',
+    liveBy: 'by',
+    open: 'Record the bank date',
+    submit: 'Record the bank date',
+    close: 'Close',
+    checkingSession: 'Checking your session…',
+    redirecting: 'Redirecting to sign in…',
+  },
 } as const;
 
 const row = (over: Partial<FeeBankDateListRow> = {}): FeeBankDateListRow => ({
@@ -198,6 +213,8 @@ describe('the finance officer’s page (DL10, DL11)', () => {
     expect(t.row).toBe(DL11.row);
     expect(mc.feeBankDateNotEarlier).toBe(DL11.notEarlier);
     expect(t.lostWrite).toBe(DL11.lostWrite);
+    expect(mc.feeBankDateResultNote).toBe(DL11.bankResultNote); // -513 item 1
+    expect({ loading: t.loading, loadError: t.loadError, district: t.district, liveRecord: t.liveRecord, liveBy: t.liveBy, open: t.open, submit: t.submit, close: t.close, checkingSession: t.checkingSession, redirecting: t.redirecting }).toEqual(DL11.labels); // -513 item 2
   });
 
   it('⭐ lists the held claims — the recorded date, the amount, the last four — and ⛔ a name, ⛔ the date of death, ⛔ a fee outcome', async () => {
@@ -316,6 +333,7 @@ describe('the form (DL3, DL9, DL11)', () => {
     const done = await screen.findByTestId('fee-bank-date-recorded');
     expect(done).toHaveTextContent(DL11.recorded);
     expect(done).toHaveTextContent('reference ending 9012');
+    expect(done.textContent).toBe('reference ending 9012 — Recorded. The District Admin must now check the claim again.'); // -513 item 2: the approved row phrase + " — " + the approved outcome
     expect(done).toHaveAttribute('role', 'status');
     // The form closes, the row can be opened again (a correction), and the result line holds the focus.
     await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
@@ -930,6 +948,13 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     kyc_route: 'digilocker', latest_posting_district: 'Patna', live_check: null, gate: { passed: false, reason: 'fee_after_death' },
     fee_date_source: 'recorded', fee_bank_date: null, ...over,
   });
+  /** K1-P (`-513` item 1): the approved line, word for word, DIRECTLY under the outcome line and before the comparison sentence. */
+  const expectBankResultNote = () => {
+    const note = screen.getByTestId('membership-check-fee-bank-result-note');
+    expect(note.textContent).toBe(DL11.bankResultNote);
+    expect(screen.getByTestId('membership-check-fee-outcome').nextElementSibling).toBe(note);
+    expect(note.nextElementSibling).toHaveTextContent(mc.feeComputed);
+  };
   const show = (p: MembershipCheckPreviewResponse) =>
     render(
       <MembershipCheckControl
@@ -952,6 +977,7 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     expect(text.indexOf('Record the check')).toBeGreaterThanOrEqual(0);
     expect(text.indexOf('Record the check')).toBeLessThan(text.indexOf('ask the finance officer'));
     expect(screen.queryByTestId('membership-check-fee-bank-date')).toBeNull();
+    expect(screen.queryByTestId('membership-check-fee-bank-result-note')).toBeNull(); // K1-P: the RECORDED date decides — no note
   });
 
   it('⭐ a blocking BANK date ⇒ TODAY\'s note, unchanged, and the bank line (date + who)', () => {
@@ -966,6 +992,7 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent(
       `The Trust's bank statement shows the payment arrived on ${DEATH} (recorded by Meera).`,
     );
+    expectBankResultNote(); // K1-P
   });
 
   it('⭐ D1 (`2026-11-27-512`) — a bank date CONSIDERED but ⛔ earlier (the recorded date is used) ⇒ D1\'s line and TODAY\'s note, ⛔ the "ask the finance officer" note', () => {
@@ -981,6 +1008,7 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     );
     expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(DL11.todaysNote);
     expect(screen.getByTestId('membership-check-fee-after-death-note')).not.toHaveTextContent('ask the finance officer');
+    expect(screen.queryByTestId('membership-check-fee-bank-result-note')).toBeNull(); // K1-P: considered but NOT earlier — the recorded date decides
   });
 
   it('a display name with `$&` / `$\'` renders as written (the slots are filled by a replacer, ⛔ a pattern)', () => {
@@ -1006,6 +1034,7 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     );
     expect(screen.queryByTestId('membership-check-fee-after-death-note')).toBeNull();
     expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent('2026-04-28');
+    expectBankResultNote(); // K1-P
   });
 
   it('⭐ `bank_date_changed` and `same_person` in their words; `bank_date_changed` REFETCHES the preview and the packet (a refusal that is not a staleness code does ⛔)', async () => {

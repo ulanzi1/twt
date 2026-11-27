@@ -1,7 +1,7 @@
 // The finance officer's BANK-DATE page — staff copy (Story 6.39a, DL11; author-commit `2026-11-27-510`). ENGLISH-ONLY
-// (staff copy is English-only). Every line marked DL11 is the copy BigDev APPROVED word for word at Task 0.2 / 0.4 — ⛔
-// reword it without a new decision. The few lines NOT marked are the page's own control labels, written from the approved
-// phrases (the 6.39 control's posture: "the rest are the control's own labels, written to match").
+// (staff copy is English-only). EVERY line is copy BigDev APPROVED word for word — ⛔ reword any of it without a new decision:
+// the lines marked DL11 at Task 0.2 / 0.4 (`2026-11-27-510`), the two `2026-11-27-512` lines, and the ten control labels marked
+// `-513 item 2` (`2026-11-27-513`; they were written from the approved phrases and approved as written).
 //
 // ⚠ `microcopy.yaml` scans ALL of `apps/admin/src/**`, comments and test ids included: the whole words it forbids stay out
 // of this file and every component that renders it — "payment" and "bank statement" are the words. ⛔ A name, ⛔ the date of
@@ -12,19 +12,19 @@ export const feeBankDatesEn = {
   heading: 'Joining fees to check against the bank statement', // DL11
   intro:
     "These claims are held because the joining fee was recorded on or after the date of death. If the Trust's bank statement shows the payment arrived earlier, record the date it arrived.", // DL11
-  loading: 'Loading…',
-  loadError: 'The list could not be loaded.',
+  loading: 'Loading…', // -513 item 2
+  loadError: 'The list could not be loaded.', // -513 item 2
   empty: 'No claim is held on its joining fee.', // DL11
   truncated: 'Only the longest-held claims are shown.', // DL11
   recordedHeading: 'Bank dates already recorded on claims whose check now passes', // DL11
   forbidden: 'You do not have permission to record bank dates.', // DL11
   /** `{date}`, `{amount}`, `{last4}` are VALUES. DL11. */
   row: 'Recorded on {date} · ₹{amount} · reference ending {last4}',
-  district: 'District',
-  liveRecord: 'Bank date recorded',
-  liveBy: 'by',
-  open: 'Record the bank date',
-  close: 'Close',
+  district: 'District', // -513 item 2
+  liveRecord: 'Bank date recorded', // -513 item 2
+  liveBy: 'by', // -513 item 2
+  open: 'Record the bank date', // -513 item 2
+  close: 'Close', // -513 item 2
   fields: {
     reference: 'Payment reference, as shown on the statement', // DL11
     date: 'Date the money arrived, as shown on the statement', // DL11
@@ -44,7 +44,7 @@ export const feeBankDatesEn = {
     reason: 'Choose why the recorded date is wrong.',
     note: 'Write a note — which statement, and what you saw.',
   },
-  submit: 'Record the bank date',
+  submit: 'Record the bank date', // -513 item 2
   recorded: 'Recorded. The District Admin must now check the claim again.', // DL11
   // Each `fee_bank_date.<reason>` refusal — DL11 (⛔ a raw code on screen).
   refused: {
@@ -64,9 +64,9 @@ export const feeBankDatesEn = {
   } as Record<string, string>,
   invalid: 'Something in the form is not right. Check each field and try again.', // DL11 — a 400
   sessionExpired: 'Your session has ended. Sign in again, then record the bank date.', // DL11 — a 401
-  // The route's session gate (the 6.19d page's lines, ⛔ in DL11 — listed for BigDev in deferred-work).
-  checkingSession: 'Checking your session…',
-  redirecting: 'Redirecting to sign in…',
+  // The route's session gate (the 6.19d page's lines) — approved word for word by `2026-11-27-513` item 2.
+  checkingSession: 'Checking your session…', // -513 item 2
+  redirecting: 'Redirecting to sign in…', // -513 item 2
   // ⭐ `2026-11-27-512` D2 (approved word for word) — a write with ⛔ typed answer (a lost response, a 5xx): it may have landed.
   lostWrite: 'The bank date may not have been recorded. The list has been reloaded — check the claim before you record it again.',
 } as const;

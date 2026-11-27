@@ -4,6 +4,8 @@
 > recorded (Decisions `2026-11-27-515` to `-521`, committed `5527fdb1`). Every question here comes from one of those answers, or from
 > something found while recording them. ⛔ Nothing here re-opens an answer you gave: each question asks only what your words did not say.
 > ⛔ Member uses the system yet; nothing is live.
+> **2026-11-27 — SENT** to the Panel (BigDev: *"sent"*). ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting
+> ruling. Every line above is kept as written.
 
 ## §0 — the gate
 

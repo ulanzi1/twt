@@ -9,6 +9,8 @@
 > `story/3-13a-member-told-when-identity-not-confirmed` only, ⛔ on `main`) is sent to you FIRST. It asks the member's message words
 > (Part C's last line) AND item 9 (as its Q3). ⛔ Item 9 and that Part C line are therefore WITHDRAWN from this sitting — marked below,
 > kept as written. If the 3.13a note has been ruled by the time of this sitting, item 9 is already answered there.
+> **2026-11-27 — still PREPARED, ⛔ NOT YET SENT.** Items 1 and 9 are answered and their stories have landed on `main` (dated lines
+> under each); the sitting carries items 2–8, 10 and 11.
 
 **How to read this:** each item gives the question in one sentence, our suggestion, and what is waiting on your answer. Nothing below
 is live for members today. Every item can be answered by option letter, the way you answered the 21 November notes.
@@ -30,6 +32,8 @@ is live for members today. Every item can be answered by option letter, the way 
 - ⭐ **2026-11-27 — ANSWERED: Q1 B, Q2 A, Q3 A, Q4 A** (Decision `2026-11-27-511`, DR + KB — every one as suggested — on branch
   `story/6-39a-bank-date-for-a-fee-recorded-after-the-death` until it lands). The note was sent as brought into line on 27 November
   (`f01b7c24` — its "before sending" paragraph already removed), ⛔ the `06a80355` named above (a pre-rebase SHA).
+- ⭐ **2026-11-27 — LANDED:** Story 6.39a reached `main` by fast-forward (PR #356, `6536b8bb..78f07317`), so the note and Decision
+  `-511` are now on `main`; the "on branch … only" and "until it lands" lines above are kept as written. ⛔ Not for this sitting.
 
 **2. Registration: may the joining fee and yearly renewal be optional for now?**
 - **Question:** may the ₹110 joining fee and the yearly ₹110 renewal be optional until you decide to make them required; if a member
@@ -91,6 +95,9 @@ is live for members today. Every item can be answered by option letter, the way 
   (status block). ⛔ send the note named above; it is kept as written.
 - ⭐ **2026-11-26 — ANSWERED there: A** (Decision `2026-11-26-508` item 4, DR + KB — on branch
   `story/3-13a-member-told-when-identity-not-confirmed` until it lands). Counsel's half is still open.
+- ⭐ **2026-11-27 — LANDED:** Story 3.13a reached `main` by fast-forward (PR #355, `f5c559d0..e9ad7617`), so the 3.13a note and
+  Decision `-508` are now on `main`; the "on branch … only" and "until it lands" lines above are kept as written. Counsel's half is
+  still open.
 
 **10. The code-escrow mirror's security check** *(⚠ we have no record of whether this was sent to you in August — BigDev to confirm)*
 - **Question:** four questions about the copy of the Trust's code kept with the escrow holder: should the record admit that one written

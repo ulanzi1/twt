@@ -776,6 +776,99 @@ or one user holding both role grants), a bank date that person records leaves th
       dated line; 6.3 `deferred-work.md` dispositions (the corrected-UTR item; anything new); 6.4 Completion Notes, File List, Change Log;
       Status → review.
 
+### Review Findings
+
+Code review 2026-11-27 (`bmad-code-review`, chunked by task: Task 1 `5ac6d176`, Tasks 2–3 `5543b013`, Task 4 `41b90fff`, Task 5
+`a67b0d23`; Blind Hunter + Edge Case Hunter + Acceptance Auditor per chunk, the load-bearing-invariant lens). 2 decision-needed, 33 patch,
+4 defer, ~30 dismissed.
+
+- [x] [Review][Decision] D1 — The console when a bank date was recorded but is LATER than the recorded date — the server answers `fee_date_source: 'recorded'` with `fee_bank_date` set (DL6, TL4); the control then HIDES the bank line (shown only for `'bank'`) and shows the AMENDED note ("…ask the finance officer to check the Trust's bank statement…"), though the finance officer has already looked: the District Admin is sent back for nothing. DL11 as approved covers "a blocking outcome from the RECORDED date" and "when the bank's date is used" — this state was never put to BigDev. Options: (a) keep as built (DL11 literal); (b) whenever a record was CONSIDERED, show a bank line and today's note (needs a new line, e.g. "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}) — not earlier than the recorded date, so the recorded date is used." — new words for approval); (c) show the existing bank line for any considered record and today's note (no new words, but the line reads as if the bank date were used). [`apps/admin/src/modules/claim-verification/MembershipCheckControl.tsx`]
+- [x] [Review][Decision] D2 — The page's line for a lost response / 5xx — `refusedGeneric` ("The bank date could not be recorded.") is unapproved AND can be false (the write may have committed — the 6.22 R2-3 lesson). Options: (a) keep, listed as unapproved; (b) a new line, e.g. "The bank date may not have been recorded. The list has been reloaded — check the claim before you record it again." + reload the list on an untyped failure (new words for approval). [`apps/admin/src/modules/fee-bank-dates/errors.ts:18`]
+- [x] [Review][Patch] C1 — The owner-guard leg for `fee_date_source` cannot fail (it changes `fee_bank_date_id` in the same UPDATE); the twt_app column-grant leg likewise — isolate each column; add a catalog pin (every column minus the three granted ones appears in `pg_get_functiondef` of the guard) [`packages/domain/tests/integration/rls/claim-fee-bank-date-policy-regression.spec.ts:416,430`]
+- [x] [Review][Patch] C1 — `fee_bank_date_id` is not tied to the check's own claim — `UNIQUE (record_id, claim_case_id)` + a composite FK `(fee_bank_date_id, claim_case_id)` (0219 is unmerged — edit in place, recreate the story container) [`packages/domain/migrations/0219_claim-fee-bank-dates.sql:155`]
+- [x] [Review][Patch] C1 — The payment → bank date → check cascade (three deep) is never exercised — seed a `'bank'` check before the payment DELETE [`claim-fee-bank-date-policy-regression.spec.ts`, the cascade leg]
+- [x] [Review][Patch] C1 — The TRUNCATE leg cannot tell which table's trigger refused — assert the message names `claim_fee_bank_dates` [same spec, TRUNCATE leg]
+- [x] [Review][Patch] C1 — The one-way supersession is tested for twt_app only — add an OWNER revival leg [same spec]
+- [x] [Review][Patch] C1 — The SQL vocabularies are pinned one way only — pin each new CHECK's `pg_get_constraintdef` against its TS constant; name `claim_fee_bank_dates` in the jobs "no-decision" table lists [same spec; `apps/jobs/tests/claim-suspicion-*-no-decision.test.ts`]
+- [x] [Review][Patch] C2 — The writer's "blank note" check tests CIPHERTEXT, which is never blank — say what it guards (an empty envelope) [`packages/domain/src/claim/fee-bank-date-persist.ts`, step (0)]
+- [x] [Review][Patch] C2 — The 403 / cross-Pariwar legs assert `>= 400`, never that ⛔ `_rejected` line was written; ⛔ 401 leg exists; the AC8 comment says "stepped up" but nothing is — exact codes, the ⛔-audit assertion, a 401 leg with a valid body, the comment fixed [`apps/api/tests/integration/claims/fee-bank-date.spec.ts`]
+- [x] [Review][Patch] C2 — The captured-log check covers only the reference and the note on the 409 path — add the bank date, a planted display name and the 400 path [same spec, AC4 leg]
+- [x] [Review][Patch] C2 — The list's window filter has ⛔ negative leg — an out-of-window claim with a blocking check is absent from `held` [same spec]
+- [x] [Review][Patch] C2 — `auditReason` says `concurrent` where the wire code is `fee_bank_date.stale` (DL12 "its code") [`apps/api/src/modules/claims/claims.fee-bank-date.handlers.ts:90`]
+- [x] [Review][Patch] C2 — The two list sections are separate statements: one claim can land in BOTH (a re-check between them) — drop from `recorded` any claim already in `held` [`packages/domain/src/claim/fee-bank-date-read.ts:235`]
+- [x] [Review][Patch] C2/C3 — ⛔ live two-connection race test: two finance officers at once (one wins, the other `stale`), and a finance officer vs a District Admin check [new domain concurrency spec]
+- [x] [Review][Patch] C2 — Untested branches: `no_fee_receipt` and the receipt-mismatch `stale` in the writer [domain spec]
+- [x] [Review][Patch] C2 — The IST bounds have ⛔ midnight-edge leg (a bank date equal to IST today while UTC is still yesterday) — the writer takes `now`, so a domain leg [domain spec]
+- [x] [Review][Patch] C3 — Two 6.39 contract assertions went VACUOUS: the kind (i) token was not added to the bodies at `:85-86`, so they fail on the missing bank token, ⛔ on the live-check token they test [`packages/contracts/tests/claims-membership-check.test.ts:85-86`]
+- [x] [Review][Patch] C3 — The PQ1 test never shows the bank date producing the pass (bank date = recorded date; the passing outcome is handed to the writer) — a strictly earlier bank date, a death date between, the outcome computed by the ONE rule [`packages/domain/tests/integration/claim/fee-bank-date-check.spec.ts`, PQ1]
+- [x] [Review][Patch] C3 — The translator spec's "a re-check naming the record lets it through" is a GATE-level leg on a raw record — say so in the test [`apps/api/tests/integration/claims/membership-check-bank-date-routes.spec.ts`]
+- [x] [Review][Patch] C3 — `String.replace` with a display name interprets `$&` / `$'` — use replacer functions [`MembershipCheckControl.tsx`; `FeeBankDatesPage.tsx` row line]
+- [x] [Review][Patch] C3 — DL12 partly done: the read audit lacks `fee_date_source`; the rejected audit does not echo `expected_fee_bank_date_id`; the success audit lacks `fee_bank_date_id` [`claims.membership-check.handlers.ts`]
+- [x] [Review][Patch] C3 — Completion Notes undercount the edits beyond AC5's kinds (also: the lockstep line and the new `it` in `claims-membership-check.test.ts`, the three map pins in `membership-check.test.tsx` — all additive) [story Completion Notes]
+- [x] [Review][Patch] C3 — A recorded membership check does not refresh the finance officer's list (`feeBankDatesKey`) [`apps/admin/src/api/hooks.ts` `usePostMembershipCheck`]
+- [x] [Review][Patch] C3 — The DL7 comments say "compile-enforced" — the maps are `Record<string,string>`; the test pins enforce them [`apps/admin/src/modules/claim-verification/i18n-en.ts`]
+- [x] [Review][Patch] C4 — The form stays editable while the write is in flight (⛔ hold generations): a 403 landing after an edit holds and re-sends the OLD body — disable the fields while pending or held [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — The outcome lives inside the row's form: a row that moves sections or vanishes (success, `stale`, `not_held`, `window_closed`, `not_found`) unmounts the "Recorded" / refusal line and may open an empty form; "Recorded" has ⛔ way out — lift the last result to the list (one announced line, keyed by claim), close the form on success [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — Another row's "open" stays enabled mid-write: unmounting the form drops the write's callbacks (a step-up hold, a refusal) — disable while a write is in flight or held [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — The note and the typed reference stay in the mutation's `variables` (gcTime 5 min) and the retry closure, contrary to the comment — `gcTime: 0` + `reset()` after the outcome; the comment fixed [`hooks.ts` `usePostFeeBankDate`; `FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — Prompts/refusals: an edit leaves the old alert up; a repeated prompt is not re-announced; ⛔ `aria-invalid` / `aria-describedby`; focus is lost on success — clear on edit, re-key the alert, tie it to its field, focus the result line [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — A 401 on the POST shows a line but never goes to sign-in (the list's 401 does) [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — The test claims DL11 word for word but compares 14 refusal / field / reason strings with the copy file itself — pin each as a literal [`apps/admin/tests/fee-bank-dates.test.tsx`]
+- [x] [Review][Patch] C4 — `StepUpPanel` is not keyed by `holdKey(pending)` (the panel's header) [`FeeBankDatesPage.tsx`]
+- [x] [Review][Patch] C4 — Test gaps: an edit while in flight then a 403; the row after the refetch; a section move / a vanished row after a refusal; the nav link's params [`fee-bank-dates.test.tsx`]
+- [x] [Review][Patch] C4 — `deferred-work.md`'s list of unapproved page strings misses the route's inline session lines and the unmarked `refused.invalid_reason` [deferred-work, 6.39a dev section]
+- [x] [Review][Defer] C1 — `claim_fee_bank_dates`' cached `pariwar_id` / `deceased_member_id` / `fee_receipt_id` are not tied to the claim or its member at the DB (the erasure keys on the cache) [`0219`] — deferred, the 0212 / 0218 pattern; the writer takes each from server state (verified)
+- [x] [Review][Defer] C1 — twt_app may stamp the live record superseded with ⛔ successor (a "withdraw" in effect) [`0219` grants] — deferred, the 0212 / 0218 shape; only the writer supersedes
+- [x] [Review][Defer] C2 — The list's posting district is read per row, in series (≤ 2 × 200) [`claims.fee-bank-date.handlers.ts`] — deferred, capped; a bulk reader when the list grows
+- [x] [Review][Defer] C3 — `claim.membership_checked`'s payload does not carry `fee_date_source` / `fee_bank_date_id` (the row does) [`membership-check-persist.ts`] — deferred, DL12 named the audits only; an event-schema field is a contract change with replay cost
+
+**Dispositions (2026-11-27, the fix pass; ledger `2026-11-27h`).** D1 and D2 RESOLVED by [Decision 2026-11-27-512](../../.decision-log.md#decision-2026-11-27-512)
+(author-commit, BigDev — (b) on each, the words approved word for word; `82f2ef08`, committed alone). All 33 patch items APPLIED in the
+fix commit (each `it` named in its item; the migration `0219` edited in place — unmerged — and the story container recreated from
+scratch). Two items were fixed further when their own fix was reviewed (below): D2's reload now uses the SAME test as its line, and the
+three-deep cascade leg names a SECOND payment for the check (it passed with the bank-date path broken). The 4 defers stand
+(`deferred-work.md`, code review section).
+
+#### Fix-diff review (2026-11-27 — the PATCH diff, before commit)
+
+The fix diff (25 files, untracked included) reviewed by three fresh-context layers in parallel (Blind Hunter on the diff alone; Edge
+Case Hunter and Acceptance Auditor with the tree, read-only), plus the real-browser pass. Every DONE / PARTIAL verdict re-checked in code.
+
+- [x] [FixReview][Patch] F1 — The page's lost-write line said "The list has been reloaded" for answers the hook did ⛔ reload on (an
+  untyped 4xx — a 429, a 404 with ⛔ bank-date code) — one predicate `isAnsweredFeeBankDateRefusal` (hooks.ts) now decides both, the
+  console reloads too (the write may have landed); a leg pins the two both ways [`hooks.ts`, `errors.ts`, `fee-bank-dates.test.tsx`]
+- [x] [FixReview][Patch] F2 — The three-deep cascade leg could ⛔ fail: the check named the SAME payment, whose own FK cascades — it now
+  names a second payment; mutation-checked live (the FK set to NO ACTION ⇒ the leg red) [`claim-fee-bank-date-policy-regression.spec.ts`]
+- [x] [FixReview][Patch] F3 (Blind 1, Edge 1) — A reload while a write was in flight or HELD (a focus refetch while the officer reads the
+  step-up code; another actor's commit) could MOVE the row to the other section — a NEW component — unmounting its form: the write's
+  answer, the held step-up and the typed fields lost with ⛔ word. The list on screen is now FROZEN while a write is busy, and a form
+  whose row moved or left closes once the outcome is shown; legs for both (the freeze leg mutation-checked: red without it)
+  [`FeeBankDatesPage.tsx`, `fee-bank-dates.test.tsx`]
+- [x] [FixReview][Patch] F4 (Blind 9, Edge 5) — A refusal moved the focus to the outcome line above both sections, away from the form being
+  corrected; and in REAL Chrome the focus fell to `<body>` (the locked fieldset disables the focused button — jsdom keeps it; found by
+  the browser pass). The line takes the focus only when its form is gone; otherwise the focus returns to the form's submit button, also
+  after Cancel on a held step-up (a leg, mutation-checked; the refusal half proved in the browser) [`FeeBankDatesPage.tsx`]
+- [x] [FixReview][Patch] F5 (Auditor C4 PARTIAL) — "clear on edit": an edit now clears the prompt (any field) and retires that row's
+  outcome line [`FeeBankDatesPage.tsx`, `fee-bank-dates.test.tsx`]
+- [x] [FixReview][Patch] F6 (Blind 2) — `usePostMembershipCheck` invalidated a literal key — now `feeBankDatesKey(pariwarId)` [`hooks.ts`]
+- [x] [FixReview][Patch] F7 (Blind 3, Auditor) — The nav link's "outside a Pariwar" leg swallowed a timeout — it now asserts the Primary nav
+  rendered (and the sibling Pariwar link is absent) [`fee-bank-dates.test.tsx`]
+- [x] [FixReview][Patch] F8 (Blind 6, Edge 3) — The sections' de-duplication read the held overflow row too (a claim past the cap that was
+  also recorded vanished from both) — the DISPLAYED held rows only [`fee-bank-date-read.ts`]
+- [x] [FixReview][Patch] F9 (Edge 6) — The step-up path kept the plaintext note and reference in the mutation's `variables` while held —
+  `reset()` on the hold too (the retry closure alone holds the body) [`FeeBankDatesPage.tsx`]
+- [x] [FixReview][Patch] F10 (Auditor) — The D1 test's bank date (2026-05-03) was EARLIER than the recorded date while the line says "not
+  earlier" — 2026-05-12 [`fee-bank-dates.test.tsx`]
+- [x] [FixReview][Defer] Edge 2 — a POST that never answers keeps the page locked (`apiFetch` has ⛔ timeout) until a reload; Edge 3's
+  reverse race (a claim in NEITHER section between the two statements — the next reload shows it); Edge 4 — a 429 / a route-level 4xx
+  reads as "may not have been recorded" (true-but-loose; `-512` names only a write with ⛔ typed answer); Edge 5 — a server-refused field
+  gets ⛔ `aria-invalid`; Blind 10 — the concurrency spec leaves its superuser-seeded members / receipts (a fresh tenant per file) —
+  `deferred-work.md`, fix-diff section.
+- Dismissed after checking the code: Blind 4 / 8 (the preview names only a record it CONSIDERED — `considerableFeeBankDate`, so "not
+  earlier" and the read audit's id are exact); Blind 5 (the panel's Cancel is outside the locked fieldset); Blind 7 (PQ1's payment is
+  recorded `new Date()` — the computed outcome is the stored one); Blind 11 / Edge 7 (the container was recreated — the composite-FK
+  spec ran there).
+
 ## Dev Notes
 
 ### Traps
@@ -920,6 +1013,28 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
   `test (unit)` red on ONE test — `apps/admin/tests/ground-inspection-discrepancy.test.tsx` (Story 6.27d) timed out at 5076 ms under
   the run's load. The story touches ⛔ file of it; it passed 3 / 3 alone and in the whole admin suite (116 files / 2517 tests) right
   after — the contention class ([[project_ci_local_concurrency_oversubscription]]). Recorded as red, ⛔ re-labelled green.
+- **The real-browser pass (2026-11-27, the code-review fix pass — roster Row 58 (d)):** the agent's Chrome (macOS, the probe on
+  `127.0.0.1` loaded) against the admin Vite dev server (`localhost:3001`) and the API on the story container `twt-6-39a-pg`, recreated
+  and migrated from scratch through `0219` as edited. Sign-in by the cookie helper ([[project_admin_browser_pass_launcher]] — fake
+  WebAuthn, ⛔ passkey); the step-up's code read from the test delivery. An uncommitted launcher seeded ONE Pariwar with five claims held on
+  a fee recorded 10 May (death 1 May); two bank dates were recorded through the real route before the pass (12 May — not earlier; 25 April).
+  Observed, each in the page's DOM: **(1)** an empty press ⇒ the reference prompt, an alert, `aria-invalid` + `aria-describedby` on its
+  field, the focus kept on the button; an edit clears it. **(2)** a valid record ⇒ the step-up HOLD: the fields locked (`:disabled`), every
+  other row's "open" disabled; the code sent, typed, verified ⇒ the SAME body re-sent ⇒ *"reference ending 2377 — Recorded. The District
+  Admin must now check the claim again."* as a status, FOCUSED, the form closed, every row unlocked, the row's recorded line naming
+  *"Meera $& Rao (Finance)"* as written. **(3)** a reference one digit off ⇒ DL11's `reference_mismatch` line (an alert, ⛔ focused), the
+  form open with the typed value — ⚠ the focus on `<body>` (the disabled fieldset): FIXED (F4) and re-run — the focus back on the submit
+  button; an edit retired the line. **(4)** the lost write: the bank-date POST forwarded (the write LANDED) and its answer replaced by a
+  502 ⇒ `-512` D2's line word for word (an alert), the list reloaded (GET 200) and the row now showing the bank date the write recorded.
+  **(5)** the console as a District Admin: the 12 May claim ⇒ `-512` D1's line word for word (`data-source="recorded"`) and TODAY's note
+  (⛔ "ask the finance officer"); the 25 April claim ⇒ DL11's bank line (`data-source="bank"`), ⛔ blocking note, the gate's DL7 line *"The
+  finance officer recorded the bank's date … — check again."*; the re-check recorded ⇒ *"The membership check has passed."*, and the
+  finance officer's page then lists that claim in the second section, the other four held. **(6)** the sweep: the API's log stream (125
+  lines) and every bank-date / check audit line carry ⛔ planted note, ⛔ typed reference, ⛔ display name, ⛔ bank date — codes and ids only.
+  ⚠ NOT observed in the browser: a reload DURING a held write (the tool cannot hide a tab — F3's freeze is proved by its component leg);
+  the 401 path (component leg). The launcher and the dev servers removed afterwards.
+- **`ci:local` (2026-11-27, the code-review fix pass — the story container recreated from scratch, migrated through `0219` as edited;
+  `DATABASE_URL` = its port):** 41 of 41 jobs green, `integration-tests` included (11m30s for that job).
 - **Whole suites, live, on the story DB:** domain 564 files / 9040 tests; API 254 / 255 files (3491 tests) — the one red was
   `medical-disclose.spec.ts`'s random-base64 `ckd` collision (known failure #13), 21 / 21 on re-run; admin 116 / 2517; contracts 1836.
 
@@ -974,10 +1089,15 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
     `false`; the 6.39a fence block with planted controls; runtime imports from three entry points clean.
   - **AC12** — the page, its route, nav link, the console's new lines and words (`fee-bank-dates.test.tsx`, 15). ⚠ The real-browser
     pass is RECORDED UN-ATTESTED: the agent's Chrome was ⛔ connected (`list_connected_browsers` empty) — roster Row 58 (d) stays open.
+    ⭐ **2026-11-27, the code-review fix pass:** the real-browser pass RAN (Debug Log, "The real-browser pass") — roster Row 58 (d) MET;
+    `fee-bank-dates.test.tsx` now 28.
   - **AC13** — 6.39's specs edited by AC5's kinds (i)–(v), and ONE further edit ⛔ in that list (stated, ⛔ hidden): three assertions in
     `apps/admin/tests/membership-check.test.tsx` pinned TODAY's console note under a blocking RECORDED date — the case `-510` DL11 amended —
     and now pin the amended note, the same exact-text check. `ci:local` 40 / 41 (above — the red is a contention timeout in a 6.27d file,
-    green alone).
+    green alone). ⚠ **Corrected 2026-11-27 (code review C3):** "ONE further edit" UNDERCOUNTED — beyond AC5's kinds there are also, all
+    ADDITIVE (⛔ an assertion loosened or removed): the lockstep line and ONE new `it` in `packages/contracts/tests/claims-membership-check.test.ts`,
+    and the three wait-reason map pins (`bank_date_recorded`) in `apps/admin/tests/membership-check.test.tsx`. The review's own fixes
+    add further additive legs to 6.39's specs (the review findings and their fix commit name them).
   - **Not built / not claimed:** TR10 — "matches in practice" is ⛔ proven (the first real use attests it). DL5 — once a claim is
     `state_trustee_approved` a wrong bank date can ⛔ longer be corrected here (asserted; roster Row 58 note 2). The corrected-UTR item
     stays "Not addressed by 6.39a" (its dated note of Task 0.5 stands). A handful of the page's control labels are ⛔ in DL11's approved
@@ -1056,6 +1176,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 - `packages/domain/tests/integration/claim/membership-check-approval.spec.ts`
 - `packages/domain/tests/integration/claim/membership-check-concurrency.spec.ts`
 - `packages/domain/tests/integration/rls/claim-fee-bank-date-policy-regression.spec.ts` (new)
+- `packages/domain/tests/integration/claim/fee-bank-date-concurrency.spec.ts` (new — code review)
 - `packages/domain/tests/member/rtbf-anonymize.test.ts`
 - `packages/domain/tests/rbac/permissions.test.ts`
 - `packages/domain/tests/rbac/roles.test.ts`
@@ -1076,3 +1197,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 | 2026-11-27 | v1.7 | Task 0.5 done: roster Row 58 `fee-bank-date-live` (legs (a)–(e), all open) and a dated line on Row 46; `deferred-work.md` — PQ1–PQ4 open with their triggers, the corrected-UTR item's dated *"Not addressed by 6.39a"* note, a dated line under 6.39's PQ1 (b); Status `ready-for-dev → in-progress`; Task 0 complete. |
 | 2026-11-27 | v1.8 | The Panel ruled the note — `2026-11-27-511` (Trustee-ratified, DR + KB: *"Q1 B, Q2 A, Q3 A, Q4 A"*; the 27 November version, `f01b7c24`), every answer the built side: the Panel-questions heading and PQ1–PQ4 marked RULED (the questions kept as put); the Policy-meaning note gains the sentence's appeal clause as recorded in `-511`; ⛔ AC, Task or DL change. |
 | 2026-11-27 | v1.9 | Dev done (`bmad-dev-story 6.39a on worktree`; ledger `2026-11-27g`): Tasks 0.1 and 1–6 ticked; Agent Model, Debug Log (the container, the trigger incident, `ci:local` 40 / 41 with the one contention red), Completion Notes, File List; Status `in-progress → review`. The real-browser pass recorded un-attested; one edit to 6.39's specs beyond AC5's kinds stated, ⛔ hidden. |
+| 2026-11-27 | v1.10 | Code review fix pass (ledger `2026-11-27h`): D1 / D2 resolved by `2026-11-27-512`; the 33 patch items applied and ticked; the PATCH diff reviewed by three fresh-context layers and the real-browser pass — ten more fixes F1–F10 and five LOW defers (the Review Findings' fix-diff subsection, `deferred-work.md`); Completion Notes AC13 corrected (the undercount) and AC12 dated (the pass RAN — roster Row 58 (d) MET); Debug Log: the browser pass, `ci:local` 41 / 41 on a fresh container. Status stays `review` — `done` waits for the landing. |

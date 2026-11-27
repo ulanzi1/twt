@@ -1330,3 +1330,11 @@ observes these.
     component tests only (`apps/admin/tests/fee-bank-dates.test.tsx`, 15) — ⛔ marked MET: a real pass, run later, records itself here.
     **(e)** unchanged — the step-up is built (DL9) and its delivery is still the admin stub. ⚠ Note (2) as built: a correction is refused
     `window_closed` once the claim is `state_trustee_approved` (the domain spec's PQ1 leg asserts it).
+  - **2026-11-27 — leg (d) MET: the real-browser pass RAN** (the code-review fix pass, ⛔ landed; story Debug Log, "The real-browser
+    pass"). The agent's Chrome (macOS) against the admin dev server and the API on the story's own container (fresh, migrated through
+    `0219`), signed in by the cookie helper (fake WebAuthn — ⛔ a production sign-in), the step-up code read from the test delivery. The
+    finance officer's page — the prompts, the step-up hold and its re-send, a success, `reference_mismatch`, a lost write (`-512` D2) —
+    and the console's new lines (`-512` D1's, DL11's bank line, DL7's wait line, a re-check that passes on the bank's date) were each
+    observed in the page; one defect it found (the focus fell to `<body>` after a refusal) was fixed and re-run. ⚠ ⛔ Observed in the
+    browser: a reload during a held write (simulated in a component test only) and the 401 path. (a), (b), (c), (e) unchanged — (e)'s
+    pass used the test step-up delivery, so it says nothing of production.

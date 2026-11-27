@@ -4,12 +4,45 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the fix-diff review of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **A bank-date POST that never answers locks the finance officer's page** — `apiFetch` has ⛔ timeout, and while a write is in flight
+  the form (its Close too) and every other row's "open" are locked (F3: unmounting would drop the write's answer). A reload frees it.
+  **Trigger:** a client-wide request timeout, or an officer report of a stuck page.
+- **The list's two sections are two statements** — the de-duplication handles a claim in BOTH; a claim that moves the other way between
+  them (recorded → held) is in NEITHER until the next reload. One REPEATABLE READ snapshot for both reads would close it. **Trigger:** a
+  second reader of the list, or the list's reads moving into one statement.
+- **A 429 or a route-level 4xx with ⛔ bank-date code reads "The bank date may not have been recorded …"** — true but loose (such a write
+  did not land); `-512` D2's line is for a write with ⛔ typed answer, and the page has ⛔ approved line for these. **Trigger:** BigDev gives
+  words for a rate-limited or an unknown refusal.
+- **A field the SERVER refuses (`reference_mismatch`, `in_future`, `before_joining`) gets ⛔ `aria-invalid`** — the list's alert names the
+  problem, the focus returns to the submit button; only the form's own prompts sit on their field. **Trigger:** an accessibility pass
+  of the staff screens.
+- **`fee-bank-date-concurrency.spec.ts` leaves the members and receipts it seeds as the superuser** (claims and events are cleaned) — a
+  fresh tenant per file, so ⛔ count drifts; the sibling 6.39 spec's shape. **Trigger:** a shared-DB cleanup pass.
+
+## Deferred from: code review of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **`claim_fee_bank_dates`' cached ids are not tied to the claim at the DB** — `pariwar_id`, `deceased_member_id` (the erasure keys on it) and
+  `fee_receipt_id` have ⛔ composite FK to `claims` / the receipt's member. The 0212 / 0218 pattern; the writer takes each from the locked claim,
+  the re-read payment and the scope (verified in review). **Trigger:** a second writer of the table, or a composite-FK pass over the claim tables.
+- **twt_app can supersede the live bank-date record with ⛔ successor** — the column grant allows the stamp alone (the 0212 / 0218 shape); only
+  the writer supersedes, always with an insert. **Trigger:** a second writer, or a `superseded_by` column on these tables.
+- **The finance officer's list reads each row's posting district in series** (≤ 2 × 200 reads). **Trigger:** the list's cap is raised, or a
+  bulk posting reader exists.
+- **`claim.membership_checked` does not carry `fee_date_source` / `fee_bank_date_id`** — the check row does; DL12 named the audits only.
+  **Trigger:** a timeline or report needs to tell a bank-date outcome from a recorded one from events alone.
+
 ## Deferred from: dev of story 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 - **The finance officer's page carries a few control labels ⛔ in DL11's approved list.** The submit and close buttons (*"Record the bank
   date"*, *"Close"*), the row's *"District"* and *"Bank date recorded … by"* lines, and the loading / load-error / generic-refusal lines
   (`apps/admin/src/modules/fee-bank-dates/i18n-en.ts` — the lines ⛔ marked DL11). Written from the approved phrases (the 6.39 control's
-  posture). Owner: BigDev. **Trigger:** BigDev reads them (approve, or give words) — before the real-browser pass (roster Row 58 (d)).
+  posture). ⚠ **Amended 2026-11-27 (code review C4):** the list also holds the route's session lines (*"Checking your session…"*,
+  *"Redirecting to sign in…"* — the 6.19d page's, now `checkingSession` / `redirecting` in the same file) and `refused.invalid_reason`,
+  which reuses DL11's approved 400 line but is ⛔ a DL11 line of its own. The generic-refusal line is GONE — `2026-11-27-512` D2 replaced
+  it with an approved line (`lostWrite`). The page's outcome line joins the approved row part *"reference ending {last4}"* to the approved
+  outcome with " — " (⛔ new words; the composition is listed here). Owner: BigDev. **Trigger:** BigDev reads them (approve, or give words) — before the real-browser pass (roster Row 58 (d)).
 - **AC5's list of allowed edits to 6.39's specs missed one case.** Three assertions in `apps/admin/tests/membership-check.test.tsx` pinned
   today's console note under a blocking RECORDED date — the case `2026-11-27-510` DL11 AMENDED (`-474` item 3). They now pin the amended
   note, the same exact-text check (⛔ loosened). Recorded, ⛔ a new rule. Owner: BigDev. **Trigger:** the story's code review.
@@ -19,6 +52,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   later change makes an insert error reachable.
 - **The real-browser pass of the page and the console's new lines is UN-ATTESTED** — the agent's Chrome was ⛔ connected (2026-11-27).
   Tracked as roster Row 58 (d). **Trigger:** a session with a connected browser.
+  - **2026-11-27 — Closed by the code-review fix pass:** the pass RAN in the agent's Chrome (story Debug Log, "The real-browser pass";
+    roster Row 58 (d) dated line). ⛔ Observed in it: a reload during a held write, and the 401 path (component legs only).
 - **The step-up's production cost stands (DL9):** the record cannot be made in production until deferral R4 (*"ADMIN step-up
   OTP-over-SMS"*) is discharged — roster Row 58 (e). ⛔ New item; named here so the dev record points at it.
 

@@ -23,7 +23,7 @@
 //   · ⛔ Never in an event, a log line or an audit context: the note, either date, a name (N7).
 
 import { sql } from 'drizzle-orm';
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, foreignKey, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import { CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS } from '../encryption/field-classes.js';
@@ -119,9 +119,8 @@ export const claimMembershipChecks = pgTable(
     // Story 6.39a (0219, DL6) — which fee date `fee_outcome` was computed from, and the live bank-date record the check
     // CONSIDERED, whichever date won (the gate's second currency token — DL7). `'bank'` ⇒ an id (one-way CHECK).
     feeDateSource: text('fee_date_source').notNull().default('recorded').$type<MembershipCheckFeeDateSource>(),
-    feeBankDateId: uuid('fee_bank_date_id')
-      .$type<ClaimFeeBankDateId>()
-      .references(() => claimFeeBankDates.recordId, { onDelete: 'cascade' }),
+    // ⚠ The FK is COMPOSITE — `(fee_bank_date_id, claim_case_id)` → the record of the SAME claim (declared below).
+    feeBankDateId: uuid('fee_bank_date_id').$type<ClaimFeeBankDateId>(),
 
     // N2 at the time of the check. The GATE re-reads the KYC record each time — this column is the record of
     // what the staff member was asked, ⛔ the gate's source.
@@ -148,6 +147,12 @@ export const claimMembershipChecks = pgTable(
     index('claim_membership_checks_fee_receipt_id_idx').on(t.feeReceiptId),
     index('claim_membership_checks_deceased_member_idx').on(t.pariwarId, t.deceasedMemberId),
     index('claim_membership_checks_fee_bank_date_id_idx').on(t.feeBankDateId),
+    // Story 6.39a (code review) — a check names only a bank-date record of its OWN claim.
+    foreignKey({
+      name: 'claim_membership_checks_fee_bank_date_id_fk',
+      columns: [t.feeBankDateId, t.claimCaseId],
+      foreignColumns: [claimFeeBankDates.recordId, claimFeeBankDates.claimCaseId],
+    }).onDelete('cascade'),
     // DL1 — at most ONE live check per claim (the supersession backstop).
     uniqueIndex('claim_membership_checks_one_live_per_claim_uq')
       .on(t.claimCaseId)

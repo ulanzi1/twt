@@ -333,6 +333,10 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_fee_bank_dates: RLS + DB
     }
     await s.client.query(`UPDATE ${TABLE} SET note_ciphertext = '[anonymized]' WHERE record_id = $1`, [r!.recordId]);
     await s.client.query(`UPDATE ${TABLE} SET superseded_at = now(), superseded_reason = 're_recorded' WHERE record_id = $1`, [r!.recordId]);
+    // ⭐ The one-way trigger binds the OWNER too: a superseded record is never revived.
+    expect(
+      pgCode(await refusal(s, () => s.client.query(`UPDATE ${TABLE} SET superseded_at = NULL, superseded_reason = NULL WHERE record_id = $1`, [r!.recordId]))),
+    ).toBe('23000');
     const after = await s.client.query(`SELECT note_ciphertext, superseded_reason, bank_credit_date::text AS d FROM ${TABLE} WHERE record_id = $1`, [
       r!.recordId,
     ]);
@@ -349,6 +353,8 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_fee_bank_dates: RLS + DB
       (e: unknown) => e,
     );
     expect(pgCode(err)).toBe('23000');
+    // ⚠ The CASCADE set includes `claim_membership_checks`, whose own guard also raises 23000 — so the MESSAGE says whose it was.
+    expect(String((err as Error).message)).toMatch(/claim_fee_bank_dates is append-only/);
     await client.query('ROLLBACK TO SAVEPOINT tr');
   });
 
@@ -410,12 +416,18 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_membership_checks gains 
   it('⛔ twt_app cannot UPDATE either new column (no column grant, 42501)', async () => {
     const s = await seedClaimWithReviewAndPayment();
     const [r] = await s.tx.insert(schema.claimFeeBankDates).values(record(s)).returning();
+    // ⚠ Each leg changes ONE column (code review 2026-11-27): the check already names the record, so setting `'bank'` touches
+    // `fee_date_source` alone; a NULL-id check is the other leg's.
+    const [named] = await s.tx
+      .insert(schema.claimMembershipChecks)
+      .values(check(s, { feeDateSource: 'recorded', feeBankDateId: r!.recordId, supersededAt: new Date(), supersededReason: 're_checked' }))
+      .returning();
     const [c] = await s.tx.insert(schema.claimMembershipChecks).values(check(s)).returning();
-    const byId = eq(schema.claimMembershipChecks.checkId, c!.checkId);
-    for (const [label, set] of [
-      ['fee_date_source', { feeDateSource: 'bank' as const, feeBankDateId: r!.recordId }],
-      ['fee_bank_date_id', { feeBankDateId: r!.recordId }],
+    for (const [label, id, set] of [
+      ['fee_date_source', named!.checkId, { feeDateSource: 'bank' as const }],
+      ['fee_bank_date_id', c!.checkId, { feeBankDateId: r!.recordId }],
     ] as const) {
+      const byId = eq(schema.claimMembershipChecks.checkId, id);
       const err = await refusal(s, () => s.tx.update(schema.claimMembershipChecks).set(set).where(byId));
       expect(pgCode(err), label).toBe('42501');
     }
@@ -425,9 +437,15 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_membership_checks gains 
     const s = await seedClaimWithReviewAndPayment();
     const [r] = await s.tx.insert(schema.claimFeeBankDates).values(record(s)).returning();
     const [c] = await s.tx.insert(schema.claimMembershipChecks).values(check(s, { feeOutcome: 'after_death' })).returning();
+    // ⚠ Code review 2026-11-27 — the `fee_date_source` leg changes THAT column alone (the check already names the record, so the
+    // one-way CHECK allows `'bank'`): drop the column from the guard and THIS leg goes green — ⛔ masked by `fee_bank_date_id`.
+    const [named] = await s.tx
+      .insert(schema.claimMembershipChecks)
+      .values(check(s, { feeDateSource: 'recorded', feeBankDateId: r!.recordId, supersededAt: new Date(), supersededReason: 're_checked' }))
+      .returning();
     await s.client.query('RESET ROLE');
     const legs: [string, string, unknown[]][] = [
-      ['UPDATE fee_date_source', `UPDATE ${CHECKS} SET fee_date_source = 'bank', fee_bank_date_id = $2 WHERE check_id = $1`, [c!.checkId, r!.recordId]],
+      ['UPDATE fee_date_source', `UPDATE ${CHECKS} SET fee_date_source = 'bank' WHERE check_id = $1`, [named!.checkId]],
       ['UPDATE fee_bank_date_id', `UPDATE ${CHECKS} SET fee_bank_date_id = $2 WHERE check_id = $1`, [c!.checkId, r!.recordId]],
       ['UPDATE fee_outcome (0212 chain)', `UPDATE ${CHECKS} SET fee_outcome = 'before_death' WHERE check_id = $1`, [c!.checkId]],
       ['UPDATE identity_outcome (0212 chain)', `UPDATE ${CHECKS} SET identity_outcome = 'confirmed', identity_required = true WHERE check_id = $1`, [c!.checkId]],
@@ -438,5 +456,69 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_membership_checks gains 
     // The stamp and the scrub still pass the replaced guard.
     await s.client.query(`UPDATE ${CHECKS} SET note_ciphertext = 'enc:v1:x' WHERE check_id = $1`, [c!.checkId]);
     await s.client.query(`UPDATE ${CHECKS} SET superseded_at = now(), superseded_reason = 're_checked' WHERE check_id = $1`, [c!.checkId]);
+  });
+
+  it('⭐⭐ TR2 / TR13 — the catalog pin: EVERY column of each table but the three granted ones is named in its guard function', async () => {
+    const { client } = getTx();
+    for (const [table, fn] of [
+      [CHECKS, 'claim_membership_checks_reject_mutation'],
+      [TABLE, 'claim_fee_bank_dates_reject_mutation'],
+    ] as const) {
+      const cols = await client.query<{ attname: string }>(
+        `SELECT attname FROM pg_attribute WHERE attrelid = $1::regclass AND attnum > 0 AND NOT attisdropped`,
+        [table],
+      );
+      const def = (await client.query<{ d: string }>(`SELECT pg_get_functiondef($1::regproc) AS d`, [fn])).rows[0]!.d;
+      const frozen = cols.rows.map((r) => r.attname).filter((c) => !['superseded_at', 'superseded_reason', 'note_ciphertext'].includes(c));
+      expect(frozen.length, table).toBeGreaterThan(8);
+      for (const col of frozen) expect(def.includes(`NEW.${col} IS DISTINCT FROM OLD.${col}`), `${fn} is missing ${col}`).toBe(true);
+      for (const granted of ['superseded_at', 'superseded_reason', 'note_ciphertext']) {
+        expect(def.includes(`NEW.${granted} IS DISTINCT FROM`), `${fn} freezes the granted ${granted}`).toBe(false);
+      }
+    }
+  });
+
+  it('⭐ the CHECK vocabularies match the TS constants BOTH ways (`pg_get_constraintdef`)', async () => {
+    const { client } = getTx();
+    const def = async (name: string) =>
+      (await client.query<{ d: string }>(`SELECT pg_get_constraintdef(oid) AS d FROM pg_constraint WHERE conname = $1`, [name])).rows[0]!.d;
+    const quoted = (d: string) => [...d.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]!).sort();
+    expect(quoted(await def('claim_fee_bank_dates_reason_code_check'))).toEqual([...schema.FEE_BANK_DATE_REASON_CODES].sort());
+    expect(quoted(await def('claim_membership_checks_fee_date_source_check'))).toEqual([...schema.MEMBERSHIP_CHECK_FEE_DATE_SOURCES].sort());
+    expect(quoted(await def('claim_fee_bank_dates_supersession_coherence_check'))).toEqual([...schema.FEE_BANK_DATE_SUPERSESSION_REASONS].sort());
+  });
+
+  it('⭐ the FK is COMPOSITE: a check can name a bank-date record of its OWN claim only (23503 for another claim\'s)', async () => {
+    const s = await seedClaimWithReviewAndPayment();
+    const other = await seedClaimWithReviewAndPayment();
+    const [theirs] = await other.tx.insert(schema.claimFeeBankDates).values(record(other)).returning();
+    const err = await refusal(s, () =>
+      s.tx.insert(schema.claimMembershipChecks).values(check(s, { feeDateSource: 'bank', feeBankDateId: theirs!.recordId })),
+    );
+    expect(pgCode(err)).toBe('23503');
+    expect(pgConstraint(err)).toBe('claim_membership_checks_fee_bank_date_id_fk');
+  });
+
+  it('the three-deep cascade: deleting the payment removes the bank-date record AND the check that names it (pg_trigger_depth > 1)', async () => {
+    const s = await seedClaimWithReviewAndPayment();
+    const [r] = await s.tx.insert(schema.claimFeeBankDates).values(record(s)).returning();
+    // ⚠ The check names ANOTHER payment (fix-diff review 2026-11-27): the check's own `fee_receipt_id` FK cascades from a payment
+    // too, so naming the SAME one would delete the check directly and the leg would pass with the bank-date path broken. Here the
+    // check can go ONLY by payment → bank-date record → check.
+    const [otherReceipt] = await s.tx
+      .insert(schema.vyawasthaShulkReceipts)
+      .values({
+        memberId: s.memberId as never, pariwarId: PARIWAR_A, tr: `TR-${randomUUID()}`, utr: `UTR-${randomUUID()}`,
+        amountInr: 100, paymentMethod: 'upi', validThrough: new Date('2099-01-01T00:00:00Z'),
+      })
+      .returning();
+    const [c] = await s.tx
+      .insert(schema.claimMembershipChecks)
+      .values(check(s, { feeReceiptId: otherReceipt!.receiptId, feeDateSource: 'bank', feeBankDateId: r!.recordId }))
+      .returning();
+    await s.client.query('RESET ROLE');
+    await s.client.query('DELETE FROM vyawastha_shulk_receipts WHERE receipt_id = $1', [s.receiptId]);
+    expect((await s.client.query(`SELECT 1 FROM ${TABLE} WHERE record_id = $1`, [r!.recordId])).rows).toEqual([]);
+    expect((await s.client.query(`SELECT 1 FROM ${CHECKS} WHERE check_id = $1`, [c!.checkId])).rows).toEqual([]);
   });
 });

@@ -44,7 +44,9 @@ function FeeBankDatesView(): ReactElement {
   }
   return (
     <main className="mx-auto max-w-4xl p-4">
-      <h1 className="text-lg font-semibold">{t.heading}</h1>
+      <h1 id="fee-bank-dates-heading" className="text-lg font-semibold">
+        {t.heading}
+      </h1>
       <p className="mt-1 text-sm text-slate-600">{t.intro}</p>
       {body}
     </main>
@@ -57,7 +59,7 @@ export function FeeBankDatesRoute(): ReactElement {
   useEffect(() => {
     if (session.isError) void navigate({ to: '/login' });
   }, [session.isError, navigate]);
-  if (session.isLoading) return <p role="status">Checking your session…</p>;
-  if (session.isError) return <p role="status">Redirecting to sign in…</p>;
+  if (session.isLoading) return <p role="status">{t.checkingSession}</p>;
+  if (session.isError) return <p role="status">{t.redirecting}</p>;
   return <FeeBankDatesView />;
 }

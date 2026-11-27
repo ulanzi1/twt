@@ -64,6 +64,8 @@ const FORBIDDEN = [
   'closeClaimOnFraudFinding',
   // ⭐ Story 6.39 — the membership check's writer.
   'recordMembershipCheck',
+  // ⭐ Story 6.39a — the finance officer's bank-date writer (a STAFF act — ⛔ a job ever records one).
+  'recordFeeBankDate',
   'projectClaimState',
   'appendEvent',
   // ⭐ 6.24a — the closure, the appeal writers and the reversal key (the notices READ RF1 and the closing event, ⛔ more).
@@ -96,6 +98,8 @@ const DECISION_TABLE_NAMES = [
   'claim_nominee_findings',
   // ⭐ Story 6.39 — the staff membership check before any drive: a STAFF act (`-424` Q1 (a) C) — ⛔ a job ever records one.
   'claim_membership_checks',
+  // ⭐ Story 6.39a — the finance officer's bank date for a joining fee: a STAFF act (`-473` Q2 B) — ⛔ a job ever records one.
+  'claim_fee_bank_dates',
   'cycle_freeze_commits',
   'nominee_determinations',
   'nominee_determination_items',
@@ -153,6 +157,9 @@ describe('⛔ invariant 7 — the suspicion notices call ⛔ decision writer and
       // ⭐ Story 6.39 — the membership check: its writer by NAME, and its table by WRITE form.
       ['recordMembershipCheck', 'await claim.recordMembershipCheck(client, input);'],
       ['insert', 'await client.query(`INSERT INTO claim_membership_checks (claim_case_id) VALUES ($1)`, [id]);'],
+      // ⭐ Story 6.39a — the bank date: its writer by NAME, and its table by WRITE form.
+      ['recordFeeBankDate', 'await claim.recordFeeBankDate(client, input);'],
+      ['insert', 'await client.query(`INSERT INTO claim_fee_bank_dates (claim_case_id) VALUES ($1)`, [id]);'],
       ['drizzle', 'await db.insert(claimNomineeFindings).values(row);'],
       ['drizzle', 'await db.insert(s.claimVerifierDecisions).values(row);'],
       ['drizzle', 'await tx.update(claims).set({ currentState: "closed" });'],

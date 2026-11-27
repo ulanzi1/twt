@@ -70,6 +70,9 @@ CREATE INDEX "claim_fee_bank_dates_fee_receipt_id_idx" ON "claim_fee_bank_dates"
 CREATE INDEX "claim_fee_bank_dates_deceased_member_idx" ON "claim_fee_bank_dates" USING btree ("pariwar_id", "deceased_member_id");--> statement-breakpoint
 -- ⭐ DL1 — at most ONE live record per claim. The writer's conditional UPDATE is the interface; this index is the truth.
 CREATE UNIQUE INDEX "claim_fee_bank_dates_one_live_per_claim_uq" ON "claim_fee_bank_dates" USING btree ("claim_case_id") WHERE superseded_at IS NULL;--> statement-breakpoint
+-- The target of `claim_membership_checks`' COMPOSITE FK (below): a check can name only a record of its OWN claim (code review
+-- 2026-11-27 — a single-column FK skips RLS and would accept another claim's record).
+ALTER TABLE "claim_fee_bank_dates" ADD CONSTRAINT "claim_fee_bank_dates_record_claim_uq" UNIQUE ("record_id", "claim_case_id");--> statement-breakpoint
 
 -- Append-only, structurally and COLUMN-AWARE (the 0212 idiom):
 --   · UPDATE   — refused unless ONLY the granted columns changed: the two supersession columns (the writer) and
@@ -152,7 +155,9 @@ ALTER TABLE "claim_membership_checks" ADD COLUMN "fee_date_source" text DEFAULT 
 -- `fee_bank_date_id` — the live bank-date record the check CONSIDERED, whichever date won (DL6): the gate compares it with
 -- the claim's live record (`bank_date_recorded`, DL7), so it is stored even when the recorded date was the earlier.
 ALTER TABLE "claim_membership_checks" ADD COLUMN "fee_bank_date_id" uuid;--> statement-breakpoint
-ALTER TABLE "claim_membership_checks" ADD CONSTRAINT "claim_membership_checks_fee_bank_date_id_fk" FOREIGN KEY ("fee_bank_date_id") REFERENCES "public"."claim_fee_bank_dates"("record_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+-- COMPOSITE (code review 2026-11-27): the record named must be one of the check's OWN claim. MATCH SIMPLE — a NULL
+-- `fee_bank_date_id` (⛔ record considered) is not checked.
+ALTER TABLE "claim_membership_checks" ADD CONSTRAINT "claim_membership_checks_fee_bank_date_id_fk" FOREIGN KEY ("fee_bank_date_id", "claim_case_id") REFERENCES "public"."claim_fee_bank_dates"("record_id", "claim_case_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 -- ⚠ LOCKSTEP with `MEMBERSHIP_CHECK_FEE_DATE_SOURCES` (schema/claim_membership_checks.ts) and the contracts mirror.
 ALTER TABLE "claim_membership_checks" ADD CONSTRAINT "claim_membership_checks_fee_date_source_check" CHECK ("fee_date_source" IN ('recorded', 'bank'));--> statement-breakpoint
 -- ONE-WAY (DL6): `'bank'` ⇒ an id. `'recorded'` WITH an id is valid — a record was considered and the recorded date was the

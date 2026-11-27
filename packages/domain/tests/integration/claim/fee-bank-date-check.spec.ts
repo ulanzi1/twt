@@ -24,6 +24,8 @@ import {
   isFeePaidAfterDeathRefusalStanding,
   membershipCheckApprovalState,
   projectClaimState,
+  chooseFeeDate,
+  compareFeeCalendarDateWithDeathDate,
   recordFeeBankDate,
   recordMembershipCheck,
   voteOnFrozenClaim,
@@ -60,18 +62,26 @@ const TODAY = () => istDateOf(new Date());
  * An approvable claim at `state` (a fresh Pariwar) whose deceased has a REAL joining payment (the lock-in event + its
  * payment), the live check naming THAT payment with `feeOutcome`.
  */
-async function claimAt(state: 'verifier_review' | 'verifier_approved', feeOutcome: 'before_death' | 'after_death' = 'after_death'): Promise<Ctx> {
+async function claimAt(
+  state: 'verifier_review' | 'verifier_approved',
+  feeOutcome: 'before_death' | 'after_death' = 'after_death',
+  opts: { readonly joiningEvent?: boolean; readonly deathDate?: string } = {},
+): Promise<Ctx> {
   const { client, tx } = getTx();
   const pid = toPariwarId(randomUUID());
   await enterAppScope(client, pid);
   const cid = toClaimId(randomUUID());
   const mid = randomUUID();
   await driveClaimTo(client, pid, cid, mid, state);
+  // A dated certificate FIRST — the name-check fixture keeps an accepted one (a later re-review would stale the determination).
+  if (opts.deathDate) await seedAcceptedDeathCertificate(client, { pariwarId: pid, claimCaseId: cid, date: opts.deathDate });
   await seedNomineeNameCheck(client, pid, cid, { membershipCheck: 'skip', inspection: 'completed' });
   const utr = `${Math.floor(1e11 + Math.random() * 9e11)}`;
   const receiptId = await asSuperuser(client, async () => {
     await tx.insert(schema.members).values({ memberId: mid as never, pariwarId: pid, state: 'lock-in', stateEventVersion: 1 }).onConflictDoNothing();
-    await seedEvent(tx, pid, {
+    // The member joined 30 days ago — so a bank date up to a month back is ⛔ "before joining" (G10's bound).
+    await client.query(`UPDATE members SET created_at = now() - interval '30 days' WHERE member_id = $1`, [mid]);
+    if (opts.joiningEvent !== false) await seedEvent(tx, pid, {
       streamId: mid,
       eventType: 'member.vyawastha_shulk_paid',
       eventVersion: 3,
@@ -94,7 +104,10 @@ async function claimAt(state: 'verifier_review' | 'verifier_approved', feeOutcom
 }
 
 /** Replace the live check with a RAW one naming the joining payment (the deceased has ⛔ KYC row ⇒ the identity is judged: `confirmed`). */
-async function rawCheck(ctx: Ctx, over: { feeOutcome?: 'before_death' | 'same_day' | 'after_death'; feeDateSource?: 'recorded' | 'bank'; feeBankDateId?: string | null } = {}): Promise<string> {
+async function rawCheck(
+  ctx: Ctx,
+  over: { feeOutcome?: 'before_death' | 'same_day' | 'after_death'; feeDateSource?: 'recorded' | 'bank'; feeBankDateId?: string | null; feeReceiptId?: string } = {},
+): Promise<string> {
   await ctx.client.query(
     `UPDATE claim_membership_checks SET superseded_at = now(), superseded_reason = 're_checked' WHERE claim_case_id = $1 AND superseded_at IS NULL`,
     [ctx.cid],
@@ -103,7 +116,7 @@ async function rawCheck(ctx: Ctx, over: { feeOutcome?: 'before_death' | 'same_da
     .insert(schema.claimMembershipChecks)
     .values({
       claimCaseId: ctx.cid, pariwarId: ctx.pid, deceasedMemberId: ctx.mid as never, deathCertificateReviewId: ctx.reviewId as never,
-      feeReceiptId: ctx.receiptId as never, feeOutcome: over.feeOutcome ?? 'after_death', feeDateSource: over.feeDateSource ?? 'recorded',
+      feeReceiptId: (over.feeReceiptId ?? ctx.receiptId) as never, feeOutcome: over.feeOutcome ?? 'after_death', feeDateSource: over.feeDateSource ?? 'recorded',
       feeBankDateId: (over.feeBankDateId ?? null) as never, identityRequired: true, identityOutcome: 'confirmed', identityReason: null,
       noteCiphertext: null, decidedByActorId: DA, decidedByDisplay: 'Anita (District Admin)',
     })
@@ -196,9 +209,65 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
     });
   });
 
+  describe('the writer\'s other refusals and the IST bounds (code review 2026-11-27)', () => {
+    it('`no_fee_receipt` — the joining payment cannot be identified (⛔ `pending-fee → lock-in` event), ⛔ row', async () => {
+      const ctx = await claimAt('verifier_review', 'after_death', { joiningEvent: false });
+      await expect(bank(ctx)).rejects.toSatisfy(refusedBank('no_fee_receipt'));
+    });
+
+    it('`stale` — the live check names ANOTHER payment than the joining one, ⛔ row', async () => {
+      const ctx = await claimAt('verifier_review');
+      const otherReceipt = await asSuperuser(ctx.client, async () => {
+        const [r] = await ctx.tx
+          .insert(schema.vyawasthaShulkReceipts)
+          .values({
+            memberId: toMemberId(ctx.mid), pariwarId: ctx.pid, tr: `TR-${randomUUID()}`, utr: `${Math.floor(1e11 + Math.random() * 9e11)}`,
+            amountInr: 110, paymentMethod: 'upi', paidAt: new Date(), validThrough: new Date('2099-01-01T00:00:00.000Z'),
+          })
+          .returning({ receiptId: schema.vyawasthaShulkReceipts.receiptId });
+        return r!.receiptId as string;
+      });
+      await enterAppScope(ctx.client, ctx.pid);
+      await rawCheck(ctx, { feeReceiptId: otherReceipt });
+      await expect(bank(ctx)).rejects.toSatisfy(refusedBank('stale'));
+    });
+
+    it('⭐ TR6 — the bounds are INDIAN calendar dates at the midnight edge: at 19:00Z (IST the NEXT day) a bank date of that IST day is accepted; the day after is `in_future`', async () => {
+      const ctx = await claimAt('verifier_review');
+      const utcDay = istDateOf(new Date(Date.now() - 10 * 86_400_000)); // well after joining (30 days ago)
+      const now = new Date(`${utcDay}T19:00:00.000Z`); // 00:30 IST on the next calendar day
+      const istToday = istDateOf(now);
+      expect(istToday > utcDay).toBe(true);
+      const after = istDateOf(new Date(now.getTime() + 86_400_000));
+      await ctx.client.query('SAVEPOINT ist');
+      await expect(bank(ctx, { bankCreditDate: after, now })).rejects.toSatisfy(refusedBank('in_future'));
+      await ctx.client.query('ROLLBACK TO SAVEPOINT ist');
+      await expect(bank(ctx, { bankCreditDate: istToday, now })).resolves.toMatchObject({ reasonCode: 'recorded_late_by_member' });
+    });
+
+    it('`before_joining` at the IST edge: a bank date ON the member\'s IST joining day is accepted; the day before is refused', async () => {
+      const ctx = await claimAt('verifier_review');
+      // Joined at 18:45Z — the NEXT day in India.
+      const joinedUtcDay = istDateOf(new Date(Date.now() - 20 * 86_400_000));
+      await asSuperuser(ctx.client, () => ctx.client.query(`UPDATE members SET created_at = $2 WHERE member_id = $1`, [ctx.mid, `${joinedUtcDay}T18:45:00.000Z`]));
+      await enterAppScope(ctx.client, ctx.pid);
+      const joinedIst = istDateOf(new Date(`${joinedUtcDay}T18:45:00.000Z`));
+      expect(joinedIst > joinedUtcDay).toBe(true);
+      await ctx.client.query('SAVEPOINT bj');
+      await expect(bank(ctx, { bankCreditDate: joinedUtcDay })).rejects.toSatisfy(refusedBank('before_joining'));
+      await ctx.client.query('ROLLBACK TO SAVEPOINT bj');
+      await expect(bank(ctx, { bankCreditDate: joinedIst })).resolves.toMatchObject({ reasonCode: 'recorded_late_by_member' });
+    });
+  });
+
   describe('AC6 — PQ1 (`2026-11-27-511` Q1 B): the bank date helps after a refusal, once the appeal sends the claim back', () => {
-    it('⭐⭐ PQ1 — denied `fee_paid_after_death` ⇒ `window_closed`; the appeal reverses it ⇒ accepted in `reversed`; the re-check passes; the final vote approves; the refusal no longer stands; then corrections STOP at `state_trustee_approved`', async () => {
-      const ctx = await claimAt('verifier_review', 'after_death');
+    it('⭐⭐ PQ1 — denied `fee_paid_after_death` ⇒ `window_closed`; the appeal reverses it ⇒ accepted in `reversed`; the re-check passes ON THE EARLIER BANK DATE (the ONE rule); the final vote approves; the refusal no longer stands; then corrections STOP at `state_trustee_approved`', async () => {
+      // ⭐ Code review 2026-11-27 — the dates are CONSISTENT: death 5 days ago; the payment RECORDED today (⇒ `after_death`);
+      // the bank's date 7 days ago (⇒ `before_death`). Every outcome below is COMPUTED by the rule, ⛔ handed in.
+      const day = (n: number) => istDateOf(new Date(Date.now() - n * 86_400_000));
+      const DEATH = day(5);
+      const ctx = await claimAt('verifier_review', 'after_death', { deathDate: DEATH });
+      expect(compareFeeCalendarDateWithDeathDate(chooseFeeDate(new Date(), null).feeDate, DEATH)).toBe('after_death');
       // The P1 denial for the fee (the gate answers `fee_after_death`, so the guard accepts the reason).
       await adjudicateClaim(ctx.client, {
         claimCaseId: ctx.cid, pariwarId: ctx.pid, outcome: 'denied', reasonCode: 'fee_paid_after_death',
@@ -228,11 +297,16 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
       expect(await stateOf(ctx)).toBe('reversed');
 
       // ⭐ In `reversed` (inside the window) the finance officer's record is ACCEPTED — the live check survived the denial.
-      const rec = await bank(ctx);
+      const rec = await bank(ctx, { bankCreditDate: day(7) });
       expect(rec.recordId).toBeTruthy();
       expect(await gateState(ctx)).toEqual({ passed: false, reason: 'bank_date_recorded' });
-      // The District Admin checks again (the handler would compute `before_death` from the earlier bank date).
-      await check(ctx, { feeOutcome: 'before_death' });
+      // The District Admin checks again — the outcome computed as the handler computes it: the EARLIER date, the ONE rule.
+      const chosen = chooseFeeDate(new Date(), { bankCreditDate: day(7) });
+      expect(chosen).toEqual({ feeDate: day(7), source: 'bank' });
+      const outcome = compareFeeCalendarDateWithDeathDate(chosen.feeDate, DEATH);
+      expect(outcome).toBe('before_death');
+      const rechecked = await check(ctx, { feeOutcome: outcome });
+      expect({ source: rechecked.feeDateSource, id: rechecked.feeBankDateId }).toEqual({ source: 'bank', id: rec.recordId });
       expect(await gateState(ctx)).toEqual({ passed: true });
       // The final vote approves.
       const voted = await voteOnFrozenClaim(ctx.client, {

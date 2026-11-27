@@ -780,6 +780,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       fee_receipt_id: w.receiptId,
       fee_outcome: 'same_day',
       fee_date_source: 'recorded', // Story 6.39a — AC5 kind (ii)
+      fee_bank_date_id: null, // Story 6.39a — AC5 kind (ii) (code review 2026-11-27: the record considered — ⛔ one here)
       identity_required: true,
       identity_outcome: 'not_confirmed',
       identity_reason: 'name_differs',

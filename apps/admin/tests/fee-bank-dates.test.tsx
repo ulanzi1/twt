@@ -13,7 +13,7 @@
 // The network is the only thing faked (`api/client.js`, function by function). DL11's words are pinned HERE as literals,
 // so a reword of the copy file fails this test.
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,14 +22,16 @@ import { FEE_BANK_DATE_REFUSAL_REASONS, FEE_BANK_DATE_STEP_UP_CONTEXT } from '@t
 import type { FeeBankDateListResponse, FeeBankDateListRow, MembershipCheckGateStatus, MembershipCheckPreviewResponse } from '@twt/contracts';
 
 let params: Record<string, string> = {};
+const navigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({
-  Link: (p: { children: ReactNode; to: string; 'data-testid'?: string }) => (
-    <a href={p.to} data-testid={p['data-testid']}>
+  // The mocked Link carries `params` too, so the nav leg can prove the Pariwar id is passed (code review 2026-11-27).
+  Link: (p: { children: ReactNode; to: string; params?: Record<string, string>; 'data-testid'?: string }) => (
+    <a href={p.to} data-params={JSON.stringify(p.params ?? {})} data-testid={p['data-testid']}>
       {p.children}
     </a>
   ),
   Outlet: () => null,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate,
   useParams: () => params,
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
@@ -51,7 +53,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 });
 
 const { ApiError } = await import('../src/api/client.js');
-const { MEMBERSHIP_CHECK_STALE_CODES } = await import('../src/api/hooks.js');
+const { MEMBERSHIP_CHECK_STALE_CODES, isAnsweredFeeBankDateRefusal } = await import('../src/api/hooks.js');
 const { FeeBankDatesRoute } = await import('../src/routes/FeeBankDatesRoute.js');
 const { RootLayout } = await import('../src/routes/RootLayout.js');
 const { feeBankDatesEn: t, feeBankDateErrorMessage } = await import('../src/modules/fee-bank-dates/index.js');
@@ -92,6 +94,34 @@ const DL11 = {
   bankChanged: "The finance officer recorded the bank's date since you opened this check. It has been reloaded — check again.",
   samePerson: "You recorded the bank's date on this claim, so another person must record this check.",
   bankWait: "The finance officer recorded the bank's date for the joining fee — check again.",
+  // ⭐ Code review 2026-11-27 — EVERY approved page string pinned as a literal (⛔ the copy file checked against itself).
+  refused: {
+    reference_mismatch: 'This reference does not match the payment recorded for the member. Check that you have the right line on the statement.',
+    before_joining: 'That date is before the member joined. Check the date on the statement.',
+    in_future: 'That date is in the future.',
+    not_held: 'This claim is not held on its joining fee.',
+    window_closed: 'A bank date can no longer be recorded on this claim.',
+    stale: 'This claim changed since you opened it. It has been reloaded — check again.',
+    not_found: 'This claim could not be found. Reload the page.',
+    no_fee_receipt: "The record of the member's joining fee cannot be identified, so a bank date cannot be recorded. Please tell the Super Admin.",
+    missing_display: 'Your account has no display name, so a bank date cannot be attributed to you. Ask a Super Admin to set it.',
+    invalid_reason: 'Something in the form is not right. Check each field and try again.',
+  },
+  fields: {
+    reference: 'Payment reference, as shown on the statement',
+    date: 'Date the money arrived, as shown on the statement',
+    reasonLegend: 'Why the recorded date is wrong',
+    note: 'Note — which statement, and what you saw',
+  },
+  reasons: {
+    recorded_late_by_member: 'The member recorded the payment late',
+    recorded_by_family_after_death: 'The family recorded the payment after the death',
+    other: 'Other',
+  },
+  row: 'Recorded on {date} · ₹{amount} · reference ending {last4}',
+  // `2026-11-27-512` — D1 and D2, approved word for word.
+  notEarlier: "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}) — not earlier than the recorded date, so the recorded date is used.",
+  lostWrite: 'The bank date may not have been recorded. The list has been reloaded — check the claim before you record it again.',
 } as const;
 
 const row = (over: Partial<FeeBankDateListRow> = {}): FeeBankDateListRow => ({
@@ -148,6 +178,12 @@ describe('the finance officer’s page (DL10, DL11)', () => {
     expect(t.prompts).toEqual({ referenceEmpty: DL11.promptRefEmpty, referenceShape: DL11.promptRefShape, date: DL11.promptDate, reason: DL11.promptReason, note: DL11.promptNote });
     expect(mc.feeAfterDeathNoteRecorded).toBe(DL11.amendedNote);
     expect(mc.feeAfterDeathNote).toBe(DL11.todaysNote); // today's note, unchanged
+    expect(t.refused).toEqual(DL11.refused);
+    expect(t.fields).toEqual(DL11.fields);
+    expect(t.reasons).toEqual(DL11.reasons);
+    expect(t.row).toBe(DL11.row);
+    expect(mc.feeBankDateNotEarlier).toBe(DL11.notEarlier);
+    expect(t.lostWrite).toBe(DL11.lostWrite);
   });
 
   it('⭐ lists the held claims — the recorded date, the amount, the last four — and ⛔ a name, ⛔ the date of death, ⛔ a fee outcome', async () => {
@@ -206,7 +242,20 @@ describe('the finance officer’s page (DL10, DL11)', () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByTestId('nav-fee-bank-dates')).toHaveAttribute('href', '/p/$pariwarId/fee-bank-dates');
+    expect(screen.getByTestId('nav-fee-bank-dates')).toHaveAttribute('data-params', JSON.stringify({ pariwarId: PARIWAR }));
     expect(screen.getByTestId('nav-fee-bank-dates')).toHaveTextContent(DL11.nav);
+    cleanup();
+    // ⛔ Outside a Pariwar context.
+    params = {};
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RootLayout />
+      </QueryClientProvider>,
+    );
+    // The layout DID render (the Primary nav is there — the link is ungated, so it would be by now) — ⛔ a swallowed timeout.
+    expect(await screen.findByRole('navigation', { name: 'Primary' })).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-certificate-reminders')).toBeNull(); // the sibling Pariwar link agrees
+    expect(screen.queryByTestId('nav-fee-bank-dates')).toBeNull();
   });
 });
 
@@ -240,7 +289,14 @@ describe('the form (DL3, DL9, DL11)', () => {
     const form = await openForm();
     fill(form, { ...VALID, reference: ` ${VALID.reference} ` });
     fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
-    expect(await screen.findByTestId(`fee-bank-date-recorded-${CLAIM}`)).toHaveTextContent(DL11.recorded);
+    const done = await screen.findByTestId('fee-bank-date-recorded');
+    expect(done).toHaveTextContent(DL11.recorded);
+    expect(done).toHaveTextContent('reference ending 9012');
+    expect(done).toHaveAttribute('role', 'status');
+    // The form closes, the row can be opened again (a correction), and the result line holds the focus.
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    expect(screen.getByTestId('fee-bank-date-open')).toBeEnabled();
+    expect(document.activeElement).toBe(done);
     expect(postFeeBankDate).toHaveBeenCalledWith(PARIWAR, CLAIM, {
       statement_reference: VALID.reference,
       bank_credit_date: VALID.date,
@@ -271,7 +327,7 @@ describe('the form (DL3, DL9, DL11)', () => {
     fill(form, VALID);
     const before = getFeeBankDates.mock.calls.length;
     fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
-    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.stale);
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.stale);
     await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
   });
 
@@ -286,15 +342,204 @@ describe('the form (DL3, DL9, DL11)', () => {
     fill(form, VALID);
     fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
     const hold = await screen.findByTestId('fee-bank-date-step-up');
-    // ⛔ the refusal line for a step-up — the panel is the answer.
+    // ⛔ the refusal line for a step-up — the panel is the answer; the held body is LOCKED on screen (the fields are disabled).
     expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+    expect(within(form).getByTestId('fee-bank-date-fields')).toBeDisabled();
     fireEvent.click(within(hold).getByRole('button', { name: stepUpEn.send }));
     fireEvent.change(await screen.findByTestId('fee-bank-date-step-up-code'), { target: { value: '123456' } });
     fireEvent.click(screen.getByTestId('fee-bank-date-step-up-verify'));
-    expect(await screen.findByTestId(`fee-bank-date-recorded-${CLAIM}`)).toHaveTextContent(DL11.recorded);
+    expect(await screen.findByTestId('fee-bank-date-recorded')).toHaveTextContent(DL11.recorded);
     expect(requestStepUp).toHaveBeenCalledWith(FEE_BANK_DATE_STEP_UP_CONTEXT);
     expect(postFeeBankDate).toHaveBeenCalledTimes(2);
     expect(postFeeBankDate.mock.calls[1]).toEqual(postFeeBankDate.mock.calls[0]);
+  });
+});
+
+describe('the form and the list after an outcome (code review 2026-11-27)', () => {
+  it('⭐ the fields LOCK while the write is in flight (a 403 landing after an edit can hold only what is on screen) and other rows cannot be opened', async () => {
+    getFeeBankDates.mockResolvedValue(list({ held: [row(), row({ claim_case_id: CLAIM_2, reference_last4: '3333' })] }));
+    let release: (v: unknown) => void = () => undefined;
+    postFeeBankDate.mockReturnValueOnce(new Promise((res) => (release = res)));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(within(form).getByTestId('fee-bank-date-fields')).toBeDisabled());
+    expect(within(form).getByTestId('fee-bank-date-note')).toBeDisabled();
+    const otherRow = screen.getByTestId(`fee-bank-date-row-${CLAIM_2}`);
+    expect(within(otherRow).getByTestId('fee-bank-date-open')).toBeDisabled();
+    release({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
+    expect(await screen.findByTestId('fee-bank-date-recorded')).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByTestId(`fee-bank-date-row-${CLAIM_2}`)).getByTestId('fee-bank-date-open')).toBeEnabled());
+  });
+
+  it('⭐ a refusal whose reload makes the row LEAVE the list (`not_held`) keeps its line — on the list, announced, naming the claim', async () => {
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [] }));
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.not_held', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const line = await screen.findByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(DL11.refused.not_held);
+    expect(line).toHaveTextContent('reference ending 9012');
+    expect(line).toHaveAttribute('role', 'alert');
+    await screen.findByTestId('fee-bank-dates-empty'); // the row has gone…
+    expect(screen.getByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.not_held); // …the line has ⛔
+    expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull();
+  });
+
+  it('⭐ a success whose reload MOVES the row to the second section: the line stays, and ⛔ empty form opens there', async () => {
+    getFeeBankDates
+      .mockResolvedValueOnce(list())
+      .mockResolvedValue(list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }));
+    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const second = await screen.findByTestId('fee-bank-dates-recorded');
+    expect(screen.getByTestId('fee-bank-date-recorded')).toHaveTextContent(DL11.recorded);
+    expect(within(second).queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull();
+    expect(within(second).getByTestId('fee-bank-date-open')).toBeEnabled();
+  });
+
+  it('⭐ D2 (`2026-11-27-512`) — a write with ⛔ typed answer (a 5xx) says it MAY not have been recorded and RELOADS the list', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(502, 'upstream', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    const before = getFeeBankDates.mock.calls.length;
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.lostWrite);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
+    expect(feeBankDateErrorMessage(new TypeError('Failed to fetch'))).toBe(DL11.lostWrite);
+  });
+
+  it('D2 — an UNTYPED 4xx (a 429, a 404 with ⛔ bank-date code) shows the lost-write line, so it RELOADS too (the hook and the line share one test)', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(429, 'rate_limited', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    const before = getFeeBankDates.mock.calls.length;
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    expect(await screen.findByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.lostWrite);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
+    // The shared predicate, both ways: every line the page HAS is an answered refusal; the rest are lost writes.
+    for (const e of [new ApiError(409, 'fee_bank_date.stale', 'x'), new ApiError(400, 'validation', 'x'), new ApiError(403, 'auth.forbidden', 'x'), new ApiError(401, 'auth.session_required', 'x'), new ApiError(422, 'admin.display_name_missing', 'x')]) {
+      expect(isAnsweredFeeBankDateRefusal(e), e.code).toBe(true);
+      expect(feeBankDateErrorMessage(e), e.code).not.toBe(DL11.lostWrite);
+    }
+    for (const e of [new ApiError(404, 'http.404', 'x'), new ApiError(429, 'rate_limited', 'x'), new ApiError(503, 'x', 'x'), new TypeError('Failed to fetch')]) {
+      expect(isAnsweredFeeBankDateRefusal(e)).toBe(false);
+      expect(feeBankDateErrorMessage(e)).toBe(DL11.lostWrite);
+    }
+  });
+
+  it('⭐ fix-diff review — a reload WHILE a write is held (a focus refetch during the step-up) does ⛔ unmount the form: the panel, the typed fields and the write survive; the fresh list renders after', async () => {
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }));
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step-up required'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await screen.findByTestId('fee-bank-date-step-up');
+    const before = getFeeBankDates.mock.calls.length;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
+    await new Promise((r) => setTimeout(r, 20));
+    // Frozen: the SAME form node, its panel and its typed reference — ⛔ an empty form in the second section.
+    expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form);
+    expect(screen.getByTestId('fee-bank-date-step-up')).toBeInTheDocument();
+    expect(within(form).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference);
+    expect(screen.queryByTestId('fee-bank-dates-recorded')).toBeNull();
+    focusManager.setFocused(undefined);
+    // Cancel the hold ⇒ the fresh list renders; the row MOVED section, so its form closes (⛔ re-opened empty).
+    fireEvent.click(screen.getByTestId('fee-bank-date-step-up-cancel'));
+    const second = await screen.findByTestId('fee-bank-dates-recorded');
+    expect(within(second).queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull();
+    expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull();
+  });
+
+  it('⭐ fix-diff review — a `stale` refusal whose reload MOVES the row: the form closes, the line stays and takes the focus', async () => {
+    getFeeBankDates.mockResolvedValueOnce(list()).mockResolvedValue(list({ held: [], recorded: [row({ fee_date_source: 'bank', expected_live_record_id: RECORD })] }));
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.stale', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const line = await screen.findByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(DL11.refused.stale);
+    await screen.findByTestId('fee-bank-dates-recorded');
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    expect(screen.getByTestId('fee-bank-date-refused')).toHaveTextContent(DL11.refused.stale);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('fee-bank-date-refused')));
+  });
+
+  it('fix-diff review — a refusal while the form STAYS open keeps the focus in the form; an edit retires the line and the prompt', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.reference_mismatch', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    const submit = within(form).getByTestId('fee-bank-date-submit');
+    submit.focus();
+    fireEvent.click(submit);
+    const line = await screen.findByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(DL11.refused.reference_mismatch);
+    await waitFor(() => expect(within(form).getByTestId('fee-bank-date-fields')).toBeEnabled());
+    expect(document.activeElement).not.toBe(line);
+    // ⚠ The focus RETURNS to the submit button (real Chrome drops it to <body> on the disabled fieldset — the browser pass
+    // 2026-11-27 proved the fix there; jsdom keeps focus on a disabled control, so this leg alone is weak).
+    expect(document.activeElement).toBe(submit);
+    fill(form, { reference: '1' });
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+  });
+
+  it('fix-diff review — Cancel on a held step-up returns the focus to the form\'s submit button (⛔ <body>: the Cancel button unmounts)', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step-up required'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const cancel = await screen.findByTestId('fee-bank-date-step-up-cancel');
+    cancel.focus();
+    fireEvent.click(cancel);
+    await waitFor(() => expect(screen.queryByTestId('fee-bank-date-step-up')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(within(form).getByTestId('fee-bank-date-submit')));
+    expect(within(form).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference); // the typed fields stay
+  });
+
+  it('a 401 on the write goes to sign-in (as the list\'s 401 does)', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'x'));
+    navigate.mockClear();
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
+  });
+
+  it('the prompt sits on its field (`aria-invalid`, `aria-describedby`), clears on an edit of that field, and a REPEATED prompt is a new node (announced again)', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    const submit = () => fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    submit();
+    const first = within(form).getByTestId('fee-bank-date-prompt');
+    const ref = within(form).getByTestId('fee-bank-date-reference');
+    expect(ref).toHaveAttribute('aria-invalid', 'true');
+    expect(ref).toHaveAttribute('aria-describedby', first.id);
+    submit();
+    expect(within(form).getByTestId('fee-bank-date-prompt')).not.toBe(first);
+    fill(form, { reference: '1' });
+    expect(within(form).queryByTestId('fee-bank-date-prompt')).toBeNull();
+    expect(ref).not.toHaveAttribute('aria-invalid');
   });
 });
 
@@ -344,6 +589,33 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent(
       `The Trust's bank statement shows the payment arrived on ${DEATH} (recorded by Meera).`,
     );
+  });
+
+  it('⭐ D1 (`2026-11-27-512`) — a bank date CONSIDERED but ⛔ earlier (the recorded date is used) ⇒ D1\'s line and TODAY\'s note, ⛔ the "ask the finance officer" note', () => {
+    show(
+      preview({
+        fee_outcome: 'same_day',
+        fee_date_source: 'recorded',
+        fee_bank_date: { record_id: RECORD, bank_credit_date: '2026-05-12', reason_code: 'other', recorded_by_display: 'Meera', recorded_at: '2026-06-01T05:30:00.000Z' },
+      }),
+    );
+    expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent(
+      "The Trust's bank statement shows the payment arrived on 2026-05-12 (recorded by Meera) — not earlier than the recorded date, so the recorded date is used.",
+    );
+    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(DL11.todaysNote);
+    expect(screen.getByTestId('membership-check-fee-after-death-note')).not.toHaveTextContent('ask the finance officer');
+  });
+
+  it('a display name with `$&` / `$\'` renders as written (the slots are filled by a replacer, ⛔ a pattern)', () => {
+    show(
+      preview({
+        fee_outcome: 'before_death',
+        fee_blocks_approval: false,
+        fee_date_source: 'bank',
+        fee_bank_date: { record_id: RECORD, bank_credit_date: '2026-04-28', reason_code: 'other', recorded_by_display: "A$&B$'C", recorded_at: '2026-06-01T05:30:00.000Z' },
+      }),
+    );
+    expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent("(recorded by A$&B$'C).");
   });
 
   it('a PASSING bank date ⇒ the bank line and ⛔ note', () => {

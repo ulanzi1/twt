@@ -21,7 +21,7 @@
 //   · ⛔ Never in an event, a log line or an audit context: the note, the bank date, the typed reference, a name (N6).
 
 import { sql } from 'drizzle-orm';
-import { date, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { date, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import { CLAIM_FEE_BANK_DATE_FIELD_CLASS } from '../encryption/field-classes.js';
@@ -87,6 +87,8 @@ export const claimFeeBankDates = pgTable(
     uniqueIndex('claim_fee_bank_dates_one_live_per_claim_uq')
       .on(t.claimCaseId)
       .where(sql`superseded_at IS NULL`),
+    // The target of `claim_membership_checks`' composite FK — a check names only a record of its OWN claim.
+    unique('claim_fee_bank_dates_record_claim_uq').on(t.recordId, t.claimCaseId),
   ],
 );
 

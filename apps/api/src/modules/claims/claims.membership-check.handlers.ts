@@ -212,6 +212,9 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
           death_certificate_review_id: deathDate.state === 'readable' ? deathDate.reviewId : null,
           fee_receipt_found: receipt !== null,
           fee_outcome: feeOutcome,
+          // Story 6.39a (DL12; code review 2026-11-27) — which date the outcome came from, and the record considered (codes / ids).
+          fee_date_source: chosen?.source ?? 'recorded',
+          fee_bank_date_id: bankDate?.recordId ?? null,
           live_check_id: live?.checkId ?? null,
         },
       });
@@ -362,6 +365,9 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
             // ⚠ Client-echoed too: the live check the staff member SAW (`null` = none) — with the live row's own history,
             // it shows which check a `check_changed` refusal had not seen (code review 2026-11-21, family 8).
             expected_live_check_id: body.expected_live_check_id === null ? null : body.expected_live_check_id.toLowerCase(),
+            // ⚠ Client-echoed too (Story 6.39a, code review 2026-11-27): the bank-date record the staff member SAW — it shows which
+            // record a `bank_date_changed` refusal had not seen.
+            expected_fee_bank_date_id: body.expected_fee_bank_date_id === null ? null : body.expected_fee_bank_date_id.toLowerCase(),
             identity_outcome: body.identity_outcome,
             reason: auditReason(failure),
             on: 'write',
@@ -382,6 +388,7 @@ export function createMembershipCheckHandlers(deps: AppDeps) {
           fee_outcome: result.feeOutcome,
           // Story 6.39a (DL12) — which date the outcome came from (a code).
           fee_date_source: result.feeDateSource,
+          fee_bank_date_id: result.feeBankDateId,
           identity_required: result.identityRequired,
           identity_outcome: result.identityOutcome,
           identity_reason: result.identityReason,

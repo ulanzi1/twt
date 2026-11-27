@@ -234,9 +234,15 @@ export async function listClaimsHeldOnFee(
   });
   const held = await readSection(db, pariwarId, 'held', heldLimit);
   const recorded = await readSection(db, pariwarId, 'recorded', recordedLimit);
+  // ⚠ The two sections are two statements: a District Admin's re-check committed BETWEEN them could put one claim in BOTH
+  // (code review 2026-11-27). A claim is listed ONCE — held wins (its row's tokens are the older read, and a POST from it is
+  // refused `stale` and reloads, never a silent double).
+  // Only the DISPLAYED held rows (an overflow row past the cap would otherwise vanish from both sections — fix-diff review).
+  const heldIds = new Set(held.slice(0, heldLimit).map((r) => (r.claimCaseId as string).toLowerCase()));
+  const recordedOnce = recorded.filter((r) => !heldIds.has((r.claimCaseId as string).toLowerCase()));
   return {
     held: held.slice(0, heldLimit).map(toRow),
-    recorded: recorded.slice(0, recordedLimit).map(toRow),
+    recorded: recordedOnce.slice(0, recordedLimit).map(toRow),
     heldTruncated: held.length > heldLimit,
     recordedTruncated: recorded.length > recordedLimit,
   };

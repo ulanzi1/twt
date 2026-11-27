@@ -1,27 +1,38 @@
 // The finance officer's BANK-DATE page — Story 6.39a (Task 5; DL3, DL9, DL10, DL11; AC12).
 //
 // `2026-11-21-473` Q2 B: *"Staff may use the bank's date when the Trust's own bank statement shows the money arrived before
-// the death; they record that they did, with a reason, and it is audited."* Built `2026-11-27-510`.
+// the death; they record that they did, with a reason, and it is audited."* Built `2026-11-27-510`; the page's lost-write line
+// `2026-11-27-512` D2.
 //   · TWO sections (DL10): the claims the recorded check holds on its joining fee, and — only when non-empty, under its own
 //     heading — those with a recorded bank date whose check now passes (listed so a wrong date can be corrected).
 //   · Each row shows the RECORDED date, the amount and the reference's LAST FOUR only (DL3: the typed reference is a real
 //     check, ⛔ a copy from the screen). ⛔ A name, ⛔ the date of death, ⛔ the check's outcome (N2).
 //   · The form: the reference AS THE STATEMENT SHOWS IT, the date the money arrived, a reason, a note — every field
-//     required, each missing one refused in words before anything is sent.
+//     required, each missing one refused in words, on its field, before anything is sent.
 //   · The write needs a FRESH step-up (DL9): a 403 `auth.step_up_required` HOLDS it and the shared `StepUpPanel` re-sends it
-//     (⛔ a second step-up UI). The page owns the mutation and the currency tokens (the row's live check and live record).
+//     (⛔ a second step-up UI). While a write is in flight or held, the form is LOCKED (so the held body is the one on screen —
+//     the panel's hold discipline) and ⛔ other row can be opened (unmounting the form would drop the write's answer).
+// ⭐ Code review 2026-11-27 — the OUTCOME (recorded / refused / lost) is the LIST's, ⛔ the row's: a row that moves section or
+// leaves the list on the reload (a success, `stale`, `not_held`, `window_closed`, `not_found`) would otherwise take its line
+// with it. ONE announced, focused line above the sections, naming the claim's reference ending.
 // English only (the admin console's posture). ⛔ Colour alone: every state is WORDS.
 
+import { useNavigate } from '@tanstack/react-router';
 import { FEE_BANK_DATE_REASON_CODES, FEE_BANK_DATE_STEP_UP_CONTEXT, STATEMENT_REFERENCE_RE, type FeeBankDateListRow } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { ApiError } from '../../api/client.js';
 import { usePostFeeBankDate } from '../../api/hooks.js';
-import { holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '../workplaces/StepUpPanel.js';
+import { holdKey, holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '../workplaces/StepUpPanel.js';
 import { feeBankDateErrorMessage } from './errors.js';
 import { feeBankDatesEn as t } from './i18n-en.js';
 
 type Reason = (typeof FEE_BANK_DATE_REASON_CODES)[number];
+
+/** The approved row line's LAST part (`reference ending {last4}`, DL11) — names the claim on the outcome line, ⛔ new words. */
+const REFERENCE_ENDING = t.row.split(' · ').pop()!;
+type Field = 'reference' | 'date' | 'reason' | 'note';
 
 /** A `YYYY-MM-DD` that is a REAL calendar date (2026-02-30 is ⛔ one) — the contract's rule, for the form's own prompt. */
 function isRealDate(value: string): boolean {
@@ -34,31 +45,77 @@ function fmt(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
 }
 
-/** What is wrong with the form, in the approved words — `null` when it may be sent. Checked in the field order. */
-export function feeBankDateFormPrompt(form: { reference: string; date: string; reason: Reason | null; note: string }): string | null {
+/** Fill `{key}` slots with VALUES — a replacer function, so a value's `$&` / `$'` is never read as a pattern. */
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (slot, key: string) => values[key] ?? slot);
+}
+
+/** What is wrong with the form, in the approved words, and on WHICH field — `null` when it may be sent. Field order. */
+export function feeBankDateFormPrompt(form: { reference: string; date: string; reason: Reason | null; note: string }): { field: Field; text: string } | null {
   const ref = form.reference.trim();
-  if (ref === '') return t.prompts.referenceEmpty;
-  if (!STATEMENT_REFERENCE_RE.test(ref)) return t.prompts.referenceShape;
-  if (!isRealDate(form.date)) return t.prompts.date;
-  if (form.reason === null) return t.prompts.reason;
-  if (form.note.trim() === '') return t.prompts.note;
+  if (ref === '') return { field: 'reference', text: t.prompts.referenceEmpty };
+  if (!STATEMENT_REFERENCE_RE.test(ref)) return { field: 'reference', text: t.prompts.referenceShape };
+  if (!isRealDate(form.date)) return { field: 'date', text: t.prompts.date };
+  if (form.reason === null) return { field: 'reason', text: t.prompts.reason };
+  if (form.note.trim() === '') return { field: 'note', text: t.prompts.note };
   return null;
 }
 
-function RowForm({ pariwarId, row, onClose }: { pariwarId: string; row: FeeBankDateListRow; onClose: () => void }): ReactElement {
+/** The list's ONE outcome line. `kind` picks its role: a recorded line is a status, a refusal or a lost write an alert. */
+export interface FeeBankDateNotice {
+  readonly claimCaseId: string;
+  readonly referenceLast4: string;
+  readonly kind: 'recorded' | 'refused';
+  readonly text: string;
+  /** Bumped per notice, so the SAME words a second time are a NEW node — announced again. */
+  readonly seq: number;
+}
+
+interface RowFormProps {
+  pariwarId: string;
+  row: FeeBankDateListRow;
+  onClose: () => void;
+  /** The write's outcome — the list shows it (the row may move or leave on the reload). */
+  onOutcome: (kind: FeeBankDateNotice['kind'], text: string, closeForm: boolean) => void;
+  /** A write is in flight or held — the list locks every other row's "open". */
+  onBusyChange: (busy: boolean) => void;
+  /** The officer edited a field — the list retires this row's outcome line. */
+  onEdited: () => void;
+}
+
+function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited }: RowFormProps): ReactElement {
   const record = usePostFeeBankDate(pariwarId);
+  const navigate = useNavigate();
   const [reference, setReference] = useState('');
   const [date, setDate] = useState('');
   const [reason, setReason] = useState<Reason | null>(null);
   const [note, setNote] = useState('');
-  const [prompt, setPrompt] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<{ field: Field; text: string; seq: number } | null>(null);
   const [pending, setPending] = useState<PendingWrite>(null);
-  const [done, setDone] = useState(false);
   const id = row.claim_case_id;
+  const busy = record.isPending || pending !== null;
 
-  // Any edit backs out of a held retry (the shared panel's hold discipline: a held write is what the officer ASKED for).
-  const edit = <V,>(set: (v: V) => void) => (v: V) => {
-    setPending(null);
+  useEffect(() => {
+    onBusyChange(busy);
+  }, [busy, onBusyChange]);
+  useEffect(() => () => onBusyChange(false), [onBusyChange]);
+  // ⚠ Real Chrome drops the focus to <body> when the focused control is natively disabled (the locked fieldset — jsdom keeps
+  // it; the browser pass 2026-11-27). When the form comes back after a refusal or a cancelled step-up, the focus returns to
+  // its submit button — the officer corrects the SAME form.
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (!busy && refocus.current) {
+      refocus.current = false;
+      submitRef.current?.focus();
+    }
+  }, [busy]);
+
+  // An edit (only possible while ⛔ busy — the fieldset is locked otherwise) clears the prompt and the row's outcome line: the
+  // officer is acting on it (a still-wrong field is prompted again on the next press). `field` is kept for the call sites.
+  const edit = <V,>(_field: Field, set: (v: V) => void) => (v: V) => {
+    setPrompt(null);
+    onEdited();
     set(v);
   };
 
@@ -67,13 +124,26 @@ function RowForm({ pariwarId, row, onClose }: { pariwarId: string; row: FeeBankD
       { claimCaseId: id, body },
       {
         onSuccess: () => {
-          setDone(true);
-          setNote(''); // the Tier-1 note is ⛔ kept in state once it is written
-          setReference(''); // ⛔ the typed reference either
+          // ⛔ The Tier-1 note or the typed reference kept anywhere once written: the form state, the mutation (reset; the hook's
+          // gcTime is 0), the retry closure (the hold is gone).
+          setNote('');
+          setReference('');
+          record.reset();
+          onOutcome('recorded', t.recorded, true);
         },
         onError: (err) => {
-          if (!needsStepUp(err)) return;
-          setPending(holdOnce({ owner: 'bank-date', target: id, id: Date.now(), label: t.submit, retry: () => send(body) }));
+          if (needsStepUp(err)) {
+            record.reset(); // the held body lives in the retry closure alone (⛔ also in the mutation's `variables`)
+            setPending(holdOnce({ owner: 'bank-date', target: id, id: Date.now(), label: t.submit, retry: () => send(body) }));
+            return;
+          }
+          record.reset();
+          if (err instanceof ApiError && err.status === 401) {
+            void navigate({ to: '/login' });
+            return;
+          }
+          refocus.current = true;
+          onOutcome('refused', feeBankDateErrorMessage(err), false);
         },
       },
     );
@@ -81,8 +151,11 @@ function RowForm({ pariwarId, row, onClose }: { pariwarId: string; row: FeeBankD
 
   const submit = () => {
     const p = feeBankDateFormPrompt({ reference, date, reason, note });
-    setPrompt(p);
-    if (p !== null) return;
+    if (p !== null) {
+      setPrompt((prev) => ({ ...p, seq: (prev?.seq ?? 0) + 1 }));
+      return;
+    }
+    setPrompt(null);
     send({
       statement_reference: reference.trim(),
       bank_credit_date: date,
@@ -93,94 +166,96 @@ function RowForm({ pariwarId, row, onClose }: { pariwarId: string; row: FeeBankD
     });
   };
 
-  if (done) {
-    return (
-      <p role="status" data-testid={`fee-bank-date-recorded-${id}`}>
-        {t.recorded}
-      </p>
-    );
-  }
-  const failed = record.isError && !needsStepUp(record.error);
-  const locked = record.isPending || pending !== null;
+  const promptId = `fee-bank-date-prompt-${id}`;
+  const invalid = (f: Field) => (prompt?.field === f ? { 'aria-invalid': true as const, 'aria-describedby': promptId } : {});
   return (
     <div className="flex flex-col gap-2 rounded border p-3" data-testid={`fee-bank-date-form-${id}`}>
-      <label className="flex flex-col text-sm">
-        {t.fields.reference}
-        <input
-          type="text"
-          autoComplete="off"
-          value={reference}
-          maxLength={40}
-          onChange={(e) => edit(setReference)(e.target.value)}
-          data-testid="fee-bank-date-reference"
-        />
-      </label>
-      <label className="flex flex-col text-sm">
-        {t.fields.date}
-        <input type="date" value={date} onChange={(e) => edit(setDate)(e.target.value)} data-testid="fee-bank-date-date" />
-      </label>
-      <fieldset className="flex flex-col gap-1" data-testid="fee-bank-date-reasons">
-        <legend className="text-sm">{t.fields.reasonLegend}</legend>
-        {FEE_BANK_DATE_REASON_CODES.map((r) => (
-          <label key={r} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name={`fee-bank-date-reason-${id}`}
-              value={r}
-              checked={reason === r}
-              onChange={() => edit(setReason)(r)}
-              data-testid={`fee-bank-date-reason-${r}`}
-            />
-            {t.reasons[r]}
-          </label>
-        ))}
+      <fieldset disabled={busy} className="flex flex-col gap-2" data-testid="fee-bank-date-fields">
+        <label className="flex flex-col text-sm">
+          {t.fields.reference}
+          <input
+            type="text"
+            autoComplete="off"
+            value={reference}
+            maxLength={40}
+            onChange={(e) => edit('reference', setReference)(e.target.value)}
+            data-testid="fee-bank-date-reference"
+            {...invalid('reference')}
+          />
+        </label>
+        <label className="flex flex-col text-sm">
+          {t.fields.date}
+          <input type="date" value={date} onChange={(e) => edit('date', setDate)(e.target.value)} data-testid="fee-bank-date-date" {...invalid('date')} />
+        </label>
+        <fieldset className="flex flex-col gap-1" data-testid="fee-bank-date-reasons" {...invalid('reason')}>
+          <legend className="text-sm">{t.fields.reasonLegend}</legend>
+          {FEE_BANK_DATE_REASON_CODES.map((r) => (
+            <label key={r} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name={`fee-bank-date-reason-${id}`}
+                value={r}
+                checked={reason === r}
+                onChange={() => edit<Reason>('reason', setReason)(r)}
+                data-testid={`fee-bank-date-reason-${r}`}
+              />
+              {t.reasons[r]}
+            </label>
+          ))}
+        </fieldset>
+        <label className="flex flex-col text-sm">
+          {t.fields.note}
+          <textarea value={note} maxLength={2000} onChange={(e) => edit('note', setNote)(e.target.value)} data-testid="fee-bank-date-note" {...invalid('note')} />
+        </label>
+        {prompt !== null ? (
+          // Keyed by `seq`: the same prompt a second time is a NEW node — announced again.
+          <p key={prompt.seq} id={promptId} role="alert" data-testid="fee-bank-date-prompt">
+            {prompt.text}
+          </p>
+        ) : null}
+        <div className="flex gap-2">
+          <button ref={submitRef} type="button" className="rounded bg-accent px-3 py-1 text-sm font-semibold text-white" onClick={submit} data-testid="fee-bank-date-submit">
+            {t.submit}
+          </button>
+          <button type="button" className="text-sm underline" onClick={onClose} data-testid="fee-bank-date-close">
+            {t.close}
+          </button>
+        </div>
       </fieldset>
-      <label className="flex flex-col text-sm">
-        {t.fields.note}
-        <textarea value={note} maxLength={2000} onChange={(e) => edit(setNote)(e.target.value)} data-testid="fee-bank-date-note" />
-      </label>
-      {prompt !== null ? (
-        <p role="alert" data-testid="fee-bank-date-prompt">
-          {prompt}
-        </p>
-      ) : null}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className="rounded bg-accent px-3 py-1 text-sm font-semibold text-white"
-          disabled={locked}
-          onClick={submit}
-          data-testid="fee-bank-date-submit"
-        >
-          {t.submit}
-        </button>
-        <button type="button" className="text-sm underline" disabled={record.isPending} onClick={onClose} data-testid="fee-bank-date-close">
-          {t.close}
-        </button>
-      </div>
       {pending !== null ? (
         <StepUpPanel
+          key={holdKey(pending)}
           context={FEE_BANK_DATE_STEP_UP_CONTEXT}
           pending={pending}
           onDone={() => setPending(null)}
-          onCancel={() => setPending(null)}
+          onCancel={() => {
+            refocus.current = true;
+            setPending(null);
+          }}
           testId="fee-bank-date-step-up"
         />
-      ) : null}
-      {failed ? (
-        <p role="alert" data-testid="fee-bank-date-refused">
-          {feeBankDateErrorMessage(record.error)}
-        </p>
       ) : null}
     </div>
   );
 }
 
-function Row({ pariwarId, row, open, onOpen }: { pariwarId: string; row: FeeBankDateListRow; open: boolean; onOpen: (id: string | null) => void }): ReactElement {
+interface RowProps {
+  pariwarId: string;
+  row: FeeBankDateListRow;
+  open: boolean;
+  /** Another row's write is in flight or held — this row cannot be opened meanwhile. */
+  locked: boolean;
+  onOpen: (id: string | null) => void;
+  onOutcome: RowFormProps['onOutcome'];
+  onBusyChange: RowFormProps['onBusyChange'];
+  onEdited: RowFormProps['onEdited'];
+}
+
+function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, onEdited }: RowProps): ReactElement {
   return (
     <li className="flex flex-col gap-1 border-b py-2" data-testid={`fee-bank-date-row-${row.claim_case_id}`}>
       <p className="text-sm" data-testid="fee-bank-date-row-line">
-        {t.row.replace('{date}', row.recorded_fee_date).replace('{amount}', String(row.amount_inr)).replace('{last4}', row.reference_last4)}
+        {fill(t.row, { date: row.recorded_fee_date, amount: String(row.amount_inr), last4: row.reference_last4 })}
       </p>
       {row.latest_posting_district ? (
         <p className="text-xs">
@@ -194,9 +269,15 @@ function Row({ pariwarId, row, open, onOpen }: { pariwarId: string; row: FeeBank
         </p>
       ) : null}
       {open ? (
-        <RowForm pariwarId={pariwarId} row={row} onClose={() => onOpen(null)} />
+        <RowForm pariwarId={pariwarId} row={row} onClose={() => onOpen(null)} onOutcome={onOutcome} onBusyChange={onBusyChange} onEdited={onEdited} />
       ) : (
-        <button type="button" className="self-start text-sm underline" onClick={() => onOpen(row.claim_case_id)} data-testid="fee-bank-date-open">
+        <button
+          type="button"
+          className="self-start text-sm underline"
+          disabled={locked}
+          onClick={() => onOpen(row.claim_case_id)}
+          data-testid="fee-bank-date-open"
+        >
           {t.open}
         </button>
       )}
@@ -212,22 +293,97 @@ export interface FeeBankDatesListProps {
   recordedTruncated: boolean;
 }
 
-/** The two sections (DL10). ONE form open at a time; the row keys it. */
+/** The two sections (DL10). ONE form open at a time; ONE outcome line for the page. */
 export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
   const [openFor, setOpenFor] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<FeeBankDateNotice | null>(null);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  // ⭐ While a write is in flight or HELD, the list on screen is FROZEN (fix-diff review 2026-11-27): a reload in that time (a
+  // focus refetch while the officer reads the step-up code; another actor's commit) could move or drop the row, and a moved row
+  // is a NEW component (two lists) — its form would unmount and take the write's answer, the held step-up and the typed fields
+  // with it, with ⛔ word. The fresh list renders once the outcome is shown.
+  const [frozen, setFrozen] = useState<{ held: readonly FeeBankDateListRow[]; recorded: readonly FeeBankDateListRow[] } | null>(null);
+  useEffect(() => {
+    setFrozen((prev) => (busy ? (prev ?? { held: props.held, recorded: props.recorded }) : null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the snapshot is taken when `busy` turns on, ⛔ on each new list
+  }, [busy]);
+  const held = frozen?.held ?? props.held;
+  const recorded = frozen?.recorded ?? props.recorded;
+
+  // The outcome line takes the focus when the form that held it is GONE (a success closes it; a refused row may leave or
+  // move on the reload) — family 13 (d). A refusal whose form is still open keeps the focus in the form being corrected
+  // (the line is an alert — announced without the focus; fix-diff review 2026-11-27).
+  useEffect(() => {
+    if (notice !== null && (notice.kind === 'recorded' || openFor !== notice.claimCaseId)) noticeRef.current?.focus();
+  }, [notice, openFor]);
+  // A form whose row has LEFT the list, or MOVED section, closes. The sections are two lists, so a moved row is a NEW
+  // component: its form would re-open EMPTY (the typed fields and any held step-up dropped without a word) — fix-diff
+  // review 2026-11-27. Closing says so: the outcome line stays, and the row's "open" is one press away.
+  const heldIds = held.map((r) => r.claim_case_id);
+  const sectionOf = (id: string): 'held' | 'recorded' | null =>
+    heldIds.includes(id) ? 'held' : recorded.some((r) => r.claim_case_id === id) ? 'recorded' : null;
+  const openSection = openFor === null ? null : sectionOf(openFor);
+  const openedIn = useRef<'held' | 'recorded' | null>(null);
+  useEffect(() => {
+    if (openFor === null) {
+      openedIn.current = null;
+      return;
+    }
+    if (openSection === null || (openedIn.current !== null && openedIn.current !== openSection)) {
+      setOpenFor(null);
+      return;
+    }
+    openedIn.current = openSection;
+  }, [openFor, openSection]);
+
+  const outcomeFor = (row: FeeBankDateListRow): RowFormProps['onOutcome'] => (kind, text, closeForm) => {
+    setNotice((prev) => ({ claimCaseId: row.claim_case_id, referenceLast4: row.reference_last4, kind, text, seq: (prev?.seq ?? 0) + 1 }));
+    if (closeForm) setOpenFor(null);
+  };
+  const open = (id: string | null) => {
+    openedIn.current = null; // set by the effect for the row now open
+    setOpenFor(id);
+    if (id !== null) setNotice(null);
+  };
+  // An edit in the row's form retires that row's outcome line (the officer is correcting it — an old refusal must not stand).
+  const editedFor = (id: string) => () => setNotice((prev) => (prev !== null && prev.claimCaseId === id ? null : prev));
+
+  const rowOf = (row: FeeBankDateListRow) => (
+    <Row
+      key={row.claim_case_id}
+      pariwarId={props.pariwarId}
+      row={row}
+      open={openFor === row.claim_case_id}
+      locked={busy && openFor !== row.claim_case_id}
+      onOpen={open}
+      onOutcome={outcomeFor(row)}
+      onEdited={editedFor(row.claim_case_id)}
+      onBusyChange={setBusy}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-4" data-testid="fee-bank-dates-list">
-      <section aria-label={t.heading} data-testid="fee-bank-dates-held">
-        {props.held.length === 0 ? (
+      {notice !== null ? (
+        <p
+          key={notice.seq}
+          ref={noticeRef}
+          tabIndex={-1}
+          role={notice.kind === 'recorded' ? 'status' : 'alert'}
+          data-testid={notice.kind === 'recorded' ? 'fee-bank-date-recorded' : 'fee-bank-date-refused'}
+          data-claim={notice.claimCaseId}
+        >
+          {fill(REFERENCE_ENDING, { last4: notice.referenceLast4 })} — {notice.text}
+        </p>
+      ) : null}
+      <section aria-labelledby="fee-bank-dates-heading" data-testid="fee-bank-dates-held">
+        {held.length === 0 ? (
           <p role="status" data-testid="fee-bank-dates-empty">
             {t.empty}
           </p>
         ) : (
-          <ul>
-            {props.held.map((row) => (
-              <Row key={row.claim_case_id} pariwarId={props.pariwarId} row={row} open={openFor === row.claim_case_id} onOpen={setOpenFor} />
-            ))}
-          </ul>
+          <ul>{held.map(rowOf)}</ul>
         )}
         {props.heldTruncated ? (
           <p role="status" className="text-xs" data-testid="fee-bank-dates-held-truncated">
@@ -235,16 +391,12 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
           </p>
         ) : null}
       </section>
-      {props.recorded.length > 0 ? (
+      {recorded.length > 0 ? (
         <section aria-labelledby="fee-bank-dates-recorded-heading" data-testid="fee-bank-dates-recorded">
           <h2 id="fee-bank-dates-recorded-heading" className="text-base font-semibold">
             {t.recordedHeading}
           </h2>
-          <ul>
-            {props.recorded.map((row) => (
-              <Row key={row.claim_case_id} pariwarId={props.pariwarId} row={row} open={openFor === row.claim_case_id} onOpen={setOpenFor} />
-            ))}
-          </ul>
+          <ul>{recorded.map(rowOf)}</ul>
           {props.recordedTruncated ? (
             <p role="status" className="text-xs" data-testid="fee-bank-dates-recorded-truncated">
               {t.truncated}

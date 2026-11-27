@@ -82,8 +82,10 @@ describe('Story 6.39 — MembershipCheckRequest (⛔ a client supplies ⛔ date)
   });
 
   it('the LIVE-check token is REQUIRED — nullable, ⛔ optional (code review 2026-11-21: a client must say which check it saw)', () => {
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'confirmed' }).success).toBe(false);
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: 'x', identity_outcome: 'confirmed' }).success).toBe(false);
+    // Story 6.39a — AC5 kind (i) (code review 2026-11-27: these two were left without the bank-date token, so they failed on IT, ⛔ on
+    // the live-check token they test — now each body is complete but for the one field under test).
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: 'x', expected_fee_bank_date_id: null, identity_outcome: 'confirmed' }).success).toBe(false);
     expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: REVIEW, expected_fee_bank_date_id: null, identity_outcome: 'confirmed' }).success).toBe(true);
   });
 

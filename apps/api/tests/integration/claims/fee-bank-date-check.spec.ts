@@ -128,6 +128,10 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the membership check uses the ban
     // The success audit names the source (a code) — ⛔ the date.
     const line = W.auditsFor('admin_claim.membership_checked', w.claimCaseId).at(-1)!;
     expect((line.context as Json).fee_date_source).toBe('bank');
+    expect((line.context as Json).fee_bank_date_id).toBe(recordId);
+    // The READ line names the source and the record considered too (DL12; code review 2026-11-27) — codes and ids only.
+    const read = W.auditsFor('admin_claim.membership_check_read', w.claimCaseId).at(-1)!;
+    expect(read.context).toMatchObject({ fee_date_source: 'bank', fee_bank_date_id: recordId });
     expect(JSON.stringify(line).includes('2026-04-30')).toBe(false);
   });
 
@@ -177,6 +181,11 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the membership check uses the ban
     });
     expect(res.statusCode, res.body).toBe(409);
     expect(errCode(j(res))).toBe('membership_check.bank_date_changed');
+    // The refusal's audit echoes the record the staff member SAW (`null` — ⛔ one), so the line shows what was ⛔ seen.
+    expect(W.auditsFor('admin_claim.membership_check_rejected', w.claimCaseId).at(-1)!.context).toMatchObject({
+      reason: 'bank_date_changed',
+      expected_fee_bank_date_id: null,
+    });
     expect(j(res)).toMatchObject({ error: { message: "The finance officer recorded the bank's date since you opened this check. It has been reloaded — check again." } });
     expect((await td.pool.query(`SELECT 1 FROM claim_membership_checks WHERE claim_case_id = $1`, [w.claimCaseId])).rows).toHaveLength(before);
   });

@@ -59,9 +59,14 @@ export const feeBankDatesEn = {
     no_fee_receipt:
       "The record of the member's joining fee cannot be identified, so a bank date cannot be recorded. Please tell the Super Admin.",
     missing_display: 'Your account has no display name, so a bank date cannot be attributed to you. Ask a Super Admin to set it.',
+    // ⚠ ⛔ a line of its own in DL11: the writer's defence code reuses DL11's approved 400 line (the contract answers 400 first).
     invalid_reason: 'Something in the form is not right. Check each field and try again.',
   } as Record<string, string>,
   invalid: 'Something in the form is not right. Check each field and try again.', // DL11 — a 400
   sessionExpired: 'Your session has ended. Sign in again, then record the bank date.', // DL11 — a 401
-  refusedGeneric: 'The bank date could not be recorded.',
+  // The route's session gate (the 6.19d page's lines, ⛔ in DL11 — listed for BigDev in deferred-work).
+  checkingSession: 'Checking your session…',
+  redirecting: 'Redirecting to sign in…',
+  // ⭐ `2026-11-27-512` D2 (approved word for word) — a write with ⛔ typed answer (a lost response, a 5xx): it may have landed.
+  lostWrite: 'The bank date may not have been recorded. The list has been reloaded — check the claim before you record it again.',
 } as const;

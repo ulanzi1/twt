@@ -189,6 +189,15 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     expect(errCode(j(res))).toBe('fee_bank_date.window_closed');
     expect(await W.records(w)).toEqual([]);
     expect(rejected(w).map((e) => (e.context as Json).reason)).toEqual(['window_closed']);
+    // ⭐ The list's window filter (code review 2026-11-27): a denied claim whose live check still blocks is ⛔ listed — a
+    // control first: the same claim WAS held before the denial would have been listed (its live check blocks).
+    const viewer = await W.staff(w, ['finance_officer']);
+    const list = j(await viewer.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })) as { held: Json[]; recorded: Json[] };
+    expect([...list.held, ...list.recorded].map((r) => r.claim_case_id)).not.toContain(w.claimCaseId);
+    const still = await W.world({ pariwarId: w.pariwarId });
+    await W.seedCheck(still);
+    const list2 = j(await viewer.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })) as { held: Json[] };
+    expect(list2.held.map((r) => r.claim_case_id)).toEqual([still.claimCaseId]);
   });
 
   it('AC3 — the bounds: a date after today ⇒ `in_future`; before the member joined ⇒ `before_joining`; each ⛔ row', async () => {
@@ -261,10 +270,11 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
   it('⭐⭐ AC4 / PQ2 — a reference ONE DIGIT off ⇒ `reference_mismatch`, ⛔ row; the typed value is in ⛔ audit, ⛔ log line, ⛔ response body (with a positive log control)', async () => {
     const w = await W.world({ utr: '123456789012' });
     await W.seedCheck(w);
-    const a = await fo(w);
+    const a = await fo(w, 'ZZ-PLANTED-LOG-NAME');
     const planted = '123456789013';
+    const plantedDate = '2026-04-23';
     const before = logChunks.length;
-    const res = await post(a, w, { statement_reference: planted });
+    const res = await post(a, w, { statement_reference: planted, bank_credit_date: plantedDate });
     expect(res.statusCode, res.body).toBe(409);
     expect(errCode(j(res))).toBe('fee_bank_date.reference_mismatch');
     expect(res.body.includes(planted)).toBe(false);
@@ -279,6 +289,25 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     expect(logged.includes(control), 'the captured log stream is live').toBe(true);
     expect(logged.includes(planted), 'the typed reference reached a log line').toBe(false);
     expect(logged.includes('ZZ-BANK-NOTE'), 'the note reached a log line').toBe(false);
+    expect(logged.includes(plantedDate), 'the bank date reached a log line').toBe(false);
+    expect(logged.includes('ZZ-PLANTED-LOG-NAME'), 'the display name reached a log line').toBe(false);
+  });
+
+  it('⭐ AC4 / AC9 — the 400 path: a malformed reference (a planted value) is refused by the contract, and appears in ⛔ response, ⛔ log line, ⛔ audit', async () => {
+    const w = await W.world();
+    await W.seedCheck(w);
+    const a = await fo(w);
+    const planted = '98765432109'; // 11 digits — fails the reference shape
+    const before = logChunks.length;
+    const res = await post(a, w, { statement_reference: planted });
+    expect(res.statusCode, res.body).toBe(400);
+    expect(res.body.includes(planted)).toBe(false);
+    const control = `ZZLOGCONTROL${randomUUID().slice(0, 8)}`;
+    await a.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId, `?zz=${control}`) });
+    const logged = logChunks.slice(before).join('');
+    expect(logged.includes(control), 'the captured log stream is live').toBe(true);
+    expect(logged.includes(planted), 'the malformed reference reached a log line').toBe(false);
+    expect(rejected(w)).toEqual([]);
   });
 
   it('⭐ AC4 / DL3 — the SAME reference: a 22-character one stored in lower case and typed in capitals, and one typed with a trailing space, are ACCEPTED', async () => {
@@ -381,18 +410,33 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     expect(res.statusCode, res.body).toBe(201);
   });
 
-  it('⭐ AC8 — 403 for district_admin, pariwar_admin, verifier and helpline_operator on BOTH routes (a VALID body, stepped up); ⛔ row', async () => {
+  it('⭐ AC8 / AC9 — 403 for district_admin, pariwar_admin, verifier and helpline_operator on BOTH routes (a VALID body, stepped up for this act); ⛔ row, ⛔ `_rejected` line', async () => {
     const w = await W.world();
     await W.seedCheck(w);
     for (const role of ['district_admin', 'pariwar_admin', 'verifier', 'helpline_operator'] as const) {
       const a = await W.staff(w, [role]);
       const list = await a.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) });
       expect(list.statusCode, `${role} list`).toBe(403);
+      // Stepped up for THIS act — so the 403 below is the permission hook's, ⛔ the step-up's.
+      await W.stepUp(a, FEE_BANK_DATE_STEP_UP_CONTEXT);
       const res = await post(a, w);
       expect(res.statusCode, `${role} post: ${res.body}`).toBe(403);
       expect(errCode(j(res)), role).not.toBe('auth.step_up_required'); // the permission hook answers first
     }
     expect(await W.records(w)).toEqual([]);
+    expect(rejected(w)).toEqual([]); // a 403 is answered before the handler — ⛔ audited here (DL12)
+  });
+
+  it('⭐ AC9 / TR9 — ⛔ session ⇒ 401 on both routes (a VALID body), ⛔ row, ⛔ `_rejected` line', async () => {
+    const w = await W.world();
+    await W.seedCheck(w);
+    const anon = makeClient(app);
+    const list = await anon.inject({ method: 'GET', url: W.listUrl(w.pariwarId) });
+    expect(list.statusCode, list.body).toBe(401);
+    const res = await anon.inject({ method: 'POST', url: W.postUrl(w), payload: await W.body(w) });
+    expect(res.statusCode, res.body).toBe(401);
+    expect(await W.records(w)).toEqual([]);
+    expect(rejected(w)).toEqual([]);
   });
 
   it('AC8 — a finance officer of ANOTHER Pariwar is refused on both routes', async () => {
@@ -400,12 +444,15 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     await W.seedCheck(w);
     const other = await W.world();
     const a = await W.staff(other, ['finance_officer']);
-    // Scoped to its own Pariwar, it asks for this one.
-    expect((await a.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })).statusCode).toBeGreaterThanOrEqual(400);
+    // Scoped to its own Pariwar, it asks for this one — the scope hook answers 404 (another tenant's Pariwar is ⛔ revealed),
+    // ⛔ a 500, ⛔ a 403 that confirms it exists.
+    const list = await a.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) });
+    expect(list.statusCode, list.body).toBe(404);
     await W.stepUp(a, FEE_BANK_DATE_STEP_UP_CONTEXT);
     const res = await post(a, w);
-    expect(res.statusCode).toBeGreaterThanOrEqual(400);
-    expect(res.statusCode).not.toBe(201);
+    expect(res.statusCode, res.body).toBe(404);
+    expect(errCode(j(res))).toBe(errCode(j(list)));
     expect(await W.records(w)).toEqual([]);
+    expect(rejected(w)).toEqual([]);
   });
 });

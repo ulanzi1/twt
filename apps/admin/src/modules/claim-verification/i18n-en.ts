@@ -950,7 +950,8 @@ export const verifierConsoleEn = {
     approveBlocked: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
-      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word). ⚠ ⛔ compile-enforced (a `Record<string,string>`): the
+      // `toEqual` pins in `membership-check.test.tsx` enforce it — a miss would read as `not_checked`.
       bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
@@ -962,7 +963,8 @@ export const verifierConsoleEn = {
     finalVoteGate: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
-      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word). ⚠ ⛔ compile-enforced (a `Record<string,string>`): the
+      // `toEqual` pins in `membership-check.test.tsx` enforce it — a miss would read as `not_checked`.
       bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
@@ -972,7 +974,8 @@ export const verifierConsoleEn = {
     r9Gate: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
-      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word): ⛔ compile-enforced here — a miss reads as `not_checked`.
+      // Story 6.39a (DL7 — `2026-11-27-510`, approved word for word). ⚠ ⛔ compile-enforced (a `Record<string,string>`): the
+      // `toEqual` pins in `membership-check.test.tsx` enforce it — a miss would read as `not_checked`.
       bank_date_recorded: "The finance officer recorded the bank's date for the joining fee — check again.",
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
@@ -999,6 +1002,10 @@ export const verifierConsoleEn = {
       'No drive can open for this claim on the recorded date. Record the check. If the member may have paid before the death, then ask the finance officer to check the Trust\'s bank statement before you deny; otherwise deny the claim with the reason "Fee paid after the death".',
     // Story 6.39a (DL11) — when the bank's date is used. `{date}` and `{name}` are VALUES (the record's date and who recorded it).
     feeBankDateUsed: "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}).",
+    // ⭐ Story 6.39a (`2026-11-27-512` D1, approved word for word) — a bank date was CONSIDERED but is ⛔ earlier than the recorded
+    // date, so the recorded date is used. Under a blocking outcome TODAY's note shows with it (⛔ the record-first note).
+    feeBankDateNotEarlier:
+      "The Trust's bank statement shows the payment arrived on {date} (recorded by {name}) — not earlier than the recorded date, so the recorded date is used.",
     // The identity half — the details on record. DL12 for the first two routes.
     identityHeading: 'Identity',
     kycRouteLabel: 'How the identity was recorded',

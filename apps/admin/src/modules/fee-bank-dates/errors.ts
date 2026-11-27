@@ -6,6 +6,8 @@ import { feeBankDateRefusalReasonOf } from '@twt/contracts';
 import { ApiError } from '../../api/client.js';
 import { feeBankDatesEn as t } from './i18n-en.js';
 
+// ⚠ LOCKSTEP with `isAnsweredFeeBankDateRefusal` (api/hooks.ts): exactly the answers that fall through to `lostWrite` RELOAD
+// the list (its words say so) — `fee-bank-dates.test.tsx` pins the two together.
 export function feeBankDateErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     const reason = feeBankDateRefusalReasonOf(err.code);
@@ -15,5 +17,6 @@ export function feeBankDateErrorMessage(err: unknown): string {
     if (err.status === 403) return t.forbidden;
     if (err.status === 400) return t.invalid;
   }
-  return t.refusedGeneric;
+  // ⛔ A typed answer (a lost response, a 5xx): the write MAY have landed — ⛔ "could not be recorded" (`2026-11-27-512` D2).
+  return t.lostWrite;
 }

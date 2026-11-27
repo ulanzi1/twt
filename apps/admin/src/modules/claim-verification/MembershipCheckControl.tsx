@@ -63,6 +63,11 @@ export interface MembershipCheckControlProps {
   recorded?: boolean;
 }
 
+/** Fill `{key}` slots with VALUES — a replacer function, so a value's `$&` / `$'` is never read as a pattern (code review 2026-11-27). */
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (slot, key: string) => values[key] ?? slot);
+}
+
 function fmt(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
 }
@@ -183,24 +188,29 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
               ) : (
                 <p className="text-xs">{t.feeComputed}</p>
               )}
-              {/* Story 6.39a (DL11) — the bank's date, when the comparison used it (the SERVER says which date — DL6). */}
-              {preview.fee_date_source === 'bank' && preview.fee_bank_date ? (
-                <p className="text-sm" data-testid="membership-check-fee-bank-date">
-                  {t.feeBankDateUsed
-                    .replace('{date}', preview.fee_bank_date.bank_credit_date)
-                    .replace('{name}', preview.fee_bank_date.recorded_by_display)}
+              {/* Story 6.39a — the bank-date record the comparison CONSIDERED (the SERVER says which date it used — DL6):
+                  · used (`'bank'`) — DL11's line;
+                  · considered but ⛔ earlier, so the recorded date is used — `2026-11-27-512` D1's line. */}
+              {preview.fee_bank_date ? (
+                <p className="text-sm" data-testid="membership-check-fee-bank-date" data-source={preview.fee_date_source}>
+                  {fill(preview.fee_date_source === 'bank' ? t.feeBankDateUsed : t.feeBankDateNotEarlier, {
+                    date: preview.fee_bank_date.bank_credit_date,
+                    name: preview.fee_bank_date.recorded_by_display,
+                  })}
                 </p>
               ) : null}
               {/* `-473` Q1 B — a fee paid ON the day of death counts as after: the same note (`-474` item 3). The SERVER says
-                  which outcomes stop the drive (N1 — ⛔ a second definition here; code review 2026-11-21). Story 6.39a (DL11):
-                  from the RECORDED date the note is the amended, record-first one; from the BANK's date today's note stands. */}
+                  which outcomes stop the drive (N1 — ⛔ a second definition here; code review 2026-11-21). Story 6.39a: the
+                  amended record-first note (DL11) ONLY for a blocking RECORDED date with ⛔ bank-date record considered — the
+                  finance officer has not looked yet; once a bank date was considered (used or ⛔ earlier) TODAY's note stands
+                  (`2026-11-27-512` D1). */}
               {preview.fee_blocks_approval ? (
                 <p
                   className="text-sm"
                   data-testid="membership-check-fee-after-death-note"
                   data-source={preview.fee_date_source}
                 >
-                  {preview.fee_date_source === 'bank' ? t.feeAfterDeathNote : t.feeAfterDeathNoteRecorded}
+                  {preview.fee_bank_date === null ? t.feeAfterDeathNoteRecorded : t.feeAfterDeathNote}
                 </p>
               ) : null}
             </section>

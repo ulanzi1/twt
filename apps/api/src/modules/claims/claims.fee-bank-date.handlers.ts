@@ -87,7 +87,8 @@ function translate(err: unknown): never {
 function auditReason(err: unknown): string {
   if (err instanceof claimDomain.FeeBankDateRefusedError) return err.reason;
   if (err instanceof AdminDisplayNameMissingError) return 'missing_display';
-  if (err instanceof claimDomain.ClaimStreamConcurrencyError) return 'concurrent';
+  // DL12: the audit carries the refusal's CODE — a stream race answers `fee_bank_date.stale` (code review 2026-11-27).
+  if (err instanceof claimDomain.ClaimStreamConcurrencyError) return 'stale';
   return err instanceof Error ? err.name : 'unknown';
 }
 

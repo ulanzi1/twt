@@ -218,7 +218,10 @@ describe.skipIf(!hasDatabase)('Story 6.39a — `bank_date_recorded` at one site 
     expect(err.message).not.toMatch(/refused|denied/i);
   }
 
-  it('⭐ 1/4 — `verifier_decision.` — the District Admin\'s approve WAITS on `bank_date_recorded`; a re-check naming the record lets it through', async () => {
+  // ⚠ Code review 2026-11-27 — the records here are RAW and name a non-joining payment (this world has ⛔ joining payment), so the
+  // "named" check below is GATE-level: it proves the gate's id compare lifts the wait. That a REAL re-check names the record (and
+  // ignores one naming another payment) is proved through the routes in `fee-bank-date-check.spec.ts` (AC5).
+  it('⭐ 1/4 — `verifier_decision.` — the District Admin\'s approve WAITS on `bank_date_recorded`; a check naming the record (gate-level) lets it through', async () => {
     const w = await seedWorld();
     const da = await staff(w.pariwarId, 'district_admin');
     const recordId = await bankDateRecorded(w);

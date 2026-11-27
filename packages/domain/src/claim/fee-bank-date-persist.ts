@@ -133,7 +133,9 @@ export async function recordFeeBankDate(client: pg.PoolClient, input: RecordFeeB
     throw refuse('invalid_reason', 'an unknown reason');
   }
   if (!isRealCalendarDate(input.bankCreditDate)) throw refuse('invalid_reason', 'the bank date is not a real calendar date');
-  if (input.noteCiphertext.trim() === '') throw refuse('invalid_reason', 'a bank date needs a note');
+  // ⚠ The note arrives ENCRYPTED, so this catches a caller that passed ⛔ envelope at all (an empty string) — a blank PLAINTEXT
+  // note is the contract's refusal (`.trim().min(1)`, 400) before the handler encrypts it (code review 2026-11-27).
+  if (input.noteCiphertext.trim() === '') throw refuse('invalid_reason', 'a bank date needs a note (an empty envelope)');
 
   const db = bindScopedDb(client);
 

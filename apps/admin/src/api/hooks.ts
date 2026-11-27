@@ -16,6 +16,7 @@ import {
   useQueryClient,
   type Query,
 } from '@tanstack/react-query';
+import { feeBankDateRefusalReasonOf } from '@twt/contracts';
 import { useCallback } from 'react';
 import type {
   DecideModerationAppealRequest,
@@ -2719,6 +2720,8 @@ export function usePostMembershipCheck(pariwarId: string, claimCaseId: string | 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId ?? '') });
     void qc.invalidateQueries({ queryKey: membershipCheckKey(pariwarId, claimCaseId ?? '') });
+    // Story 6.39a (code review 2026-11-27) — a recorded check moves the finance officer's list (its sections and tokens).
+    void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
   };
   return useMutation({
     mutationFn: (body: Parameters<typeof api.postMembershipCheck>[2]) => api.postMembershipCheck(pariwarId, claimCaseId as string, body),
@@ -2745,6 +2748,22 @@ export const FEE_BANK_DATE_RELOAD_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * A bank-date write the server ANSWERED with a refusal the page has a line for (DL11): a `fee_bank_date.<reason>`, the
+ * missing display name, a 400 / 401 / 403. Anything else is a LOST write (`2026-11-27-512` D2) — it may have landed.
+ * ⚠ LOCKSTEP with `feeBankDateErrorMessage` (modules/fee-bank-dates/errors.ts), which reads it.
+ */
+export function isAnsweredFeeBankDateRefusal(err: unknown): err is ApiError {
+  if (!(err instanceof ApiError)) return false;
+  return (
+    feeBankDateRefusalReasonOf(err.code) !== null ||
+    err.code === 'admin.display_name_missing' ||
+    err.status === 400 ||
+    err.status === 401 ||
+    err.status === 403
+  );
+}
+
+/**
  * The finance officer RECORDS a bank date. A success moves the list AND the claim's console (the membership-check preview
  * and the packet — the gate now waits on `bank_date_recorded`), so an open console never shows the old comparison.
  */
@@ -2758,9 +2777,20 @@ export function usePostFeeBankDate(pariwarId: string) {
       void qc.invalidateQueries({ queryKey: membershipCheckKey(pariwarId, args.claimCaseId) });
       void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, args.claimCaseId) });
     },
-    onError: (err: unknown) => {
-      if (err instanceof ApiError && FEE_BANK_DATE_RELOAD_CODES.has(err.code)) void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
+    onError: (err: unknown, args) => {
+      // ⚠ The SAME test as `feeBankDateErrorMessage`: an answer the page has ⛔ line for is a LOST write (a lost response, a 5xx,
+      // an untyped 4xx) and its line says "The list has been reloaded" — so it reloads, and the console too: the write MAY
+      // have landed (`2026-11-27-512` D2). A typed reload code reloads the list.
+      if (!isAnsweredFeeBankDateRefusal(err)) {
+        void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
+        void qc.invalidateQueries({ queryKey: membershipCheckKey(pariwarId, args.claimCaseId) });
+        void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, args.claimCaseId) });
+        return;
+      }
+      if (FEE_BANK_DATE_RELOAD_CODES.has(err.code)) void qc.invalidateQueries({ queryKey: feeBankDatesKey(pariwarId) });
     },
+    // ⛔ The Tier-1 note or the typed reference kept in the mutation cache once the outcome is shown (code review 2026-11-27).
+    gcTime: 0,
   });
 }
 

@@ -4,6 +4,7 @@
 > [`-413`](../../.decision-log.md#decision-2026-10-28-413) IQ7 (A). Non-blocking: the story is built either way, and the answers are ⛔ collected in
 > production until counsel's basis is recorded (roster Row 42 (a)).
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 7); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED: A** — [`2026-11-27-520`](../../.decision-log.md#decision-2026-11-27-520) (Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / agenda"* · *"7. Q A"*). Our suggestion and as built. The channel and the time ⛔ recorded. Every line above is kept as written.
 
 ## §0 — the gate
 
@@ -12,6 +13,20 @@ told by the family). The Panel has ruled who sees the NEIGHBOURS' answers to the
 are giving the family's answers EXACTLY the same readers — no new reader — so we are building it and asking you to confirm, ⛔ waiting.
 
 ---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / agenda"* · *"7. Q A"* — recorded as [`2026-11-27-520`](../../.decision-log.md#decision-2026-11-27-520),
+> committed ALONE (`5527fdb1`).
+>
+> - **A.** Same readers as the neighbours' answers — the District Admin and the district's verifiers; whoever approves the claim at a
+>   later step, for that claim at that step only; the inspector who typed an answer can read it back (our suggestion; as built — ⛔ code
+>   change). Its cost, as put below, is accepted with it.
+> - This note carried ⛔ told lines; its other sections stay ours — ⛔ objection recorded, and ⛔ that is NOT a ratification.
+> - ⛔ Covered: counsel's basis (Row 42 (a)) — if it limits who may read health information given by a family, it comes back to you.
+>
+> The ⏳ block below is kept as first written; everything below is kept **unedited** as the question **as it was put**
+> ([[feedback_supersede_never_reinterpret]]).
 
 > ## ⏳ AWAITING PANEL RULING
 >

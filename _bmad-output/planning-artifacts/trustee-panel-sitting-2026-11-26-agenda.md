@@ -14,6 +14,8 @@
 > **2026-11-27 — SENT** (BigDev: *"agenda sent"*), with every note it names for items 2–8, 10 and 11 (BigDev confirmed all of
 > them went). ⚠ The channel, the time and the exact text sent are NOT recorded. Each note carries its own dated SENT line; the
 > "PREPARED, NOT YET SENT" lines above are kept as written.
+> **2026-11-27 — RULED** (DR + KB, relayed by BigDev): items 2–8 answered — Decisions `2026-11-27-515` to `-521`, committed ALONE
+> (`5527fdb1`), one per note, a dated line under each item. Item 10: *"will answer soon"* — still open. Item 11 was for information.
 
 **How to read this:** each item gives the question in one sentence, our suggestion, and what is waiting on your answer. Nothing below
 is live for members today. Every item can be answered by option letter, the way you answered the 21 November notes.
@@ -46,6 +48,9 @@ is live for members today. Every item can be answered by option letter, the way 
   Q4 A (no fee needed for the field worker's credit).
 - **Waiting on it:** turning on the fee-optional switch (row `3-17`).
 - **Note:** `trustee-panel-routing-note-2026-11-21-registration-fee-optional.md`.
+- ⭐ **2026-11-27 — ANSWERED: Q1 B, Q2 A, Q3 A; Q4 the Panel's own answer** (Decision `2026-11-27-515`, DR + KB): the system pays a field
+  worker only if the member paid the joining fee within 30 days of joining; paying a worker for a member who did not pay is the
+  Panel's own call, later, outside the system, on a report of the members each worker brought in. ⛔ Our suggestion for Q4 (A).
 
 **3. Registration: what may a field worker fill in for a teacher?**
 - **Question:** may a field worker fill in the whole registration for a teacher (after a one-time code read out by the teacher); how long
@@ -54,6 +59,8 @@ is live for members today. Every item can be answered by option letter, the way 
   worker sees only progress).
 - **Waiting on it:** field-worker-assisted registration (row `13-9`).
 - **Note:** `trustee-panel-routing-note-2026-11-21-registration-field-worker-drafts.md`.
+- ⭐ **2026-11-27 — ANSWERED: Q1 C, widened — with no one-time code** (*"person doesn't share any OTP to field worker. Field workers should
+  ask for document and start , no OTP required."*), **Q2 A, Q3 A** (Decision `2026-11-27-516`, DR + KB). ⛔ Our suggestion for Q1 (B).
 
 **4. Field workers: three permissions** *(sent 5 November, still awaiting your answer; read with item 5)*
 - **Question:** do you confirm three permissions for the officers who manage field workers: to approve a worker, to see the workers in
@@ -61,12 +68,14 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Our suggestion:** A (confirm, as built).
 - **Waiting on it:** field-worker registration going live (roster Row 48).
 - **Note:** `trustee-panel-routing-note-2026-11-04-story-13-1a-field-worker-keys-confirm.md`.
+- ⭐ **2026-11-27 — ANSWERED: A** (Decision `2026-11-27-517`, DR + KB — as suggested, as built: the three keys and their holders confirmed). Roster Row 48 leg (i) is now MET; the row stays open on its other legs.
 
 **5. Field workers: texting a new worker their code**
 - **Question:** may the Trust text a newly approved field worker their six-digit code once, alongside an officer reading it out when asked?
 - **Our suggestion:** A (confirm the text as built).
 - **Waiting on it:** switching the text on (roster Row 49).
 - **Note:** `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`.
+- ⭐ **2026-11-27 — ANSWERED: A** (Decision `2026-11-27-518`, DR + KB — as suggested, as built: one text, never sent again, an officer still reads the code out, no officer told if it fails). Roster Row 49 leg (l) is now MET; switching the text on still waits on Row 49's other legs.
 
 **6. Sign off two staff-email designs you already asked for** *(new)*
 - **Question:** will two of you sign the written designs behind the memorial take-down email to its approvers and the field-worker
@@ -74,12 +83,15 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Our suggestion:** A (sign both). Two other drafted designs are told in the note, not asked.
 - **Waiting on it:** memorial take-downs (roster Row 41) and field-worker move requests (Row 51), one item each.
 - **Note:** `trustee-panel-routing-note-2026-11-26-adr-ratifications.md`.
+- ⭐ **2026-11-27 — ANSWERED: A** (Decision `2026-11-27-519`, DR + KB — as suggested; one letter relayed, read as A for both designs; committed `5527fdb1`): ADR-0043 and ADR-0045 signed off and marked `ratified`; ADR-0044 and ADR-0046 told, ⛔ signed — both stay `drafted`.
 
 **7. Who may read what the family tells the inspector**
 - **Question:** when the inspector asks the family how the member died and which illness they had, who may read the family's answers?
 - **Our suggestion:** A (the same readers as the neighbours' answers).
 - **Waiting on it:** collecting the family's answers (roster Row 42).
 - **Note:** `trustee-panel-routing-note-2026-10-28-6-32-family-answers-audience.md`.
+- ⭐ **2026-11-27 — ANSWERED: A** (Decision `2026-11-27-520`, DR + KB — as suggested and as built). Roster Row 42 (d) is MET; (a) and
+  (b) stay open. The item above is kept as written.
 
 **8. Instructions to a staff member sent on a ground visit**
 - **Question:** may a staff member sent on a ground visit, who must not yet see what the neighbours said, read the briefing written for
@@ -87,6 +99,9 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Our suggestion:** C (yes, with a reminder to the writer).
 - **Waiting on it:** nothing on a go-live list. Until answered, visitors get no written instructions.
 - **Note:** `trustee-panel-routing-note-2026-10-14-6-27b-instructions-to-the-assigned-inspector.md`.
+- ⭐ **2026-11-27 — ANSWERED: C** (Decision `2026-11-27-521`, DR + KB — as suggested; the note's table C, B with the reminder to the
+  writer). ⚠ ⛔ Built: the code still withholds both instructions (A) — a build is owed; where it goes is BigDev's. The item above is
+  kept as written.
 
 **9. May a member download staff's private note about their identity check?** *(new)*
 - **Question:** when a member downloads a copy of their data, should it include the short private note staff wrote while checking their
@@ -108,6 +123,8 @@ is live for members today. Every item can be answered by option letter, the way 
 - **Our suggestion:** in the note (Q1 yes · Q2 build now · Q3 yes · Q4 no suggestion).
 - **Waiting on it:** connecting the code-escrow mirror (two of the four questions are marked as blocking it).
 - **Note:** `trustee-panel-routing-note-2026-08-18-escrow-host-key-pinning.md`.
+- ⏳ **2026-11-27 — NOT YET ANSWERED:** BigDev relayed *"10. will answer soon."* with the sitting's other answers. Still open; whether the
+  note was also sent in August is still not recorded.
 
 ---
 

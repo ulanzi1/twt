@@ -4,6 +4,7 @@
 > `sprint-change-proposal-2026-11-21-registration.md`; author-commit `2026-11-21-482` decision 3). ⛔ Member uses the system yet.
 > ⛔ Nothing is built: field workers do not yet have their own app or login (that comes first), so nothing waits on this note today.
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 3); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED** (Trustee-ratified, DR + KB, relayed by BigDev) — [`2026-11-27-516`](../../.decision-log.md#decision-2026-11-27-516), committed ALONE (`5527fdb1`); the ruling block below. Every line above is kept as written.
 
 ## §0 — the gate
 
@@ -17,6 +18,23 @@ the teacher's form, photograph their ID cards and write down their nominees and 
 if the teacher never joins?"*
 
 ---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / agenda / 3. Q1 C, but person doesn't share any OTP to field worker. Field workers should
+> ask for document and start , no OTP required. / Q2 A, Q3 A"* — recorded as
+> [`2026-11-27-516`](../../.decision-log.md#decision-2026-11-27-516), committed ALONE (`5527fdb1`).
+>
+> - **Q1 — C, widened** (not C as put; not our suggestion, which was B). The worker may fill in everything except the health answers,
+>   which the person gives on their own phone — and with no one-time code: the person shares no code with the worker, who asks for
+>   the documents and starts.
+> - **Q2 — A.** An unsubmitted registration and its photos are deleted after 30 days (our suggestion).
+> - **Q3 — A.** The person sees the worker's name; once submitted, the worker sees only how far the person has got (our suggestion).
+> - Not yet settled, and not treated as ruled: that the person's own login code on their own phone stays (our reading: it does);
+>   what a person is shown about a draft they never asked for.
+> - The told lines 1–4: ⛔ objection recorded — and ⛔ that is NOT a ratification. Each option's cost, as put below, is accepted with it.
+>
+> The "awaiting" block just below is kept as written. Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 > ## ⏳ AWAITING PANEL RULING
 >

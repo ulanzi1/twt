@@ -2412,6 +2412,8 @@ fallback SMS.
 > `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) - not ruled; a ruling is
 > recorded here as a further annotation. Nothing here changes what §3.4 says, and the text is not live: its go-live is roster Row 49.
 
+> ⭐ **ANNOTATION 2026-11-27 (Story `13-1b` Task 0.6, [`2026-11-27-518`](../../.decision-log.md#decision-2026-11-27-518) — Trustee-ratified, DR + KB). ⭐ Annotated, not rewritten.** The Panel CONFIRMED the field-worker code text (option A, as built): one direct DLT SMS to the number on a newly approved worker's application, never sent again, with an officer still able to read the code out. The note was sent on 2026-11-27 with the sitting agenda. The mechanism above stays the author's. Nothing here changes what §3.4 says about members; the text is still not live: its go-live is roster Row 49.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

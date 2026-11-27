@@ -3,6 +3,7 @@
 > **Status: WRITTEN, ⛔ not sent.** Raised by the code review of Story 6.27b (round 2, item Y2). BigDev chose to put option B to the
 > Panel and to keep option A in the code until the Panel rules. ⛔ No engineering choice is bundled into this note.
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 8); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED: C** — [`2026-11-27-521`](../../.decision-log.md#decision-2026-11-27-521) (Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / agenda"* · *"8. Q C"*). Our suggestion (*"Our reading"* below), ⛔ as built: the code still keeps A, so a build is owed. ⚠ "C" is the C in the table below (B with the warning to the writer) — ⛔ the code review's Y2 (C); the first line's *"option B"* is Y2's lettering. The channel and the time ⛔ recorded. Every line above is kept as written.
 
 ---
 
@@ -14,6 +15,22 @@ wrote it could see those answers?"* That is what the Trust discloses to a staff 
 the neighbours' answers yourselves (`-310` CF2). Saying *yes* would widen that ratified rule; only you can do that.
 
 ---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / agenda"* · *"8. Q C"* — recorded as [`2026-11-27-521`](../../.decision-log.md#decision-2026-11-27-521),
+> committed ALONE (`5527fdb1`).
+>
+> - **C.** The visitor reads the briefing from the person who scheduled the visit and any Super Admin direction addressed to them, and
+>   the writing box carries the warning, word for word: *"The person you are sending has not seen the neighbours' answers. Do not repeat
+>   them here."* (our suggestion). Its cost, as put below, is accepted with it — and, C being "as B", B's cost too, narrowed by the warning.
+> - This widens your 10 October ruling (`-310` CF2) for these two instructions only; `-521` records it as a supersession in part. The
+>   neighbours' answers themselves, and every other staff note, stay hidden from the visitor until their own record is complete.
+> - ⚠ **⛔ Built yet:** the code still keeps option A. Where the change is built is BigDev's (`-521` Consequence 1).
+> - This note carried ⛔ told lines; its other sections stay ours — ⛔ objection recorded, and ⛔ that is NOT a ratification.
+>
+> The ⏳ block below is kept as first written; everything below is kept **unedited** as the question **as it was put**
+> ([[feedback_supersede_never_reinterpret]]).
 
 > ## ⏳ AWAITING PANEL RULING
 >

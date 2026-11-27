@@ -16,6 +16,9 @@ must **label per-clause provenance**.
 
 **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 10); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Whether it was ALSO sent in August is still NOT recorded (the agenda asked BigDev to confirm); ⛔ backfilled. Awaiting ruling. Every line above is kept as written.
 
+**2026-11-27 — NOT YET ANSWERED.** The Panel's answers to the rest of the sitting were relayed by BigDev with *"10. will answer soon."*
+Still awaiting ruling; every line above is kept as written.
+
 > ⚠ **Every recommendation in this note is NON-BINDING.**
 
 > ⛔ **ADR-0002 is RATIFIED and is NOT edited by this note or by any ruling on it.** Its status line

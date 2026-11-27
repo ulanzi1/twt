@@ -5,6 +5,7 @@
 > waits on this note to be built or merged: the change is built as a switch that stays **off** — the fee stays required, exactly as you
 > have ruled — until you rule.
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 2); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED** (Trustee-ratified, DR + KB, relayed by BigDev) — [`2026-11-27-515`](../../.decision-log.md#decision-2026-11-27-515), committed ALONE (`5527fdb1`); the ruling block below. Every line above is kept as written.
 
 ## §0 — the gate
 
@@ -16,6 +17,28 @@ reference:** *"may teachers join, and stay members, without paying the ₹110 fo
 still helped?"*
 
 ---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / agenda / 2. Q1 B, Q2 A, Q3 A, Q4 Field worker will be paid if member has paid the joining
+> fee, that is for sure, but whether they will be paid for bringing member who didn't pay joining fee is out of subject for this system
+> and that will be decided later by us, depending on morale of individual field worker. Therefore, we need report that must mention
+> details of member brought in so that they can be paid if required. For system, build such that field worker will get paid only if
+> member has paid the joining fee within 30 days of joining."* — recorded as
+> [`2026-11-27-515`](../../.decision-log.md#decision-2026-11-27-515), committed ALONE (`5527fdb1`).
+>
+> - **Q1 — B.** Both the joining fee and the yearly renewal are optional until you decide otherwise (our suggestion).
+> - **Q2 — A.** A member who never paid is judged by the day they pressed Submit — no drive if on or after the day of death (our
+>   suggestion).
+> - **Q3 — A.** If the fee is later made required, a free member gets the 3-month grace to pay (our suggestion).
+> - **Q4 — your own answer** (none of A, B, C as put; not our suggestion, which was A). The system pays a field worker only if the
+>   member paid the joining fee within 30 days of joining; whether a worker is paid for a member who did not pay is yours to decide
+>   later, outside the system; and a report of the members each worker brought in is to be built for that.
+> - Not yet settled, and not treated as ruled: what "joining" counts from (our reading: the day of Submit); whether the identity check
+>   and first contribution still apply (our reading: yes, as specified); which details the report shows and who reads it.
+> - The told lines 1–4: ⛔ objection recorded — and ⛔ that is NOT a ratification. Each option's cost, as put below, is accepted with it.
+>
+> The "awaiting" block just below is kept as written. Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 > ## ⏳ AWAITING PANEL RULING
 >

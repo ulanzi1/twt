@@ -482,6 +482,7 @@ Each is the author's recommendation in plain words.
   (B) also while suspended - cost: a suspended worker gets a code that credits nobody.
 - **Q-P1 (the Panel's, NON-BLOCKING, drafted at Task 0.5, sent by BigDev):** a single confirm of the three keys (`-059` B(3)). The
   build does not wait for it; go-live does (Row 48 (i)).
+  - **⭐ 2026-11-27 (`2026-11-27-517`, Trustee-ratified, DR + KB): Q-P1 DISCHARGED** — the Panel confirmed the three keys as built (option A; the note was reported sent 2026-11-05 and went again with the 2026-11-27 sitting agenda). Row 48 (i) is MET. No AD, AC or Task changes; the row stays `done`.
 
 ## Invariants (I)
 
@@ -1159,6 +1160,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1a`, 2026-11-04, on the 
 
 | Version | Date | Note |
 |---|---|---|
+| v1.16 | 2026-11-27 | The Panel RULED Q-P1 (Decision `2026-11-27-517`, DR + KB; relayed *"by DR and KB / agenda"*, item 4 *"4. Q A"*): option A, the three keys and holders as built. Row 48 (i) MET; `deferred-work.md` C6 (i) half discharged, C8 dated. No AC or Task change; no code. Row stays `done`. |
 | v1.15 | 2026-11-06 | LANDED on `main` by fast-forward (PR #324, `06bab925..43295489`). `pnpm ci:local` 38 / 38 at `43295489` on a fresh container; GitHub CI 38 / 38. Row -> `done`. Open: `decision-flow-sync`, the Panel's keys-confirm ruling (go-live only), the un-attested KMS premise; no browser pass since round 2. |
 | v1.14 | 2026-11-06 | First `ci:local` run failed two jobs (the push's database URL; a focus-after-digits test race from round 2, fixed); recorded in round 4's disposition. Row stays `review`. |
 | v1.13 | 2026-11-06 | BigDev: "1" (apply every patch). CR53-CR59 APPLIED, RED-proved, verified on :5461; `-449` corrected by amending its unpushed commit (`50642900` -> `e4ca7981`); round 3 disposition corrected in place with dated notes; pointers added (Names table, Task 5.2, the OWNER lines). Row stays `review`. |

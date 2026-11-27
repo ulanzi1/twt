@@ -1,3 +1,4 @@
+# last_updated: 2026-11-27s (GOVERNANCE — the 2026-11-26 Panel sitting RULED (DR + KB, relayed by BigDev: "by DR and KB / agenda", items 2–8; "10. will answer soon."), on `governance/panel-rulings-2026-11-27`. Seven Trustee-ratified Decisions committed ALONE first (`5527fdb1`): `-515` the fee note — Q1 B (joining AND renewal optional until the Panel decides otherwise), Q2 A (judged by the day of Submit), Q3 A (3-month grace if re-required), Q4 the Panel's OWN answer (the system pays a field worker only if the member paid the joining fee within 30 days of joining; anything else is the Panel's, outside the system, on a REPORT of members brought in — readings R1–R4 ⛔ ratified); `-516` the drafts note — Q1 C WIDENED (no health answers by the worker, and ⛔ one-time code at the draft's start), Q2 A, Q3 A; `-517` the 13.1a keys A; `-518` the 13.1b code text A; `-519` ADR-0043 + ADR-0045 signed (A) → `ratified`; `-520` the 6.32 family-answers audience A; `-521` the 6.27b instructions C — ⚠ the code still builds A, a build is owed (where: BigDev's). Records (this entry's commit): each note's ✅ RULED block inserted above its kept ⏳ block plus a dated status line; agenda items 2–8 ANSWERED, item 10 NOT YET; the escrow note NOT YET; roster Rows 41 (l), 42 (d), 48 (i), 49 (l), 51 (e) MET by dated lines and Row 58 note (4) dated; ADR-0043 / ADR-0045 headers + the ADR index (drafted 4 → 2, ratified 42 → 44); comments on rows 3-17, 13-5, 13-9, 6-27b, 6-32, 11b-4, 11b-4a, 13-1a, 13-1b and 13-1g; deferred-work, stories 13.1a, 13.1b, 6.27b, 6.32, 6.33, architecture §3.4, PRD §4.10 / §4.14.1, epics dated lines. ⛔ Status value changed; ⛔ code.)
 # last_updated: 2026-11-27r (STORY 6.39a — the real-browser pass RAN on the landed tree (BigDev: "run the real-browser pass"): the installed Chrome 158 driven by Playwright, ⚠ not the agent's Chrome extension (its browser was a Windows machine that could not reach this Mac's `localhost`); the run that counts is the third, on a freshly seeded world — 72 PASS / 0 FAIL (two earlier runs had defects of the script, listed in the story's Debug Log). Roster Row 58 (d) MET for the landed tree and Row 46 (d) MET (dated lines; the re-opened (d) closes). One new LOW finding, `6.39a-BP-W1` (the outcome lines carry no visual emphasis), recorded in `deferred-work.md`, ⛔ fixed. The landing-records commit `fe85f048` passed GitHub CI: `ci.yml` 45989764523 = 41/41 success on exactly `fe85f048`. Records only — no code changed; the row stays `done`. The launcher, the dev server and the probe were stopped and the throwaway launcher spec removed; the story container `twt-6-39a-pg` is ⛔ removed.)
 # last_updated: 2026-11-27q (STORY 6.39a — LANDED on `main` by fast-forward (`scripts/land.sh 356`; PR #356, `6536b8bb..78f07317`, 33 commits, SHAs unchanged by the push), row `review` → `done`. Evidence (ADR-0047 cl.2): the PR run `ci.yml` 45981502873 = 41/41 success on exactly `78f07317`; the push to `main`: `ci.yml` run 45985371339 = 41/41 success on exactly `78f07317` (about 30 min); `code-escrow-mirror` (45985371304) red as on every push — `MIRROR_DESTINATION_URL` and `MIRROR_PUSH_CREDENTIAL` still unset (Story 0.3 Task 8), not part of the gate. `ci:local` 41/41 on a fresh database on the same tip, before the push. Roster: Row 58 (a) and (b) MET; (d) stands as MET for the code-review pass's tree ONLY (the changes after it are ⛔ seen in a real browser); (c) and (e) unchanged — go-live matters, and merge is not go-live. Row 46: (b) MET (both PQ1 edges on `main`); (d) RE-OPENED by its own rule — a later change to the console re-opens it, and `-513` item 1's line has component tests only. Decisions `-513` and `-514` (author-commits, BigDev) were committed ALONE before what cites them. No open decision, patch or owner question remains; the review passes' deferrals stay recorded with triggers in `deferred-work.md`. This records-only commit is pushed to `main` after main's CI finished.)
 # last_updated: 2026-11-27p (STORY 6.39a — OPEN ITEMS CLOSED (BigDev: "close all open items, why are we even holding up?", then three dialogs) on `story/6-39a-…` (row `in-progress` → `review`): K1-P BUILT on the owner's words — decision `2026-11-27-513` item 1, committed ALONE first: when the bank's date decides, the console says "This result uses the bank's date shown below, not the date the fee was recorded." under the outcome line; the finance officer's page's ten labels and the outcome prefix approved as written (`-513` item 2); three scope widenings of approved sentences approved as built (`2026-11-27-514`, committed alone) — five `deferred-work.md` items DISCHARGED by dated lines, none deleted. A named `auth.csrf_origin` leg added: `-514`'s "already pins the three" was loose for that case (stated; the entry unedited). No open decision, patch or BigDev-owned question remains. Still deferred, none blocking a merge: K15–K30 and L11 / M6 / N11 (each with a trigger — other stories' code, shared machinery, or words nobody has asked for yet); roster Row 58 leg (e) — the production step-up (R4) is a go-live gate, and merge is not go-live. Verified: admin tsc, eslint, 2,549 tests, the microcopy gate. `ci:local` re-run on a fresh database on the final tip. Not pushed at the time of writing.)
@@ -21606,6 +21607,11 @@ development_status:
   # 3-17 — a per-Pariwar switch, default "fee required" (today's ruled state). ON: payment skippable; submission enters lock-in (15
   # days); renewal never graces; the door admits a submitted non-payer; 6.39's fee half becomes a submission-date check. Turned ON
   # only after the Panel rules (it would replace -424 Q1 (b), -430 Q1, -473 Q1). AI-10-1 Policy meaning mandatory.
+  # ⭐ 2026-11-27 (`2026-11-27-515`, Trustee-ratified, DR + KB): the fee note RULED — Q1 B (joining AND renewal optional until the Panel
+  # decides otherwise; 15-day lock-in from Submit), Q2 A (no drive if Submit was on or after the day of death), Q3 A (if re-required: the
+  # 3-month grace — ⚠ unreachable until 3-14 builds the lock_in_expired producer). The Panel no longer gates the build; turning the switch
+  # ON still waits on the Board's Niyamavali §2.1 (c) / §2.2 amendment (before or after — unsettled) and counsel. `-424` Q1 (b), `-430` Q1,
+  # `-473` Q1 are SUPERSEDED only while the switch is on. Readings R1–R4 of `-515` are NOT ratified.
   3-17-joining-and-renewal-fee-optional-switch: backlog
   epic-3-retrospective: done
 
@@ -22023,6 +22029,7 @@ development_status:
   # ⭐ 2026-10-10 SPLIT (`2026-10-10-305` §2 item 1; BigDev: "Four parts (Recommended)"): the row above is STORY 6.27a (keeps its key — the
   # rulings cite it) and holds the ONE shared PM1–PM25 block. b / d stay `backlog` until 6.27a is `done`; c (sending) stays `backlog`
   # until 6.27b, 6.27d AND row 6-30 are `done` — so every safety piece exists before a real answer arrives.
+  # ⭐ 2026-11-27 (`2026-11-27-521`, Trustee-ratified, DR + KB): the Y2 note RULED — C (the briefing and a direction addressed to the visitor are shown, with the writer's warning); ⚠ the code keeps A — a build is OWED, ⛔ placed (BigDev's). Row stays `done`.
   6-27b-peer-mesh-warnings-wait-and-approvers-view: done
   6-27d-inspector-discrepancy-at-completion: done
   # ⭐ 2026-10-12 ANNOTATION (Story 6.34 Task 0.4, `2026-10-12-322` C6 — the comments above kept as written): 6.27c's start condition
@@ -22086,6 +22093,7 @@ development_status:
   # ⭐ 2026-10-27 CREATED (`bmad-create-story 6.32`, ledger `2026-10-27r`): story file `6-32-inspector-questionnaire-at-the-ground-inspection.md` v1.0, IQ1–IQ12 PROPOSED;
   # ⛔ "offline saving" is NOT promised (IQ8); the "any other claim" question (6.28 OP14 (d)) waits for row 6-33's chain unless BigDev rules otherwise (IQ2).
   # ⭐ 2026-10-28 DECIDED (ledger `2026-10-28h`): IQ1–IQ13 all as recommended by `2026-10-28-413` (author-commit, alone). The 2026-10-10 "offline saving" above is CORRECTED by it (IQ8 A: each answer saves as chosen, retried in memory, ⛔ browser storage; true offline deferred). The head's letter is recorded, ⛔ a condition of approval (IQ13 A). Go-live: roster Row 42.
+  # ⭐ 2026-11-27 (`2026-11-27-520`, Trustee-ratified, DR + KB): the Panel ANSWERED the IQ7 confirm — A, the family's answers have the neighbours' readers (CF2); as built, ⛔ code change. Roster Row 42 (d) MET; (a), (b) open.
   6-32-inspector-questionnaire-at-the-ground-inspection: done
   # ⭐ 2026-10-30 CREATED (`bmad-create-story 6.33`, ledger `2026-10-30a`): story file `6-33-questionnaire-editor-versions-and-approval.md` v1.0, QE1–QE17 PROPOSED.
   # ⭐ 2026-10-30 VALIDATED (ledger `2026-10-30b`): story v1.2 (the 30a commit carried v1.1) — QE6 drops the distinct-approver rule (matches `-304`'s "or their own"); QE14 now three questions.
@@ -22753,6 +22761,7 @@ development_status:
   11b-3b-sahyog-vivran-named-identity-render-layer: done
   # ⭐ 2026-10-27 (ledger `2026-10-27e`): the TalkBack-Hindi pass (AC13) RECORDED on the emulator; T1–T3 fixed on `fix/talkback-session-2026-10-27`. Open: the photo picker / alt text, Hindi-script typing, rotated / HEIC, VoiceOver.
   11b-4-memorial-authorship-surface-family-writes-the-story: done
+  # ⭐ 2026-11-27 (`2026-11-27-519`, Trustee-ratified, DR + KB): ADR-0043 RATIFIED (the Panel note of 2026-11-26, agenda item 6, A) - roster Row 41 (l) MET; Row 41's other legs unchanged; the switch stays off; row stays done; no code.
   11b-4a-family-memorial-public-render: done
   11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice: done
   # ⭐ 2026-10-29 (Story 11b.5, Decision `2026-10-29-420` MV2): row `11b-5a` MINTED by 11b.5 — ⛔ not in the epic's story
@@ -23216,6 +23225,7 @@ development_status:
   # 2026-11-04k: records-only review round 1; BigDev chose option 2. R1–R14 remain open; no review patches or implementation applied.
   # 2026-11-04l: IMPLEMENTED on the branch (R1–R14 resolved, -447); ci:local 38/38; stays in-progress — Task 9.4 (browser pass) not run.
   # 2026-11-04m: the browser pass ran (Mac Chrome); every task done — review.
+  # ⭐ 2026-11-27 (`2026-11-27-517`, Trustee-ratified, DR + KB): the Panel RULED the keys confirm (agenda item 4, "4. Q A") - A, the three keys as built; Row 48 (i) MET; Q-P1 discharged; no code.
   13-1a-field-worker-approval-and-code-hand-over: done
   # 2026-11-06e: CREATED (v1.0); Q-1..Q-5 open with BigDev; no code before Task 0.3.
   # 2026-11-06f: VALIDATED (v1.2); Q-1..Q-7 open with BigDev; no code before Task 0.3.
@@ -23224,6 +23234,7 @@ development_status:
   # 2026-11-06i: the Panel confirm is WRITTEN, not sent; send only after Row 49 exists (Task 0.4).
   # 2026-11-06j: Tasks 0.4, 0.5 done: Row 49 appended, annotations in; the confirm can now be sent; no code yet.
   # 2026-11-06k: DEV COMPLETE (v1.6); review; ci:local 38/38 at a2040674 on a fresh container; committed on the story branch, not pushed.
+  # ⭐ 2026-11-27 (`2026-11-27-518`, Trustee-ratified, DR + KB): the Panel confirm SENT with the sitting agenda and RULED A ("5. Q A") - the text as built; Row 49 (l) MET; Q-6 discharged; no code.
   13-1b-field-worker-code-by-sms: done
   # 2026-11-07d: CREATED (v1.0); Q-1..Q-5 open with BigDev; no code before Task 0.3.
   # 2026-11-07e: VALIDATED (v1.1); 14 items applied; Q-1..Q-5 open; no code before Task 0.3.
@@ -23283,6 +23294,7 @@ development_status:
   # 2026-11-12j: full ci:local PASSED 39/39 on a fresh container (v1.12); row stays `review` (Task 8, landing, still owed).
   # 2026-11-12k: committed - the review code `8ac5510a`, then these records (v1.13); row stays `review`; NOT pushed.
   # 2026-11-12l: LANDED on `main` (PR #328, `cae6ac65..54ff8a67`, fast-forward); row `review` -> `done` (v1.14); Row 51 (c) stays open until the emails are deployed.
+  # ⭐ 2026-11-27 (`2026-11-27-519`, Trustee-ratified, DR + KB): ADR-0045 RATIFIED (the Panel note of 2026-11-26, agenda item 6, A) - roster Row 51 (e) MET; (c), (d), (f) open; row stays done; no code.
   13-1g-field-worker-move-notices-by-email: done
   # ⭐ 2026-11-16b 13-1h ADDED by BigDev (13.1f's Q-2: "For Q2 combine mobile number, PAN number and Aadhaar last 4 digits for indetification";
   # "Mobile OR PAN", "Both required", "New sibling story"; to be recorded in 13.1f's decision -464): a returning field worker found by the same
@@ -23295,6 +23307,10 @@ development_status:
   13-3-field-worker-mobile-first-dispatch-app-field-worker-dispatch-scheduler: backlog
   13-4-attribution-analytics-dashboard: backlog
   # 2026-11-21 (sprint-change-proposal-2026-11-21-registration; author-commit `2026-11-21-482`): if the fee becomes optional (3-17), "qualified acquisition" (FR-84: KYC + ₹110 paid + first contribution) needs a new rule — in the fee Panel note.
+  # ⭐ 2026-11-27 (`2026-11-27-515` Q4, Trustee-ratified, DR + KB — the Panel's own answer): the system pays a field worker ONLY if the member
+  # paid the joining fee within 30 days of joining; paying for a member who did not is the Panel's, outside the system, on a REPORT of the
+  # members each worker brought in — a new build with no row yet (where: BigDev's author-commit). NOT ratified: "joining" = Submit (R1);
+  # FR-84's KYC + first contribution still apply (R2); the report's details and readers (R3 — a disclosure, to settle before it is built).
   13-5-commission-payment-trigger-qualified-acquisition-gated-tds-194h-deduction: backlog
   13-6-field-worker-anti-fraud-throttling-assistive-not-auto-punitive-invariant: backlog
   13-7-invite-share-sheet-with-v1-caps-fr-87-v1-m-promotion: backlog
@@ -23303,6 +23319,10 @@ development_status:
   # 13-9 — the worker fills a DRAFT (details, PAN, masked Aadhaar, selfie in-app; their code attached); the person logs in on their
   # own phone, reviews, ticks terms / declaration / health declaration THEMSELVES, pays (or not, 3-17), submits. Needs 13-3. Go-live
   # waits on the Panel (a worker holding documents before consent; draft retention) and counsel (the worker as a data processor).
+  # ⭐ 2026-11-27 (`2026-11-27-516`, Trustee-ratified, DR + KB): the drafts note RULED — Q1 C WIDENED (the worker fills details, workplace,
+  # ID photos, nominees; ⛔ the health answers, which the person gives on their own phone; and ⛔ one-time code at the draft's start —
+  # "Field workers should ask for document and start , no OTP required"), Q2 A (unsubmitted draft deleted after 30 days), Q3 A (the person
+  # sees the worker's name; after Submit the worker sees progress only). The Panel half of go-live is MET; counsel and the privacy policy stay.
   13-9-field-worker-assisted-registration-draft: backlog
   epic-13-retrospective: optional
 

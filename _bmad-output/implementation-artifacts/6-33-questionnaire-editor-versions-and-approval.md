@@ -1319,6 +1319,7 @@ first; record mutants in the Debug Log.
   (at `bc1ec53c` PM23 ran (a)–(f), (e) = "Who approves a version"); 6.27 was re-lettered later. ⛔ edited.
 - The IQ7 confirm note for 6.32 (`trustee-panel-routing-note-2026-10-28-6-32-family-answers-audience.md`) is drafted, ⛔ sent — unrelated to
   this chain; ⛔ merged into QE14's note.
+  ⭐ 2026-11-27: that note was sent (with the 26 November sitting's agenda) and answered — A, `2026-11-27-520`. The lines above are kept as written.
 - ⚠ **2026-10-30 — `2026-10-30-423`** (Trustee-ratified; on branch `governance/erasure-after-death-note`, ⛔ yet on this branch — cite it
   as plain text, its anchor 404s here): once a claim is filed for a member's death their personal data is ⛔ erased (unless the report is
   closed because the member is alive), and a claim for a never-verified, withdrawn, terminated or erased member is refused at intake — built

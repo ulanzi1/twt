@@ -1,9 +1,9 @@
 # ADR-0045: The field worker move notice email — a third caller of ADR-0040's Q2 and one new identity read (Q4), amending ADR-0040's amendment of ADR-0009 §5
 
-> **Status:** drafted
-> **Date:** 2026-11-12 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-11-27 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** —
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — **relayed by BigDev, 2026-11-27**: *"by DR and KB / agenda"*, *"6. Q A"* (the Panel note `trustee-panel-routing-note-2026-11-26-adr-ratifications.md`, sent with the sitting agenda as item 6; option A, *"Sign it off (two trustees)."*). ⚠ The initials DR + KB are expanded by this log's convention. ⛔ No consent sheet was written; the evidence is the relay, recorded as given. Logged in `.decision-log.md` Decision `2026-11-27-519`
 > **Supersedes:** — (⛔ not a whole-ADR supersession: this ADR AMENDS ADR-0040's amendment in its body — the ADR-0004 / ADR-0040 / ADR-0043 in-body form; ADR-0040 stays `ratified`)
 > **Superseded by:** —
 
@@ -127,3 +127,4 @@ Load-bearing details:
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-11-12 | (initial draft) | BigDev (Solo Builder) | Authored under Story 13.1g (Decision `2026-11-12-463`). |
+| 2026-11-27 | drafted → ratified | DR + KB (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev | **Ratified.** The Panel note `trustee-panel-routing-note-2026-11-26-adr-ratifications.md` (agenda item 6, sent 2026-11-27) answered **A** — *"Sign it off (two trustees)."* — for this ADR and ADR-0043; option A's cost was accepted with it, including *"if email has been down for three or more days, the missed notices are not emailed later"* (the Q-2 rule above is the text signed). `.decision-log.md` Decision `2026-11-27-519`. The amendment of ADR-0040's amendment (Q2's third caller; Q4; the set CLOSED) is now in effect. ⛔ Production grant follows (roster Rows 24 (b), 26). The body is kept as written. |

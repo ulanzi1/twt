@@ -17,6 +17,9 @@ STATUS: ready-for-dev (v1.3). **IQ1–IQ13 DECIDED** by [`-413`](../../.decision
 (0.1 rebased onto `origin/main`; 0.2 answered; 0.3 `-413`; 0.4 records). ⛔ No Panel question is NEEDED to build; the NON-BLOCKING IQ7 confirm is
 DRAFTED for BigDev to send (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-6-32-family-answers-audience.md`); roster Row 42
 is minted. Implementation starts at Task 1.
+⭐ 2026-11-27 (`2026-11-27-520`, Trustee-ratified, DR + KB): the IQ7 confirm note was SENT (with the 26 November sitting's agenda) and
+ANSWERED — A, as built: the family's answers have exactly the neighbours' readers, and the inspector reads back what they typed. ⛔ AC or
+Task change. Roster Row 42 (d) MET. The lines above are kept as written.
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
 emphasis · ⚠ = hazard.
@@ -314,6 +317,8 @@ as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-31
   who typed an answer reads it back (own record, decrypted in the handler, audited). *Match / widen / narrow:* **MATCH in audience** (`-310` CF2 for the
   neighbours' answers), **NEW in source** (CF2 is silent on the family's) — and `-304` Q3 A reads *"shown to staff as context only"* of the answer the
   inspector's question mirrors. A NON-BLOCKING confirm to the Panel is recommended (Task 0.4), ⛔ blocking: the data is held dark behind Row 42 (a) anyway.
+  ⭐ **2026-11-27 — CONFIRMED by the Panel** (`2026-11-27-520`, Trustee-ratified, DR + KB: *"7. Q A"*): IQ7 (A)'s audience is now the
+  Panel's; a change to it is a new Panel question. The mechanism (the ONE assembler after the hide; ⛔ the claim-wide list) stays ours.
   (B) store and compare ONLY — ⛔ approver read. *Cost:* the family's account never reaches the staff the Panel meant it for ("context") — the answers
   become write-only except for the inspector's own screen and the difference prompt.
 - **IQ8 — ⭐ BigDev: "OFFLINE saving at the visit" (the 2026-10-10 row scope).** G10: no substrate, no ruling, completion cannot be offline. (A, recommended)
@@ -1058,3 +1063,4 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 | 2026-10-29 | 1.7 | BigDev: *"S22 A, S0 A"*. **S0** — rebased onto `origin/main` `282bdd33`, the migration renumbered `0188` → `0189` (`9eec3559`), ledger `-28l` → `-28w`, SHA map in S0. **S22 (A)** — the pointer built (`84041e8f`), patch-reviewed and fixed (`ca8d2bd4`, `9ad9c66d`). `ci:local` **36 / 36** on a FRESH container `twt-632-ci-pg` (:5450) at `9ad9c66d` (a first run 35 / 36 — AC13's read pin, fixed). Row STAYS `in-progress` (R7 — the real-browser pass). |
 | 2026-10-29 | 1.6 | Second code review (`bmad-code-review 6.32`, BigDev: *"2, chunks in parallel"*; two chunks × three layers at `e9676496`): 1 decision-needed (S22 — the family account on an INHERITED inspection, held for BigDev), 21 patch (1 HIGH — a refused save trapped the page), 9 + 1 deferred, 11 dismissed, S0 (the `0188` renumber at the rebase). All 21 patches APPLIED and each fix diff reviewed adversarially; the patch reviews' findings fixed (see Resolution). 0188 edited in place (S18) — container recreated. Row STAYS `in-progress` (R7, S0, S22). |
 | 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |
+| 2026-11-27 | 1.9 | **The Panel ANSWERED the IQ7 confirm — A** (`2026-11-27-520`, Trustee-ratified, DR + KB; relayed by BigDev: *"by DR and KB / agenda"* · *"7. Q A"*; the note sent with the 26 November sitting's agenda, channel and time ⛔ recorded). As built: ⛔ code, AC or Task change. Dated lines under the Status paragraph and IQ7; roster Row 42 (d) MET. |

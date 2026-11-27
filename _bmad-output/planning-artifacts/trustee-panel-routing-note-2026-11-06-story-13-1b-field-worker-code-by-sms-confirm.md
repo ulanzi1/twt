@@ -1,5 +1,10 @@
 # Trustee Panel routing note — Story 13.1b: texting a newly approved field worker their code, for the Panel to confirm
 
+> ✅ **2026-11-27 — RULED: A** — Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev against the sitting agenda. **Verbatim as relayed:** *"by DR and KB / agenda"*; for this item, *"5. Q A"* — recorded as [`2026-11-27-518`](../../.decision-log.md#decision-2026-11-27-518), committed with the sitting's other decisions, before the records (`5527fdb1`). ⚠ The channel and the time are NOT recorded; whether the text sent is identical to this file is NOT recorded.
+> - **The question — A.** Confirm the text, as being built: one text, when a Pariwar Admin approves the worker; it is never sent again; an officer can still read the code out; no officer is told if it fails (our suggestion; as built). Option A's cost, as put below, is accepted with it; options B and C were not taken. The Panel did not say the question was not theirs.
+> - The text's words and language stay BigDev's (shown, ⛔ ratified); the §0 "Not asked here" items stay with their owners (counsel's questions are ⛔ answered by accepting a cost that names them). The read-out route this text relies on was confirmed the same day ([`2026-11-27-517`](../../.decision-log.md#decision-2026-11-27-517)).
+> - Roster Row 49 leg (l) is MET on this ruling (`-452` item 2); no other leg moves. The ⏳ AWAITING block below is kept as written, and everything after it is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+
 > ## ⏳ AWAITING PANEL RULING — WRITTEN, NOT SENT
 >
 > **NOT SENT.** Written on 2026-11-06. Nothing here has been shown to the Panel until BigDev sends it and says so
@@ -13,6 +18,7 @@
 > Panel is switching the text on (the go-live checklist's item for your confirm). Nothing is live today. Registering and approving field workers does not wait
 > for this note: an officer reading the code out is the route already built, and its permission is before you in the keys note.
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 5); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED: A** ([`2026-11-27-518`](../../.decision-log.md#decision-2026-11-27-518), Trustee-ratified, DR + KB, `5527fdb1`; relayed *"by DR and KB / agenda"*, *"5. Q A"*) — recorded in the ✅ block above this one. Every line of this block is kept as written.
 
 ---
 

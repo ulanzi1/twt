@@ -1085,6 +1085,7 @@ TSCT-cohort honor channel; fire-and-forget mirror of alerts.
   > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450` — author-commit). Annotated, not rewritten.** A text sending a newly
   > approved field worker their own code is NOT on this list. It is to be put to the Panel as a non-blocking confirm (drafted, not sent; BigDev's Q-6 A; a probable widening, not a settled one; note `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) -
   > not ruled; a ruling is recorded here as a further annotation. Go-live: launch-gate Row 49.
+  > ⭐ **ANNOTATION 2026-11-27 (Story `13-1b` Task 0.6, `2026-11-27-518` — Trustee-ratified, DR + KB). Annotated, not rewritten.** The Panel CONFIRMED the text that sends a newly approved field worker their own code (option A; the note sent 2026-11-27 with the sitting agenda). Read with this list as closed (the author's reading), it WIDENS the approved plan, on the `2026-09-27-255` F7 shape: one text per worker, once, to a named number — ⛔ a return of bulk-alert SMS. Go-live: launch-gate Row 49.
 - Vernacular video alerts (WI-16) — v2.
 - TTS regional language read-aloud (WI-15) — v3.
 
@@ -1266,6 +1267,7 @@ The trust touches multiple regulatory regimes despite the "facilitator, not inte
   > ⚠ **ANNOTATION 2026-11-20 (Story `14-3` Task 0, `2026-11-20-467`). Annotated, not rewritten.** As read on 2026-11-20 the DPDP Act registers Consent Managers only (ss.2(g), 6(9)); no registration of an ordinary Data Fiduciary was found, and no "threshold" awaits clarification (Significant status is by notification). Whether any registration duty exists is asked of counsel (Story 14.3's counsel file, question 1 (c) — written, not sent). This line and roster Rows 10 / 11 are not changed.
 - **TRAI compliance — partial.** Bulk-DLT compliance de-scoped (no bulk-alert SMS). **DLT-transactional (PE/OE) registration required** for OTP-SMS, step-up-OTP-SMS, transactional-fallback-SMS, and degraded-mode cycle-open-bridge SMS — committed as operational prerequisite (architecture §2.2, §3.4). In-app notification rules may apply where notification content overlaps with regulated categories.
   > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450`). Annotated, not rewritten.** This list names four uses; a field worker's code text is not one. See §4.10's annotation of the same date: to be put to the Panel as a confirm (drafted, not sent), not ruled.
+  > ⭐ **ANNOTATION 2026-11-27 (Story `13-1b` Task 0.6, `2026-11-27-518` — Trustee-ratified, DR + KB). Annotated, not rewritten.** The field worker's code text is now Panel-confirmed (see §4.10's annotation of the same date); its DLT-transactional registration (templates 25 / 26) is a further prerequisite, not yet started — launch-gate Row 49 (a).
 - Consumer Protection Act 2019 — trust's "service" is in scope; internal appeal flow (FR-43A) is the mitigation.
 
 **Owner:** Legal counsel + Trustee Panel. **Blocker for:** trust account opening, Phase 0 → Phase 1 transition. See OQ-7 (DPO timing) and OQ-16 (regulatory surface sign-off).

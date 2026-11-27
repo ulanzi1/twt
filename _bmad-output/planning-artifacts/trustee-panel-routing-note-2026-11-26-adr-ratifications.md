@@ -4,6 +4,24 @@
 > the agenda `trustee-panel-sitting-2026-11-26-agenda.md`.
 > **Prepared by:** BigDev (Solo Builder).
 > **2026-11-27 — SENT** to the Panel with the sitting agenda (`trustee-panel-sitting-2026-11-26-agenda.md`, item 6); BigDev: *"agenda sent"*, and confirmed every note named in the agenda went with it. ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting ruling. Every line above is kept as written.
+> **2026-11-27 — RULED** — [`2026-11-27-519`](../../.decision-log.md#decision-2026-11-27-519) (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti, relayed by BigDev): **A** — ADR-0043 and ADR-0045 signed off. ⚠ The channel and the time of the ruling are NOT recorded. "Awaiting ruling" above is kept as written; the ruling is in the block below.
+
+---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / agenda"* and, for this note, *"6. Q A"* — recorded as
+> [`2026-11-27-519`](../../.decision-log.md#decision-2026-11-27-519), committed ALONE (`5527fdb1`, with the sitting's `-515` to `-521`).
+>
+> - **The question — A, for each of the two** (our suggestion, *"A for both"*): **ADR-0043** (the memorial take-down approver email)
+>   and **ADR-0045** (the field-worker move-notice email) are signed off by two trustees and marked `ratified` with their names — in
+>   each ADR's header, in the ADR index and on roster Row 41 (l) and Row 51 (e). Option A's cost, as put below, is accepted with it.
+> - ⚠ One letter was relayed for a table headed "for each of the two"; it is read as A for both, on the agenda's *"A (sign both)"*.
+> - **Told, not asked:** ADR-0044 and ADR-0046 were ⛔ signed and stay `drafted`. ⛔ Objection to the told lines is recorded — and
+>   ⛔ that is NOT a ratification; they stay ours.
+>
+> The block below is the one first written; it is kept as written. Everything below it is kept **unedited** as the question **as it
+> was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

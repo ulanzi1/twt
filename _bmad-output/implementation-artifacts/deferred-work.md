@@ -4,6 +4,19 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the fix-diff review round 3 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **DL11's `stale` line now also answers a reload with ⛔ write** — *"This claim changed since you opened it. It has been reloaded — check
+  again."* is shown when a reload moves, drops, or changes the tokens of the row whose form is open (round 2 G2, round 3 H1 / H2). DL11
+  approved it as the refusal of a write. True for a move and a token change; for a DROPPED row (denied, window closed, ⛔ longer held) "check
+  again" points at a row no longer listed, where DL11's `not_held` / `window_closed` lines would be exact but the page cannot tell which.
+  A **scope question for BigDev**, with `-512` D2's widening (round 2). **Trigger:** BigDev's next look at the page's words.
+- **An open row pushed past the list's cap reads as a change** — newer held claims can push it off the first section (its cap); the form
+  closes with the `stale` line though the claim did not change, and the row is no longer reachable on screen. **Trigger:** the list's cap
+  is reached in practice.
+- **`no_fee_receipt` does ⛔ reload the list** (pre-existing) — a state change, but ⛔ in `FEE_BANK_DATE_RELOAD_CODES`: the form stays open
+  and each press gets the same refusal until a reload. **Trigger:** row `3-17` (it makes `fee_receipt_id` nullable).
+
 ## Deferred from: the fix-diff review round 2 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 - **`-512` D2's line is shown for answers `-512` does not name** — a 429, or a 4xx with ⛔ bank-date code (`http.404`), reads *"The bank

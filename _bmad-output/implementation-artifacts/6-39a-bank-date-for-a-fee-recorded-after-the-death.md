@@ -864,6 +864,11 @@ Case Hunter and Acceptance Auditor with the tree, read-only), plus the real-brow
   reads as "may not have been recorded" (true-but-loose; `-512` names only a write with ⛔ typed answer); Edge 5 — a server-refused field
   gets ⛔ `aria-invalid`; Blind 10 — the concurrency spec leaves its superuser-seeded members / receipts (a fresh tenant per file) —
   `deferred-work.md`, fix-diff section.
+- Dismissed after checking the code: Blind 4 / 8 (the preview names only a record it CONSIDERED — `considerableFeeBankDate`, so "not
+  earlier" and the read audit's id are exact); Blind 5 (the panel's Cancel is outside the locked fieldset); Blind 7 (PQ1's payment is
+  recorded `new Date()` — the computed outcome is the stored one); Blind 11 / Edge 7 (the container was recreated — the composite-FK
+  spec ran there).
+
 #### Fix-diff review, round 2 (2026-11-27 — the committed fix `76afca9d`, BigDev: "run adversarial review on patches applied")
 
 The same three fresh-context layers on the committed fix (the Blind Hunter on the diff alone; the Edge Case Hunter and the Acceptance
@@ -897,11 +902,39 @@ mutation-checked (the fix reverted ⇒ the leg red).
   first half (`recordedTruncated` can over-report in the two-statement race — the safe direction); Blind 11 (with ⛔ receipt the read audit
   and the preview agree); Blind 12 (deferred, Edge 4). F8's de-duplication and `auditReason`'s `stale` stay without a leg (a race between
   two statements; a stream concurrency error at the API) — stated, ⛔ claimed tested.
+- ⚠ **Corrected 2026-11-27 (fix-diff review round 3 — the Acceptance Auditor):** "each fix's leg mutation-checked" (above, Change Log
+  1.11 and ledger `2026-11-27i`) OVERSTATED: G4 has ⛔ leg (the freeze's commit timing is not observable in jsdom) and G7 is a comment
+  only. The legs of G1, G2, G3, G5 and G6 were mutation-checked; G1's leg's sync point did not wait on a rendered change (round 3 — H3).
 
-- Dismissed after checking the code: Blind 4 / 8 (the preview names only a record it CONSIDERED — `considerableFeeBankDate`, so "not
-  earlier" and the read audit's id are exact); Blind 5 (the panel's Cancel is outside the locked fieldset); Blind 7 (PQ1's payment is
-  recorded `new Date()` — the computed outcome is the stored one); Blind 11 / Edge 7 (the container was recreated — the composite-FK
-  spec ran there).
+#### Fix-diff review, round 3 (2026-11-27 — the round-2 fix `abfd2592` only, BigDev: "run round 3")
+
+The same three fresh-context layers on `abfd2592` (4 files) and its records `0342a561`. Nothing HIGH; four MEDIUM, all in one family —
+the open form vs a reload that changes its row. Each re-checked in code.
+
+- [x] [FixReview3][Patch] H1 (Blind 2, Edge 1) — A CORRECTABLE refusal (the form stays open — `reference_mismatch`, `in_future`, a 400),
+  then a reload that moves or drops the row: the form closed but the OLD line stayed ("check the reference" for a form that is gone) —
+  a move or a drop now ALWAYS shows DL11's `stale` line [`FeeBankDatesPage.tsx`; a leg — red with the old guard]
+- [x] [FixReview3][Patch] H2 (Edge 2, Blind 4, Edge 4) — A reload that changed the open row's tokens IN PLACE (another officer's record, a
+  District Admin's re-check; a re-open before the reload landed) left the form on the opened tokens: the row showed the new record, the
+  form ⛔ said so, and every press was refused `stale`. The form now SAYS it (DL11's `stale` line, naming the claim) and then takes the
+  new tokens, keeping the typed fields — the next press is on what was shown. ⚠ This SUBSUMES G1's capture: the press always sends the
+  tokens on screen and a change is always said; reverting G1 alone is now harmless, reverting H2 turns its leg red [`FeeBankDatesPage.tsx`;
+  the G1 leg rewritten]
+- [x] [FixReview3][Patch] H3 (Blind 1, Auditor 3, Blind 6) — The G1 leg's sync point (`'Patna'`) was the fixture's default — the refetched
+  row now shows a NEW district and the leg waits on it; a leg for a DROPPED row (mutation-checked with a real mutant — the first mutant
+  was equivalent); `focusManager` reset in `afterEach` (a failed leg must ⛔ leave it forced); the refusal-focus leg's "weak" comment
+  removed (the pre-focus is gone) [`fee-bank-dates.test.tsx`]
+- [x] [FixReview3][Patch] H4 (Auditor 1, 4) — records: the round-2 subsection moved BELOW round 1's dismissals (⛔ word changed); the
+  "each leg mutation-checked" claim corrected by a dated line (above)
+- [x] [FixReview3][Defer] the `stale` line now also answers a reload with ⛔ write (a silent move, a drop, a token change) — a WIDENING of
+  DL11 like `-512` D2's (for a DROPPED row, *"It has been reloaded — check again"* points at a row no longer listed) — BigDev's scope
+  question; Edge 3 — an open row pushed past the list's cap reads as a change; Edge 5 — `no_fee_receipt` does ⛔ reload (pre-existing) —
+  `deferred-work.md`, round-3 section.
+- Dismissed after checking the code: Blind 3 (busy cannot stick: the press is a discrete event React renders synchronously, before any
+  promise settles, and `onBusyChange(true)` itself forces that render — the Edge Case Hunter traced the same); Blind 5 (`StepUpPanel` has
+  ⛔ focus code — G3's leg is red without the effect); Blind 7 (a 429 closing the form — `-512` D2's widening, deferred in round 2); Blind 8
+  (⛔ announcement keys on `seq` alone — the notice node is re-keyed and focused).
+- ⚠ ⛔ Observed in a browser: H2 (a reload under an open form needs a focus refetch, which the tool cannot produce — a component leg only).
 
 ## Dev Notes
 
@@ -1080,6 +1113,8 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
   `DATABASE_URL` = its port):** 41 of 41 jobs green, `integration-tests` included (11m30s for that job).
 - **`ci:local` (2026-11-27, fix-diff review round 2 — the container recreated from scratch again):** 41 of 41 jobs green,
   `integration-tests` included; `fee-bank-dates.test.tsx` 33.
+- **`ci:local` (2026-11-27, fix-diff review round 3 — the container recreated from scratch again):** 41 of 41 jobs green,
+  `integration-tests` included; `fee-bank-dates.test.tsx` 35 (three consecutive runs green).
 - **Whole suites, live, on the story DB:** domain 564 files / 9040 tests; API 254 / 255 files (3491 tests) — the one red was
   `medical-disclose.spec.ts`'s random-base64 `ckd` collision (known failure #13), 21 / 21 on re-run; admin 116 / 2517; contracts 1836.
 
@@ -1244,3 +1279,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 | 2026-11-27 | v1.9 | Dev done (`bmad-dev-story 6.39a on worktree`; ledger `2026-11-27g`): Tasks 0.1 and 1–6 ticked; Agent Model, Debug Log (the container, the trigger incident, `ci:local` 40 / 41 with the one contention red), Completion Notes, File List; Status `in-progress → review`. The real-browser pass recorded un-attested; one edit to 6.39's specs beyond AC5's kinds stated, ⛔ hidden. |
 | 2026-11-27 | v1.10 | Code review fix pass (ledger `2026-11-27h`): D1 / D2 resolved by `2026-11-27-512`; the 33 patch items applied and ticked; the PATCH diff reviewed by three fresh-context layers and the real-browser pass — ten more fixes F1–F10 and five LOW defers (the Review Findings' fix-diff subsection, `deferred-work.md`); Completion Notes AC13 corrected (the undercount) and AC12 dated (the pass RAN — roster Row 58 (d) MET); Debug Log: the browser pass, `ci:local` 41 / 41 on a fresh container. Status stays `review` — `done` waits for the landing. |
 | 2026-11-27 | v1.11 | Fix-diff review round 2 (BigDev: "run adversarial review on patches applied"; ledger `2026-11-27i`): the three layers on the committed fix `76afca9d` and the records `7bbb0e9b` — G1 (HIGH, pre-existing, widened by F1: the tokens read at press time — now the row as opened, and a reloading answer closes the form) and G2–G7 fixed, each leg mutation-checked; two defers (`-512` D2's widening as BigDev's scope question; the CSRF 403 line); records: which tree the browser pass ran on, the two changed legs RE-RUN in the browser, the overtaken label trigger annotated; `ci:local` 41 / 41. Status stays `review`. |
+| 2026-11-27 | v1.12 | Fix-diff review round 3 (BigDev: "run round 3"; ledger `2026-11-27j`): the three layers on `abfd2592` + `0342a561` — ⛔ HIGH; H1 (a move / drop always says DL11's `stale` line), H2 (a token change under an open form is SAID and the new tokens taken — subsumes G1), H3 (the G1 leg's real sync point, a dropped-row leg, `focusManager` reset), H4 (records: round 2's subsection placed below round 1's dismissals; the mutation-check claim corrected by a dated line); three defers (the `stale` line's widening — BigDev's scope question; the cap; `no_fee_receipt`); `ci:local` 41 / 41. Status stays `review`. |

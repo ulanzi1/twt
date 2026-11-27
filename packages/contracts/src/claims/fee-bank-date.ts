@@ -15,6 +15,8 @@
 
 import { z } from 'zod';
 
+import { VYAWASTHA_SHULK_UTR_RE } from '../payments/vyawastha-shulk.js';
+
 /**
  * ⭐ DL9 — the step-up context the POST requires FRESH (after the permission hook). The ONE constant the route AND the
  * admin caller import (step-up contexts have ⛔ registry). ⚠ In production ⛔ admin step-up code is delivered until
@@ -58,11 +60,43 @@ export function feeBankDateRefusalReasonOf(code: unknown): FeeBankDateRefusalRea
 export const FEE_BANK_DATE_LIST_FEE_DATE_SOURCES = ['recorded', 'bank'] as const;
 
 /**
- * A payment reference as the UPI / NEFT form admits it — the SAME regex as the payment confirm
- * (`payments/vyawastha-shulk.ts`): 12 digits, or 22 letters and digits. ⚠ The message is STATIC — a Zod issue for it
- * carries ⛔ input value (TR5).
+ * A payment reference as the UPI / NEFT form admits it — the payment confirm's OWN constant
+ * (`payments/vyawastha-shulk.ts`, `VYAWASTHA_SHULK_UTR_RE`): 12 digits, or 22 letters and digits. Imported, ⛔ re-typed — a
+ * second copy could drift and 400 a legitimate stored reference before the writer compares it (code review, second pass,
+ * K12). ⚠ The message is STATIC — a Zod issue for it carries ⛔ input value (TR5).
  */
-export const STATEMENT_REFERENCE_RE = /^\d{12}$|^[A-Za-z0-9]{22}$/;
+export const STATEMENT_REFERENCE_RE = VYAWASTHA_SHULK_UTR_RE;
+
+/**
+ * ⭐ K6 / L4 / M1 / N2 / N3 — does a note carry at least ONE VISIBLE character? `String.prototype.trim` strips whitespace and line
+ * terminators only (and U+FEFF, which ECMAScript counts as whitespace), so a note made of zero-width characters (U+200B, the joiners
+ * U+200C / U+200D, the word joiner U+2060), a Hangul filler, a variation selector or the blank braille pattern (U+2800) survives
+ * `.trim().min(1)` and reads as EMPTY on screen and in the audit trail — the REQUIRED reason ("with a reason", Q2 B) would be
+ * satisfied by nothing.
+ * A visible character is an ALLOW-list: a letter, number, punctuation mark or symbol (`\p{L}\p{N}\p{P}\p{S}`) that is not
+ * default-ignorable (`\p{Default_Ignorable_Code_Point}`: the fillers, the combining grapheme joiner, the variation selectors, the tag
+ * characters, the zero-width characters) and not one of a SHORT, HAND-KEPT list of blank glyphs that no Unicode property names: U+2800
+ * (the blank braille pattern), U+FFFC (the object-replacement character), U+303F (the ideographic half fill space), U+1D159 (the
+ * musical null notehead) and U+13441 / U+13442 (the Egyptian hieroglyph full / half blank). A character whose only fault is a blank
+ * glyph has to be NAMED here — "unknown fails closed" does not reach it, because it is a known symbol or letter.
+ * Everything else does not COUNT: whitespace, controls, format characters, combining marks, private use, separators, surrogates and every
+ * UNASSIGNED code point. So a note made ONLY of characters the engine does not know is refused; a note that also carries one visible
+ * character ("x") passes whatever else it holds — the rule asks for one visible character, not a clean string. A deny-list of invisible
+ * classes did the opposite (an unknown or unassigned character passed as visible) and could not keep up with a Unicode release.
+ * ⚠ Only that: "." or "x" is visible and passes — whether a note is MEANINGFUL is the finance officer's, and the District Admin
+ * never reads it (no decrypt path, N6).
+ * ⚠ The browser form and the API (Node) each use their OWN engine's Unicode tables, so the two can disagree about a character newer than
+ * one of them, in EITHER direction: a browser newer than the server passes it and the API answers 400; an OLDER browser refuses a note
+ * written only in a script newer than its tables, with the "Write a note" prompt — the way out is any ordinary character beside it. Rare;
+ * it cannot be pinned in a test, so it is stated. One regex (a lookahead and a class) with `.test` and no `/g`: stateless, so a later
+ * `.test()` / `.exec()` cannot be intermittently wrong. The ONE rule: the request below and the admin form's own prompt both call it; the
+ * domain writer receives the note already ENCRYPTED and cannot apply it (it refuses an empty envelope only).
+ */
+const VISIBLE_NOTE_CHARACTER =
+  /(?![\p{Default_Ignorable_Code_Point}\u2800\uFFFC\u303F\u{1D159}\u{13441}\u{13442}])[\p{L}\p{N}\p{P}\p{S}]/u;
+export function hasVisibleNoteCharacter(note: string): boolean {
+  return VISIBLE_NOTE_CHARACTER.test(note);
+}
 
 /** A `YYYY-MM-DD` that is a REAL calendar date (2026-02-30 is refused) — UTC-anchored, as the domain's `isRealCalendarDate`. */
 function isRealCalendarDateString(value: string): boolean {
@@ -86,7 +120,7 @@ export const FeeBankDateRequest = z
     bank_credit_date: RealDate,
     reason_code: FeeBankDateReasonCode,
     /** Which statement — account, period, line — and what was seen. REQUIRED (Q2 B: "with a reason"). Tier-1 at rest. */
-    note: z.string().trim().min(1).max(2000),
+    note: z.string().trim().min(1).max(2000).refine(hasVisibleNoteCharacter, 'a note needs at least one visible character'),
     /** The live check the finance officer saw (the list row's) — REQUIRED, `null` = none. */
     expected_live_check_id: z.string().uuid().nullable(),
     /** The live bank-date record the finance officer saw — REQUIRED, `null` = none. */

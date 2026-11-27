@@ -14,6 +14,9 @@
 // so a reword of the copy file fails this test.
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
@@ -57,7 +60,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 });
 
 const { ApiError } = await import('../src/api/client.js');
-const { MEMBERSHIP_CHECK_STALE_CODES, isAnsweredFeeBankDateRefusal, usePostMembershipCheck } = await import('../src/api/hooks.js');
+const { MEMBERSHIP_CHECK_STALE_CODES, feeBankDatesKey, isAnsweredFeeBankDateRefusal, membershipCheckKey, usePostMembershipCheck, verifierConsoleKey } = await import('../src/api/hooks.js');
 const { FeeBankDatesRoute } = await import('../src/routes/FeeBankDatesRoute.js');
 const { RootLayout } = await import('../src/routes/RootLayout.js');
 const { feeBankDatesEn: t, feeBankDateErrorMessage } = await import('../src/modules/fee-bank-dates/index.js');
@@ -198,13 +201,18 @@ describe('the finance officer’s page (DL10, DL11)', () => {
   });
 
   it('⭐ lists the held claims — the recorded date, the amount, the last four — and ⛔ a name, ⛔ the date of death, ⛔ a fee outcome', async () => {
-    getFeeBankDates.mockResolvedValue(list());
+    // ⭐ K14 — the wire is `.strict()` and its type carries no such field, so "the page has no date of death" was true by
+    // construction and the assertion could not fail. SMUGGLE the three forbidden values into the row the page receives: the page
+    // must field-pick (a row spread or dumped into the markup would show them), and the row's own line is the control.
+    const smuggled = { ...row(), date_of_death: DEATH, fee_outcome: 'after_death', name: 'Asha Verma' } as unknown as FeeBankDateListRow;
+    getFeeBankDates.mockResolvedValue(list({ held: [smuggled] }));
     wrap(<FeeBankDatesRoute />);
     const r = await screen.findByTestId(`fee-bank-date-row-${CLAIM}`);
     expect(within(r).getByTestId('fee-bank-date-row-line')).toHaveTextContent('Recorded on 2026-05-10 · ₹110 · reference ending 9012');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(DL11.heading);
     const page = document.body.textContent ?? '';
     expect(page).not.toContain(DEATH);
+    expect(page).not.toContain('Asha');
     expect(page).not.toMatch(/after the death|on the day of death|before the death|after_death|same_day/i);
     // ⛔ second section when it is empty.
     expect(screen.queryByTestId('fee-bank-dates-recorded')).toBeNull();
@@ -253,6 +261,11 @@ describe('the finance officer’s page (DL10, DL11)', () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByTestId('nav-fee-bank-dates')).toHaveAttribute('href', '/p/$pariwarId/fee-bank-dates');
+    // ⭐ K14 — the mocked `Link` echoes its `to`, so the href alone cannot catch a link that points where the router has no
+    // route: pin it against the path the router REGISTERS.
+    // (`fileURLToPath` takes the STRING: jsdom's `URL` object fails node's brand check — the terminology tests do the same.)
+    const routerSrc = readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/router.tsx'), 'utf8');
+    expect(routerSrc).toContain(`path: '${screen.getByTestId('nav-fee-bank-dates').getAttribute('href')}'`);
     expect(screen.getByTestId('nav-fee-bank-dates')).toHaveAttribute('data-params', JSON.stringify({ pariwarId: PARIWAR }));
     expect(screen.getByTestId('nav-fee-bank-dates')).toHaveTextContent(DL11.nav);
     cleanup();
@@ -306,7 +319,9 @@ describe('the form (DL3, DL9, DL11)', () => {
     expect(done).toHaveAttribute('role', 'status');
     // The form closes, the row can be opened again (a correction), and the result line holds the focus.
     await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
-    expect(screen.getByTestId('fee-bank-date-open')).toBeEnabled();
+    // N12 — WAIT for it: the form's removal and the list's `busy` flag clearing are two renders (the opener is `locked` until the form's
+    // cleanup effect has run), and a synchronous assertion between them failed once in the full 116-file run (not in 14 solo or loaded runs).
+    await waitFor(() => expect(screen.getByTestId('fee-bank-date-open')).toBeEnabled());
     expect(document.activeElement).toBe(done);
     expect(postFeeBankDate).toHaveBeenCalledWith(PARIWAR, CLAIM, {
       statement_reference: VALID.reference,
@@ -508,12 +523,17 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
-    await new Promise((r) => setTimeout(r, 20));
+    // ⭐ K14 — the FRESH list has LANDED in the cache (⛔ a fixed 20 ms wait, which could pass before the refetch did) and React has
+    // rendered it: only then is "the form is still the same node" a statement about the FREEZE.
+    await waitFor(() => expect((lastClient.getQueryData(feeBankDatesKey(PARIWAR)) as FeeBankDateListResponse).held).toEqual([]));
+    await act(async () => undefined);
     expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form); // frozen — ⛔ closed mid-retry
     expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
     release({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
     expect(await screen.findByTestId('fee-bank-date-recorded')).toHaveTextContent(DL11.recorded); // the answer is SHOWN
     expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull(); // ⛔ "changed" over the officer's own record
+    // The control for the negative checks above: the list that was held back is the MOVED one — it renders now the freeze is lifted.
+    expect(await screen.findByTestId('fee-bank-dates-recorded')).toBeInTheDocument();
   });
 
   it('round 3 — a CORRECTABLE refusal (the form stays open), then a reload that moves the row: the old line is REPLACED by DL11\'s `stale` line (⛔ "check the reference" for a form that is gone)', async () => {
@@ -614,7 +634,10 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await waitFor(() => expect(getFeeBankDates.mock.calls.length).toBeGreaterThan(before));
-    await new Promise((r) => setTimeout(r, 20));
+    // ⭐ K14 — the FRESH list has LANDED in the cache (⛔ a fixed 20 ms wait, which could pass before the refetch did) and React has
+    // rendered it: only then is "the form is still the same node" a statement about the FREEZE.
+    await waitFor(() => expect((lastClient.getQueryData(feeBankDatesKey(PARIWAR)) as FeeBankDateListResponse).held).toEqual([]));
+    await act(async () => undefined);
     // Frozen: the SAME form node, its panel and its typed reference — ⛔ an empty form in the second section.
     expect(screen.getByTestId(`fee-bank-date-form-${CLAIM}`)).toBe(form);
     expect(screen.getByTestId('fee-bank-date-step-up')).toBeInTheDocument();
@@ -724,6 +747,179 @@ describe('the form and the list after an outcome (code review 2026-11-27)', () =
   });
 });
 
+describe('code review, second pass (K4, K5, K6, K13, K14)', () => {
+  const TWO = () => list({ held: [row(), row({ claim_case_id: CLAIM_2, reference_last4: '3333' })] });
+  const rowEl = (id: string) => screen.getByTestId(`fee-bank-date-row-${id}`);
+
+  it('⭐ K4 — a refusal whose form STAYS open is shown right under that form, inside its row, ⛔ above both sections; closing the form retires it and the focus returns to the row’s "open" button', async () => {
+    getFeeBankDates.mockResolvedValue(TWO());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(409, 'fee_bank_date.reference_mismatch', 'x'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const line = await screen.findByTestId('fee-bank-date-refused');
+    expect(line).toHaveTextContent(DL11.refused.reference_mismatch);
+    expect(rowEl(CLAIM).contains(line)).toBe(true);
+    expect(form.nextElementSibling).toBe(line); // right under the form that was refused
+    expect(within(rowEl(CLAIM_2)).queryByTestId('fee-bank-date-refused')).toBeNull();
+    expect(screen.getAllByTestId('fee-bank-date-refused')).toHaveLength(1); // ONE line, not a copy above the sections as well
+    // The officer closes the form: its refusal goes with it, and the focus does ⛔ go to a stale line.
+    fireEvent.click(within(form).getByTestId('fee-bank-date-close'));
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(within(rowEl(CLAIM)).getByTestId('fee-bank-date-open')));
+  });
+
+  it('⭐ K5 — opening a row puts the focus in its FIRST field; closing it returns the focus to THAT row’s "open" button (⛔ <body>, where a keyboard or screen-reader user loses their place)', async () => {
+    getFeeBankDates.mockResolvedValue(TWO());
+    wrap(<FeeBankDatesRoute />);
+    const opener = within(await screen.findByTestId(`fee-bank-date-row-${CLAIM}`)).getByTestId('fee-bank-date-open');
+    fireEvent.click(opener);
+    const form = await screen.findByTestId(`fee-bank-date-form-${CLAIM}`);
+    await waitFor(() => expect(document.activeElement).toBe(within(form).getByTestId('fee-bank-date-reference')));
+    fireEvent.click(within(form).getByTestId('fee-bank-date-close'));
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    expect(document.activeElement).toBe(within(rowEl(CLAIM)).getByTestId('fee-bank-date-open'));
+    expect(document.activeElement).not.toBe(within(rowEl(CLAIM_2)).getByTestId('fee-bank-date-open'));
+  });
+
+  it('⭐ L2 — opening one row while ANOTHER row’s form is open puts the focus in the NEW form’s first field, whichever of the two comes first in the list (the closing row’s focus-return effect must not steal it)', async () => {
+    getFeeBankDates.mockResolvedValue(TWO());
+    wrap(<FeeBankDatesRoute />);
+    await screen.findByTestId(`fee-bank-date-row-${CLAIM}`);
+    // The order the title speaks of is a fact of the DOM, not an assumption: CLAIM is listed ABOVE CLAIM_2.
+    expect(rowEl(CLAIM).compareDocumentPosition(rowEl(CLAIM_2)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const opener = (id: string) => within(rowEl(id)).getByTestId('fee-bank-date-open');
+    const field = (id: string) => within(screen.getByTestId(`fee-bank-date-form-${id}`)).getByTestId('fee-bank-date-reference');
+    // The LOWER row is open; the officer opens the UPPER one — the order that used to hand the focus back to the lower opener.
+    fireEvent.click(opener(CLAIM_2));
+    await waitFor(() => expect(document.activeElement).toBe(field(CLAIM_2)));
+    fireEvent.click(opener(CLAIM));
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM_2}`)).toBeNull());
+    expect(document.activeElement).toBe(field(CLAIM));
+    expect(document.activeElement).not.toBe(opener(CLAIM_2));
+    // And the other way round (the order that was already right): upper open, the officer opens the lower.
+    fireEvent.click(opener(CLAIM_2));
+    await waitFor(() => expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull());
+    expect(document.activeElement).toBe(field(CLAIM_2));
+    // Closing the open form still returns the focus to ITS opener (the focus was lost with the unmounted button).
+    fireEvent.click(within(screen.getByTestId(`fee-bank-date-form-${CLAIM_2}`)).getByTestId('fee-bank-date-close'));
+    await waitFor(() => expect(document.activeElement).toBe(opener(CLAIM_2)));
+  });
+
+  it('⭐ K5 — every row’s buttons are DESCRIBED by that row: open, submit and close carry the row’s own line as their description (two rows ⇒ two different descriptions), and the form is a group labelled by it — ⛔ the buttons\' NAMES, which stay the same (deferred: the accessibility pass)', async () => {
+    getFeeBankDates.mockResolvedValue(TWO());
+    wrap(<FeeBankDatesRoute />);
+    await screen.findByTestId(`fee-bank-date-row-${CLAIM}`);
+    const line = (id: string) => within(rowEl(id)).getByTestId('fee-bank-date-row-line');
+    const opener = (id: string) => within(rowEl(id)).getByTestId('fee-bank-date-open');
+    expect(line(CLAIM).id).not.toBe('');
+    expect(line(CLAIM).id).not.toBe(line(CLAIM_2).id);
+    expect(opener(CLAIM)).toHaveAttribute('aria-describedby', line(CLAIM).id);
+    expect(opener(CLAIM_2)).toHaveAttribute('aria-describedby', line(CLAIM_2).id);
+    expect(opener(CLAIM)).toHaveAccessibleDescription(line(CLAIM).textContent!);
+    expect(opener(CLAIM_2)).toHaveAccessibleDescription(line(CLAIM_2).textContent!);
+    fireEvent.click(opener(CLAIM_2));
+    const form = await screen.findByTestId(`fee-bank-date-form-${CLAIM_2}`);
+    expect(form).toHaveAttribute('role', 'group');
+    expect(form).toHaveAttribute('aria-labelledby', line(CLAIM_2).id);
+    for (const testId of ['fee-bank-date-submit', 'fee-bank-date-close']) {
+      expect(within(form).getByTestId(testId)).toHaveAttribute('aria-describedby', line(CLAIM_2).id);
+      expect(within(form).getByTestId(testId)).toHaveAccessibleDescription(line(CLAIM_2).textContent!);
+    }
+  });
+
+  it('⭐ K5 — the reasons group is a `radiogroup` (`aria-invalid` is ⛔ supported on a bare fieldset’s `group`): marked invalid and tied to the prompt when the reason is the missing field, clean otherwise', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    const group = within(form).getByRole('radiogroup');
+    expect(group).not.toHaveAttribute('aria-invalid');
+    fill(form, { reference: VALID.reference, date: VALID.date });
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const prompt = within(form).getByTestId('fee-bank-date-prompt');
+    expect(prompt).toHaveTextContent(DL11.promptReason);
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    expect(group).toHaveAttribute('aria-describedby', prompt.id);
+    fill(form, { reason: VALID.reason });
+    expect(group).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('⭐ K5 / L1 — the FIELDS are `aria-busy` while a request is in flight (⛔ the group around them); and (K14) while it is, the mutation cache DOES hold the note — the control that makes "holds ⛔ note while held" mean something', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    let release: (v: unknown) => void = () => undefined;
+    postFeeBankDate.mockReturnValueOnce(new Promise((res) => (release = res)));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    const fields = within(form).getByTestId('fee-bank-date-fields');
+    expect(fields).not.toHaveAttribute('aria-busy');
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(fields).toHaveAttribute('aria-busy', 'true'));
+    expect(form).not.toHaveAttribute('aria-busy'); // the group also holds the step-up panel (L1)
+    const cached = () => lastClient.getMutationCache().getAll().map((m) => JSON.stringify(m.state.variables ?? null));
+    expect(cached().some((v) => v.includes(VALID.note))).toBe(true); // the probe CAN see a note that is there
+    release({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
+    expect(await screen.findByTestId('fee-bank-date-recorded')).toHaveTextContent(DL11.recorded);
+    // The mutation is dropped by a `gcTime: 0` timer — WAIT for it (⛔ assume it has fired by the time the outcome renders).
+    await waitFor(() => expect(cached().some((v) => v.includes(VALID.note))).toBe(false));
+  });
+
+  it('⭐ L1 — a HELD step-up: nothing around the panel is `aria-busy` — its alerts mount inside the form\'s group, and assistive technology may withhold announcements inside a busy subtree', async () => {
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'Step-up required'));
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, VALID);
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    const panel = await screen.findByTestId('fee-bank-date-step-up');
+    expect(within(form).getByTestId('fee-bank-date-fields')).toBeDisabled(); // the write IS held ("busy") …
+    expect(panel.closest('[aria-busy="true"]')).toBeNull(); // … and ⛔ a busy subtree holds the panel
+    expect(form).not.toHaveAttribute('aria-busy');
+    expect(within(form).getByTestId('fee-bank-date-fields')).not.toHaveAttribute('aria-busy');
+  });
+
+  it('⭐ K6 — a note of ONLY invisible characters is refused in the note prompt’s words and ⛔ sent; a note with one visible character is sent', async () => {
+    // Built from code points — a `\u` escape typed into a file is written as the RAW character by some tools.
+    const invisible = String.fromCharCode(0x200b, 0x3164, 0x2800);
+    getFeeBankDates.mockResolvedValue(list());
+    postFeeBankDate.mockResolvedValueOnce({ claim_case_id: CLAIM, record_id: RECORD, superseded_record_id: null, event_version: 9 });
+    wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, { ...VALID, note: invisible });
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    expect(within(form).getByTestId('fee-bank-date-prompt')).toHaveTextContent(DL11.promptNote);
+    expect(within(form).getByTestId('fee-bank-date-note')).toHaveAttribute('aria-invalid', 'true');
+    expect(postFeeBankDate).not.toHaveBeenCalled();
+    fill(form, { note: 'x' });
+    fireEvent.click(within(form).getByTestId('fee-bank-date-submit'));
+    await waitFor(() => expect(postFeeBankDate).toHaveBeenCalledTimes(1));
+    expect(postFeeBankDate.mock.calls[0]![2]).toMatchObject({ note: 'x' });
+  });
+
+  it('⭐ K13 — a change of Pariwar starts from a CLEAN list: the open form and its typed fields do ⛔ follow the officer to the other Pariwar', async () => {
+    const OTHER = '55555555-5555-4555-8555-555555555555';
+    getFeeBankDates.mockResolvedValue(list());
+    const { rerender } = wrap(<FeeBankDatesRoute />);
+    const form = await openForm();
+    fill(form, { reference: VALID.reference });
+    expect(within(form).getByTestId('fee-bank-date-reference')).toHaveValue(VALID.reference);
+    // ⭐ L3 — the OTHER Pariwar's list is ALREADY available (what a `keepPreviousData` or a warm cache would give): with no loading
+    // phase to unmount the list, ONLY the `key` can start it from clean — so this leg fails if the key is removed.
+    lastClient.setQueryData(feeBankDatesKey(OTHER), list());
+    params = { pariwarId: OTHER };
+    rerender(
+      <QueryClientProvider client={lastClient}>
+        <FeeBankDatesRoute />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(getFeeBankDates).toHaveBeenCalledWith(OTHER));
+    expect(await screen.findByTestId('fee-bank-date-open')).toBeEnabled(); // the OTHER Pariwar's list, its row closed
+    expect(screen.queryByTestId(`fee-bank-date-form-${CLAIM}`)).toBeNull();
+    expect(screen.queryByTestId('fee-bank-date-refused')).toBeNull();
+  });
+});
+
 describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
   const gate = (over: Partial<MembershipCheckGateStatus> = {}): MembershipCheckGateStatus => ({
     available: true, passed: false, reason: 'fee_after_death', viewer: { canCheckMembership: true }, ...over,
@@ -812,10 +1008,29 @@ describe('the District Admin’s console — the new lines (DL7, DL11)', () => {
     expect(screen.getByTestId('membership-check-fee-bank-date')).toHaveTextContent('2026-04-28');
   });
 
-  it('⭐ `bank_date_changed` and `same_person` in their words; `bank_date_changed` refetches the preview and the packet', () => {
+  it('⭐ `bank_date_changed` and `same_person` in their words; `bank_date_changed` REFETCHES the preview and the packet (a refusal that is not a staleness code does ⛔)', async () => {
     expect(membershipCheckErrorMessage(new ApiError(409, 'membership_check.bank_date_changed', 'x'))).toBe(DL11.bankChanged);
     expect(membershipCheckErrorMessage(new ApiError(409, 'membership_check.same_person', 'x'))).toBe(DL11.samePerson);
     expect(MEMBERSHIP_CHECK_STALE_CODES.has('membership_check.bank_date_changed')).toBe(true);
+    // ⭐ K14 — the title promised a refetch and the leg only read the code set: drive the hook and look at what it invalidates.
+    const invalidatedBy = async (code: string) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const spy = vi.spyOn(client, 'invalidateQueries');
+      postMembershipCheck.mockRejectedValueOnce(new ApiError(409, code, 'x'));
+      const { result } = renderHook(() => usePostMembershipCheck(PARIWAR, CLAIM), {
+        wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+      });
+      await act(async () => {
+        await result.current.mutateAsync({} as never).catch(() => undefined);
+      });
+      return spy.mock.calls.map((c) => JSON.stringify((c[0] as { queryKey?: unknown }).queryKey));
+    };
+    const changed = await invalidatedBy('membership_check.bank_date_changed');
+    expect(changed).toContain(JSON.stringify(membershipCheckKey(PARIWAR, CLAIM)));
+    expect(changed).toContain(JSON.stringify(verifierConsoleKey(PARIWAR, CLAIM)));
+    // The control: a refusal that is not a staleness code leaves the cache alone, so the two above are the code's doing.
+    expect(MEMBERSHIP_CHECK_STALE_CODES.has('membership_check.same_person')).toBe(false);
+    expect(await invalidatedBy('membership_check.same_person')).toEqual([]);
   });
 
   it('⭐⭐ each of the three gate maps shows `bank_date_recorded`\'s OWN sentence — asserted ≠ the `not_checked` fallback', () => {

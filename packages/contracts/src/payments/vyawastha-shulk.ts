@@ -48,6 +48,13 @@ export type VyawasthaShulkIntentResponse = z.output<typeof VyawasthaShulkIntentR
 // ── confirm ───────────────────────────────────────────────────────────────────────────────────────
 
 /**
+ * The payment reference the UPI / NEFT form admits: 12 digits, or 22 letters and digits. ONE constant — the finance
+ * officer's bank-date request (`claims/fee-bank-date.ts`) imports it, so a widening here cannot leave the bank-date
+ * POST refusing a reference the receipt accepted (Story 6.39a code review, second pass, K12).
+ */
+export const VYAWASTHA_SHULK_UTR_RE = /^\d{12}$|^[A-Za-z0-9]{22}$/;
+
+/**
  * `POST /member/vyawastha-shulk/confirm` — self-attest the UTR after returning from the UPI app.
  * `tr` is the intent's idempotency nonce (a re-confirm with the same `tr` returns the existing receipt).
  * `utr` is validated PERMISSIVELY (12-digit numeric OR 22-char alphanumeric NEFT/RTGS — UX §"UTR
@@ -57,7 +64,7 @@ export type VyawasthaShulkIntentResponse = z.output<typeof VyawasthaShulkIntentR
 export const VyawasthaShulkConfirmRequest = z
   .object({
     tr: z.string().min(1),
-    utr: z.string().regex(/^\d{12}$|^[A-Za-z0-9]{22}$/, 'UTR must be 12 digits or 22 alphanumerics'),
+    utr: z.string().regex(VYAWASTHA_SHULK_UTR_RE, 'UTR must be 12 digits or 22 alphanumerics'),
   })
   .strict();
 export type VyawasthaShulkConfirmRequest = z.output<typeof VyawasthaShulkConfirmRequest>;

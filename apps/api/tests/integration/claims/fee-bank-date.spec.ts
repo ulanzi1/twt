@@ -240,12 +240,17 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     const w = await W.world();
     await W.seedCheck(w);
     const a = await fo(w);
-    for (const over of [{ note: '   ' }, { reason_code: 'because' }, { bank_credit_date: '2026-02-30' }]) {
+    // ⭐ K6 — a note of ONLY invisible characters (a zero-width space, a Hangul filler, the blank braille pattern) is no note: built
+    // from code points, ⛔ typed as a `\u` escape (some tools write the raw character into the file).
+    const invisible = String.fromCharCode(0x200b, 0x3164, 0x2800);
+    for (const over of [{ note: '   ' }, { note: invisible }, { reason_code: 'because' }, { bank_credit_date: '2026-02-30' }]) {
       const res = await post(a, w, over);
       expect(res.statusCode, `${JSON.stringify(over)}: ${res.body}`).toBe(400);
     }
     expect(await W.records(w)).toEqual([]);
     expect(rejected(w)).toEqual([]);
+    // The control: the same body with a visible note is accepted, so each 400 above was its field's.
+    expect((await post(a, w)).statusCode).toBe(201);
   });
 
   it('⭐ AC3 / DL9 — ⛔ step-up ⇒ the step-up refusal (403, a VALID body), ⛔ row, ⛔ `_rejected` line', async () => {
@@ -460,5 +465,64 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the finance officer’s bank date
     expect(errCode(j(res))).toBe(errCode(j(list)));
     expect(await W.records(w)).toEqual([]);
     expect(rejected(w)).toEqual([]);
+  });
+
+  /** A finance officer granted at DISTRICT scope (⛔ the Pariwar), signed in, scoped and stepped up for the act (K9). */
+  async function foAtDistrict(w: Pick<World, 'pariwarId'>, district: string) {
+    const a = await W.authenticate(`fo-district ${randomUUID().slice(0, 4)}`);
+    await td.pool.query(`INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, 'finance_officer', 'district', $3)`, [
+      a.userId, w.pariwarId, district,
+    ]);
+    // ⛔ No `/api/v1/auth/scope` call: there is no such route (it answers 404) — the scope is the `:pariwarId` path param, resolved by
+    // `scopeResolutionHook` — so there is no "scope that did not take" to confuse with the district's 403 (L8; the world helpers' own
+    // `staff()` still makes the call, vestigially).
+    await W.stepUp(a, FEE_BANK_DATE_STEP_UP_CONTEXT);
+    return a;
+  }
+
+  it("⭐⭐ AC8 / checklist family 3 (code review, second pass, K9) — a finance officer granted for ANOTHER district is refused on the record route; a narrower grant NEVER satisfies the list's wider gate; the claim's own district records; an unknown claim answers like an unauthorized one", async () => {
+    const w = await W.world();
+    await W.seedCheck(w);
+    // (a) Granted for another district — and stepped up, so the 403 is the permission hook's, ⛔ the step-up's.
+    const elsewhere = await foAtDistrict(w, `D-other-${randomUUID().slice(0, 8)}`);
+    const refused = await post(elsewhere, w);
+    expect(refused.statusCode, refused.body).toBe(403);
+    expect(errCode(j(refused))).not.toBe('auth.step_up_required');
+    // A REAL, dotted code (`family.reason`) — L8 / N7: `errCode` returns the STRING `undefined` for an error with no code and `''` / `'null'`
+    // for a malformed one, any of which two refusals would share; none of them is dotted.
+    expect(errCode(j(refused))).toMatch(/^[a-z_]+\.[a-z_]+/);
+    expect(await W.records(w)).toEqual([]);
+    expect(rejected(w)).toEqual([]);
+    // (b) The list is gated at the PARIWAR dimension: a district grant never satisfies it — another district's (here) and, below, this
+    // claim's own.
+    expect((await elsewhere.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })).statusCode).toBe(403);
+    // (c) The control: granted for THIS claim's own district, the same officer-shaped grant records — so (a) was the district's
+    // refusal, ⛔ a broken fixture.
+    const own = await foAtDistrict(w, w.district);
+    const ok = await post(own, w);
+    expect(ok.statusCode, ok.body).toBe(201);
+    expect(await W.records(w)).toHaveLength(1);
+    expect((await own.client.inject({ method: 'GET', url: W.listUrl(w.pariwarId) })).statusCode).toBe(403); // (b) for the OWN district too
+    // (d) The route does not confirm which claims exist: the officer granted for ANOTHER district gets the SAME status and code for a
+    // claim that exists in this Pariwar (a) and for one that does not — the resolver stashes no district for a missing claim and the
+    // district gate fails closed (so `fee_bank_date.not_found` is unreachable over HTTP; the writer's own `not_found` is the
+    // domain's defence — K7's leg).
+    const ghost = { ...w, claimCaseId: randomUUID() };
+    const unknown = await post(elsewhere, ghost);
+    expect(unknown.statusCode, unknown.body).toBe(403);
+    expect(errCode(j(unknown))).toBe(errCode(j(refused)));
+    // (e) A finance officer granted for the WHOLE Pariwar, and (e2) a Super Admin, get the same answer for the unknown claim (6.18's rule: an
+    // unresolved district target is a 403 even for a Pariwar or a global grant) — RUN here for both. `pariwar_admin` holds no key for this
+    // route at all (AC8 refuses it on an existing claim), so the district question never reaches it.
+    const full = await fo(w);
+    const unknownToFull = await post(full, ghost);
+    expect(unknownToFull.statusCode, unknownToFull.body).toBe(403);
+    expect(errCode(j(unknownToFull))).toBe(errCode(j(refused)));
+    // (e2) N7 — and a Super Admin, RUN here: 6.18's doc block says an unresolved district target is a 403 for `super_admin` too.
+    const superAdmin = await W.staff(w, ['super_admin']);
+    await W.stepUp(superAdmin, FEE_BANK_DATE_STEP_UP_CONTEXT);
+    const unknownToSuper = await post(superAdmin, ghost);
+    expect(unknownToSuper.statusCode, unknownToSuper.body).toBe(403);
+    expect(errCode(j(unknownToSuper))).toBe(errCode(j(refused)));
   });
 });

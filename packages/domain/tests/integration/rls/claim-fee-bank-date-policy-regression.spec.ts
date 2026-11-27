@@ -303,6 +303,33 @@ describe.skipIf(!hasDatabase)('migration 0219 — claim_fee_bank_dates: RLS + DB
     expect(row).toEqual({ ...r!, noteCiphertext: '[anonymized]' });
   });
 
+  it("⭐ the UPDATE policy FAILS CLOSED across tenants — another Pariwar's session (and an unset scope) scrubs and stamps ZERO rows, and the row is untouched (code review, second pass, K10)", async () => {
+    const s = await seedClaimWithReviewAndPayment();
+    const [r] = await s.tx.insert(schema.claimFeeBankDates).values(record(s)).returning();
+    // ⚠ A statement with a WHERE on a column also needs the SELECT policy to expose the row, and that policy hides another
+    // tenant's row ON ITS OWN — so those two prove the end-to-end behaviour but would stay green with the UPDATE policy
+    // widened (mutation-checked: `ALTER POLICY … USING (true)` left them green). The statement with NO WHERE is decided by
+    // the UPDATE policy's USING alone; the row is then read back as the owner, so the proof is the row, ⛔ a count.
+    const scrubAll = () => s.client.query(`UPDATE ${TABLE} SET note_ciphertext = '[anonymized]'`);
+    const scrub = () => s.client.query(`UPDATE ${TABLE} SET note_ciphertext = '[anonymized]' WHERE record_id = $1`, [r!.recordId]);
+    const stamp = () => s.client.query(`UPDATE ${TABLE} SET superseded_at = now(), superseded_reason = 're_recorded' WHERE record_id = $1`, [r!.recordId]);
+    await enterAppScope(s.client, PARIWAR_B);
+    await scrubAll();
+    expect((await scrub()).rowCount).toBe(0);
+    expect((await stamp()).rowCount).toBe(0);
+    await enterAppRoleNoScope(s.client);
+    await s.client.query("SET LOCAL app.pariwar_id = ''");
+    expect((await scrubAll()).rowCount).toBe(0);
+    expect((await scrub()).rowCount).toBe(0);
+    expect((await stamp()).rowCount).toBe(0);
+    await s.client.query('RESET ROLE'); // the Docker superuser — reads the row whatever the policies say
+    const after = await s.client.query(`SELECT note_ciphertext, superseded_at, superseded_reason FROM ${TABLE} WHERE record_id = $1`, [r!.recordId]);
+    expect(after.rows).toEqual([{ note_ciphertext: r!.noteCiphertext, superseded_at: null, superseded_reason: null }]);
+    // The control: the OWNING Pariwar's session still matches the row, so a policy that matched nothing for everyone fails here.
+    await enterAppScope(s.client, PARIWAR_A);
+    expect((await scrub()).rowCount).toBe(1);
+  });
+
   it('⛔ twt_app holds no DELETE (42501)', async () => {
     const s = await seedClaimWithReviewAndPayment();
     const [r] = await s.tx.insert(schema.claimFeeBankDates).values(record(s)).returning();

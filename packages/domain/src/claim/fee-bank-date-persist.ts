@@ -101,6 +101,15 @@ function pgFacts(err: unknown): { code: string | undefined; constraint: string |
 }
 
 /**
+ * A 23505 on THAT index (drizzle wraps the driver error; the SQLSTATE and constraint may be on `.cause`). ⛔ Any other 23505.
+ * Pure — and exported so a test can pin it (code review, second pass, K8: the constant was a hand-typed string nothing checked).
+ */
+export function isOneLiveFeeBankDateViolation(err: unknown): boolean {
+  const f = pgFacts(err);
+  return f.code === '23505' && f.constraint === CLAIM_FEE_BANK_DATE_ONE_LIVE_INDEX;
+}
+
+/**
  * ⭐ TR5 — a DB error from this writer's statements, stripped of its PARAMETERS (drizzle's message is `Failed query: …
  * params: …`, which would carry the bank date and the note ciphertext into the 500 log). Ids and the SQLSTATE only.
  */
@@ -133,8 +142,9 @@ export async function recordFeeBankDate(client: pg.PoolClient, input: RecordFeeB
     throw refuse('invalid_reason', 'an unknown reason');
   }
   if (!isRealCalendarDate(input.bankCreditDate)) throw refuse('invalid_reason', 'the bank date is not a real calendar date');
-  // ⚠ The note arrives ENCRYPTED, so this catches a caller that passed ⛔ envelope at all (an empty string) — a blank PLAINTEXT
-  // note is the contract's refusal (`.trim().min(1)`, 400) before the handler encrypts it (code review 2026-11-27).
+  // ⚠ The note arrives ENCRYPTED, so this catches a caller that passed no envelope at all (an empty string) — a blank (or
+  // invisible-only) PLAINTEXT note is the contract's refusal (`.trim().min(1)` plus `hasVisibleNoteCharacter`, 400) before the
+  // handler encrypts it (code review 2026-11-27; second pass, K6 / L4).
   if (input.noteCiphertext.trim() === '') throw refuse('invalid_reason', 'a bank date needs a note (an empty envelope)');
 
   const db = bindScopedDb(client);
@@ -221,8 +231,10 @@ export async function recordFeeBankDate(client: pg.PoolClient, input: RecordFeeB
   const supersededRecordId = superseded[0]?.id ?? null;
 
   // ⛔ A raw 23505 to the caller: the one-live index is the backstop, its violation the same `stale` as (7). Not reachable
-  // today (every inserter takes a KEY SHARE on the claim row through the FK, so it serialises with (1)) — proved by its
-  // predicate only. Every other DB error is re-thrown parameter-free (TR5).
+  // today (every inserter takes a KEY SHARE on the claim row through the FK, so it serialises with (1)). What IS proved:
+  // the predicate (`tests/claim/fee-bank-date-one-live-violation.test.ts`), and that the constant names the index the schema
+  // and the migration define; ⛔ the mapping end to end (it cannot be constructed live). Every other DB error is re-thrown
+  // parameter-free (TR5).
   const [row] = await db
     .insert(claimFeeBankDates)
     .values({
@@ -239,7 +251,7 @@ export async function recordFeeBankDate(client: pg.PoolClient, input: RecordFeeB
     .returning({ recordId: claimFeeBankDates.recordId })
     .catch((err: unknown) => {
       const f = pgFacts(err);
-      if (f.code === '23505' && f.constraint === CLAIM_FEE_BANK_DATE_ONE_LIVE_INDEX) {
+      if (isOneLiveFeeBankDateViolation(err)) {
         throw refuse('stale', 'another bank date became live while this one was being recorded — reload');
       }
       throw new FeeBankDateWriteError(input.claimCaseId, 'insert', f.code, f.constraint);

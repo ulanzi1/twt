@@ -337,6 +337,35 @@ describe('<MembershipCheckControl> — the identity judgment (DL8)', () => {
     expect((screen.getByTestId('membership-check-identity-not_confirmed') as HTMLInputElement).checked).toBe(false);
     expect((screen.getByTestId('membership-check-note') as HTMLTextAreaElement).value).toBe('');
   });
+
+  it('⭐ 6.39a (K3) — a different BANK-DATE record is a different judgement (the comparison it feeds changed): the form starts again; the SAME record in a fresh preview object is ⛔ a reset', () => {
+    const bank = (id: string) => ({ record_id: id, bank_credit_date: '2026-04-28', reason_code: 'other' as const, recorded_by_display: 'Meera', recorded_at: '2026-06-01T05:30:00.000Z' });
+    const first = '00000000-0000-4000-8000-0000000000b1';
+    const second = '00000000-0000-4000-8000-0000000000b2';
+    const { rerender, onSubmit, onOpenChange } = renderControl({ preview: preview({ fee_date_source: 'bank', fee_bank_date: bank(first) }) });
+    const ui = (p: MembershipCheckPreviewResponse) => (
+      <MembershipCheckControl
+        gate={gate()}
+        certificateAccepted
+        open
+        onOpenChange={onOpenChange}
+        preview={p}
+        memberRecord={{ name: 'Suresh Patel', dateOfBirth: '1955-03-01' }}
+        documents={DOCS}
+        onSubmit={onSubmit}
+      />
+    );
+    fireEvent.click(screen.getByTestId('membership-check-identity-not_confirmed'));
+    fireEvent.change(screen.getByTestId('membership-check-note'), { target: { value: 'half-typed' } });
+    // The control: a background refetch hands back a NEW preview object for the SAME record — the half-typed judgement stays.
+    rerender(ui(preview({ fee_date_source: 'bank', fee_bank_date: bank(first) })));
+    expect((screen.getByTestId('membership-check-identity-not_confirmed') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId('membership-check-note') as HTMLTextAreaElement).value).toBe('half-typed');
+    // A DIFFERENT record: start again.
+    rerender(ui(preview({ fee_date_source: 'bank', fee_bank_date: bank(second) })));
+    expect((screen.getByTestId('membership-check-identity-not_confirmed') as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByTestId('membership-check-note') as HTMLTextAreaElement).value).toBe('');
+  });
 });
 
 describe('<MembershipCheckControl> — when the check cannot be recorded, it says why', () => {
@@ -677,6 +706,40 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     expect(alert).toHaveTextContent(t.refused.check_changed!);
     // `check_changed` is a staleness code: the preview is read again, so the staff member sees the other check.
     await waitFor(() => expect(getMembershipCheckPreview.mock.calls.length).toBeGreaterThan(previewReads));
+  });
+
+  it('⭐ 6.39a (code review, second pass, K3) — a re-check sends the BANK-DATE record the preview showed, ⛔ `null` — a console that always sent `null` would be refused `bank_date_changed` for ever against a claim with a live record', async () => {
+    const BANK_RECORD = '00000000-0000-4000-8000-0000000000b1';
+    getMembershipCheckPreview.mockResolvedValue(
+      preview({
+        fee_date_source: 'bank',
+        fee_bank_date: { record_id: BANK_RECORD, bank_credit_date: '2026-04-28', reason_code: 'other', recorded_by_display: 'Meera', recorded_at: '2026-06-01T05:30:00.000Z' },
+      }),
+    );
+    postMembershipCheck.mockResolvedValue({
+      claim_case_id: CLAIM,
+      check_id: CHECK,
+      death_certificate_review_id: REVIEW,
+      fee_outcome: 'before_death',
+      identity_required: true,
+      identity_outcome: 'confirmed',
+      identity_reason: null,
+      superseded_check_id: null,
+      event_version: 9,
+    });
+    await mount(gate());
+    fireEvent.click(screen.getByTestId('membership-check-disclosure'));
+    await screen.findByTestId('membership-check-form');
+    fireEvent.click(screen.getByTestId('membership-check-identity-confirmed'));
+    fireEvent.click(screen.getByTestId('membership-check-submit'));
+    await waitFor(() =>
+      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, {
+        expected_live_review_id: REVIEW,
+        expected_live_check_id: null,
+        expected_fee_bank_date_id: BANK_RECORD,
+        identity_outcome: 'confirmed',
+      }),
+    );
   });
 
   it('⭐ a STALE 409 says so in words (`role="alert"`) AND refetches the preview and the console packet', async () => {

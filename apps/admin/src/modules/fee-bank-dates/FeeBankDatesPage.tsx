@@ -14,12 +14,19 @@
 //     the panel's hold discipline) and ⛔ other row can be opened (unmounting the form would drop the write's answer).
 // ⭐ Code review 2026-11-27 — the OUTCOME (recorded / refused / lost) is the LIST's, ⛔ the row's: a row that moves section or
 // leaves the list on the reload (a success, `stale`, `not_held`, `window_closed`, `not_found`) would otherwise take its line
-// with it. ONE announced, focused line above the sections, naming the claim's reference ending.
+// with it. ONE announced line naming the claim's reference ending — above the sections and focused once its form is gone; a
+// refusal whose form STAYS open (the officer is correcting it) is the same node rendered right under that form (K4).
 // English only (the admin console's posture). ⛔ Colour alone: every state is WORDS.
 
 import { useNavigate } from '@tanstack/react-router';
-import { FEE_BANK_DATE_REASON_CODES, FEE_BANK_DATE_STEP_UP_CONTEXT, STATEMENT_REFERENCE_RE, type FeeBankDateListRow } from '@twt/contracts';
-import type { ReactElement } from 'react';
+import {
+  FEE_BANK_DATE_REASON_CODES,
+  FEE_BANK_DATE_STEP_UP_CONTEXT,
+  STATEMENT_REFERENCE_RE,
+  hasVisibleNoteCharacter,
+  type FeeBankDateListRow,
+} from '@twt/contracts';
+import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
@@ -57,7 +64,8 @@ export function feeBankDateFormPrompt(form: { reference: string; date: string; r
   if (!STATEMENT_REFERENCE_RE.test(ref)) return { field: 'reference', text: t.prompts.referenceShape };
   if (!isRealDate(form.date)) return { field: 'date', text: t.prompts.date };
   if (form.reason === null) return { field: 'reason', text: t.prompts.reason };
-  if (form.note.trim() === '') return { field: 'note', text: t.prompts.note };
+  // ⭐ K6 — the contract's ONE rule: a note of zero-width characters or a filler is no note (`.trim()` alone keeps them).
+  if (!hasVisibleNoteCharacter(form.note)) return { field: 'note', text: t.prompts.note };
   return null;
 }
 
@@ -74,6 +82,8 @@ export interface FeeBankDateNotice {
 interface RowFormProps {
   pariwarId: string;
   row: FeeBankDateListRow;
+  /** The id of this row's line — the form's name, and what each of its buttons is described by (K5: N identical buttons). */
+  lineId: string;
   onClose: () => void;
   /** The write's outcome — the list shows it (the row may move or leave on the reload). */
   onOutcome: (kind: FeeBankDateNotice['kind'], text: string, closeForm: boolean) => void;
@@ -85,7 +95,7 @@ interface RowFormProps {
   onTokensChanged: () => void;
 }
 
-function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, onTokensChanged }: RowFormProps): ReactElement {
+function RowForm({ pariwarId, row, lineId, onClose, onOutcome, onBusyChange, onEdited, onTokensChanged }: RowFormProps): ReactElement {
   const record = usePostFeeBankDate(pariwarId);
   const navigate = useNavigate();
   const [reference, setReference] = useState('');
@@ -125,6 +135,12 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
   // its submit button — the officer corrects the SAME form.
   const submitRef = useRef<HTMLButtonElement>(null);
   const refocus = useRef(false);
+  // ⭐ K5 — opening the form unmounted the focused "open" button: the focus goes to the form's first field (⛔ <body>, where a
+  // keyboard or screen-reader user loses their place in the list).
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, []);
   // A HELD write moves the focus into the step-up panel (its first control — "Send the code"): the locked fieldset has just
   // dropped it to <body> in real Chrome (code review round 2).
   const panelRef = useRef<HTMLDivElement>(null);
@@ -204,11 +220,16 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
   const promptId = `fee-bank-date-prompt-${id}`;
   const invalid = (f: Field) => (prompt?.field === f ? { 'aria-invalid': true as const, 'aria-describedby': promptId } : {});
   return (
-    <div className="flex flex-col gap-2 rounded border p-3" data-testid={`fee-bank-date-form-${id}`}>
-      <fieldset disabled={busy} className="flex flex-col gap-2" data-testid="fee-bank-date-fields">
+    // ⭐ K5 — the form is a group LABELLED by its row's line, and its buttons are DESCRIBED by it (no new words).
+    <div className="flex flex-col gap-2 rounded border p-3" role="group" aria-labelledby={lineId} data-testid={`fee-bank-date-form-${id}`}>
+      {/* ⭐ L1 — `aria-busy` marks the FIELDS while a request is in flight, ⛔ the group and ⛔ the held step-up: `busy` is also true for the
+          whole hold, and the step-up panel's alerts (a wrong code, a send that failed) mount inside it — assistive technology may
+          withhold announcements inside a busy subtree. */}
+      <fieldset disabled={busy} aria-busy={sending || record.isPending || undefined} className="flex flex-col gap-2" data-testid="fee-bank-date-fields">
         <label className="flex flex-col text-sm">
           {t.fields.reference}
           <input
+            ref={firstFieldRef}
             type="text"
             autoComplete="off"
             value={reference}
@@ -222,7 +243,8 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
           {t.fields.date}
           <input type="date" value={date} onChange={(e) => edit('date', setDate)(e.target.value)} data-testid="fee-bank-date-date" {...invalid('date')} />
         </label>
-        <fieldset className="flex flex-col gap-1" data-testid="fee-bank-date-reasons" {...invalid('reason')}>
+        {/* K5 — `aria-invalid` is ⛔ supported on the implicit `group` role of a bare fieldset; `radiogroup` supports it. */}
+        <fieldset className="flex flex-col gap-1" role="radiogroup" data-testid="fee-bank-date-reasons" {...invalid('reason')}>
           <legend className="text-sm">{t.fields.reasonLegend}</legend>
           {FEE_BANK_DATE_REASON_CODES.map((r) => (
             <label key={r} className="flex items-center gap-2 text-sm">
@@ -249,10 +271,17 @@ function RowForm({ pariwarId, row, onClose, onOutcome, onBusyChange, onEdited, o
           </p>
         ) : null}
         <div className="flex gap-2">
-          <button ref={submitRef} type="button" className="rounded bg-accent px-3 py-1 text-sm font-semibold text-white" onClick={submit} data-testid="fee-bank-date-submit">
+          <button
+            ref={submitRef}
+            type="button"
+            className="rounded bg-accent px-3 py-1 text-sm font-semibold text-white"
+            aria-describedby={lineId}
+            onClick={submit}
+            data-testid="fee-bank-date-submit"
+          >
             {t.submit}
           </button>
-          <button type="button" className="text-sm underline" onClick={onClose} data-testid="fee-bank-date-close">
+          <button type="button" className="text-sm underline" aria-describedby={lineId} onClick={onClose} data-testid="fee-bank-date-close">
             {t.close}
           </button>
         </div>
@@ -287,12 +316,29 @@ interface RowProps {
   onBusyChange: RowFormProps['onBusyChange'];
   onEdited: RowFormProps['onEdited'];
   onTokensChanged: RowFormProps['onTokensChanged'];
+  /** The list's outcome line, when it is a refusal whose form is THIS row's and still open — shown right under the form (K4). */
+  inlineNotice: ReactNode;
 }
 
-function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, onEdited, onTokensChanged }: RowProps): ReactElement {
+function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, onEdited, onTokensChanged, inlineNotice }: RowProps): ReactElement {
+  const lineId = `fee-bank-date-row-line-${row.claim_case_id}`;
+  // ⭐ K5 — closing the form unmounted the focused control: the focus returns to THIS row's "open" button (⛔ <body>). A form that
+  // closes with an outcome line hands the focus to that line instead (the list's effect runs after this one and wins).
+  // ⭐ L2 — ONLY when the focus was LOST (`<body>`: the unmounted control had it). Passive effects run in sibling order, so when
+  // the officer opens an EARLIER row while this one is open, that row's new form has already taken the focus by the time this
+  // effect runs, and taking it back would leave the new form open and silent.
+  const openerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      const focused = document.activeElement;
+      if (focused === null || focused === document.body) openerRef.current?.focus();
+    }
+    wasOpen.current = open;
+  }, [open]);
   return (
     <li className="flex flex-col gap-1 border-b py-2" data-testid={`fee-bank-date-row-${row.claim_case_id}`}>
-      <p className="text-sm" data-testid="fee-bank-date-row-line">
+      <p id={lineId} className="text-sm" data-testid="fee-bank-date-row-line">
         {fill(t.row, { date: row.recorded_fee_date, amount: String(row.amount_inr), last4: row.reference_last4 })}
       </p>
       {row.latest_posting_district ? (
@@ -307,12 +353,26 @@ function Row({ pariwarId, row, open, locked, onOpen, onOutcome, onBusyChange, on
         </p>
       ) : null}
       {open ? (
-        <RowForm pariwarId={pariwarId} row={row} onClose={() => onOpen(null)} onOutcome={onOutcome} onBusyChange={onBusyChange} onEdited={onEdited} onTokensChanged={onTokensChanged} />
+        <>
+          <RowForm
+            pariwarId={pariwarId}
+            row={row}
+            lineId={lineId}
+            onClose={() => onOpen(null)}
+            onOutcome={onOutcome}
+            onBusyChange={onBusyChange}
+            onEdited={onEdited}
+            onTokensChanged={onTokensChanged}
+          />
+          {inlineNotice}
+        </>
       ) : (
         <button
+          ref={openerRef}
           type="button"
           className="self-start text-sm underline"
           disabled={locked}
+          aria-describedby={lineId}
           onClick={() => onOpen(row.claim_case_id)}
           data-testid="fee-bank-date-open"
         >
@@ -398,6 +458,9 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
     openedLast4.current = [...held, ...recorded].find((r) => r.claim_case_id === id)?.reference_last4 ?? '';
     setOpenFor(id);
     if (id !== null) setNotice(null);
+    // ⭐ K5 — the officer CLOSED the form: its refusal line is retired with it. Left up, the effect below would hand the focus to
+    // that stale line instead of the row's "open" button.
+    else setNotice((prev) => (prev !== null && prev.kind === 'refused' && prev.claimCaseId === openFor ? null : prev));
   };
   const tokensChangedFor = (row: FeeBankDateListRow) => () => {
     setNotice((prev) => staleNotice(row.claim_case_id, row.reference_last4, prev));
@@ -405,6 +468,24 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
   };
   // An edit in the row's form retires that row's outcome line (the officer is correcting it — an old refusal must not stand).
   const editedFor = (id: string) => () => setNotice((prev) => (prev !== null && prev.claimCaseId === id ? null : prev));
+
+  // ⭐ K4 — the ONE outcome line. A refusal whose form is still open sits RIGHT UNDER that form (inside its row): above both
+  // sections it was out of sight on a long list — an officer who pressed submit on row 15 saw nothing near the form. Everything
+  // else (a recorded line, a refusal whose form is gone) stays above the sections, focused. One node either way.
+  const noticeNode =
+    notice === null ? null : (
+      <p
+        key={notice.seq}
+        ref={noticeRef}
+        tabIndex={-1}
+        role={notice.kind === 'recorded' ? 'status' : 'alert'}
+        data-testid={notice.kind === 'recorded' ? 'fee-bank-date-recorded' : 'fee-bank-date-refused'}
+        data-claim={notice.claimCaseId}
+      >
+        {fill(REFERENCE_ENDING, { last4: notice.referenceLast4 })} — {notice.text}
+      </p>
+    );
+  const noticeInRow = notice !== null && notice.kind === 'refused' && openFor === notice.claimCaseId;
 
   const rowOf = (row: FeeBankDateListRow) => (
     <Row
@@ -418,23 +499,13 @@ export function FeeBankDatesList(props: FeeBankDatesListProps): ReactElement {
       onEdited={editedFor(row.claim_case_id)}
       onTokensChanged={tokensChangedFor(row)}
       onBusyChange={setBusy}
+      inlineNotice={noticeInRow && notice.claimCaseId === row.claim_case_id ? noticeNode : null}
     />
   );
 
   return (
     <div className="flex flex-col gap-4" data-testid="fee-bank-dates-list">
-      {notice !== null ? (
-        <p
-          key={notice.seq}
-          ref={noticeRef}
-          tabIndex={-1}
-          role={notice.kind === 'recorded' ? 'status' : 'alert'}
-          data-testid={notice.kind === 'recorded' ? 'fee-bank-date-recorded' : 'fee-bank-date-refused'}
-          data-claim={notice.claimCaseId}
-        >
-          {fill(REFERENCE_ENDING, { last4: notice.referenceLast4 })} — {notice.text}
-        </p>
-      ) : null}
+      {noticeInRow ? null : noticeNode}
       <section aria-labelledby="fee-bank-dates-heading" data-testid="fee-bank-dates-held">
         {held.length === 0 ? (
           <p role="status" data-testid="fee-bank-dates-empty">

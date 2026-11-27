@@ -32,7 +32,11 @@ function FeeBankDatesView(): ReactElement {
     body = (
       <>
         {q.isError ? <p role="alert">{t.loadError}</p> : null}
+        {/* ⭐ K13 — keyed by the Pariwar: the open form, its typed fields, the frozen snapshot and the outcome line are THIS
+            Pariwar's. Today the loading branch above already unmounts the list on a param change (a new query key has no data);
+            the key makes it structural, so a `keepPreviousData` added to the hook later cannot carry them across. */}
         <FeeBankDatesList
+          key={pariwarId}
           pariwarId={pariwarId}
           held={q.data.held}
           recorded={q.data.recorded}

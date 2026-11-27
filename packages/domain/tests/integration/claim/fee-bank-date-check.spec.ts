@@ -158,6 +158,39 @@ async function stateOf(ctx: Pick<Ctx, 'tx' | 'cid'>): Promise<string> {
 const refusedCheck = (reason: string) => (e: unknown) => e instanceof MembershipCheckRefusedError && e.reason === reason;
 const refusedBank = (reason: string) => (e: unknown) => e instanceof FeeBankDateRefusedError && e.reason === reason;
 
+const eventRows = async (ctx: Ctx) =>
+  (await ctx.client.query<{ n: number }>('SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1', [ctx.cid])).rows[0]!.n;
+const checkSnapshot = async (ctx: Ctx) => ({ rows: await checkRows(ctx), live: await liveId(ctx, 'claim_membership_checks'), events: await eventRows(ctx) });
+type CheckSnapshot = Awaited<ReturnType<typeof checkSnapshot>>;
+
+/**
+ * ⭐ The refusal wrote NOTHING — asserted INSIDE the savepoint, BEFORE the rollback (code review, second pass, K2). The writer's
+ * refusals are thrown errors, not DB errors, so the transaction is alive and a writer that inserted (or superseded the live
+ * check) and THEN threw shows here. After `ROLLBACK TO SAVEPOINT` it would not: every row such a writer wrote is gone whatever
+ * it did, so an assertion made there cannot fail. What "NOTHING" covers, exactly (L7): the claim's check rows, WHICH check is
+ * live, and the claim stream's events — ⛔ audit or outbox rows (the writer writes none). Returns the snapshot, for the positive
+ * control `expectCheckRecorded` (M4 / N6): an accepted check moves the rows, the events AND which check is live, so no part of the snapshot is blind.
+ */
+const refusedWritesNothing = async (ctx: Ctx, savepoint: string, reason: string, attempt: () => Promise<unknown>): Promise<CheckSnapshot> => {
+  const before = await checkSnapshot(ctx);
+  await ctx.client.query(`SAVEPOINT ${savepoint}`);
+  await expect(attempt()).rejects.toSatisfy(refusedCheck(reason));
+  expect(await checkSnapshot(ctx)).toEqual(before);
+  await ctx.client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+  return before;
+};
+
+/** The control for the legs above: the SAME claim, an ACCEPTED check — one more row, and the stream's events moved. */
+const expectCheckRecorded = async (ctx: Ctx, before: CheckSnapshot) => {
+  const after = await checkSnapshot(ctx);
+  expect(after.rows).toBe(before.rows + 1);
+  expect(after.events).toBeGreaterThan(before.events);
+  // N6 — and WHICH check is live: the accepted check supersedes the one the claim was seeded with, so a snapshot whose `live` could not
+  // move would be blind to a refusal that superseded the live check and then threw.
+  expect(after.live).not.toBeNull();
+  expect(after.live).not.toBe(before.live);
+};
+
 describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { timeout: 20000 }, () => {
   setupLiveDb();
 
@@ -169,12 +202,9 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
       // the recorded date, so `recorded` is kept: DL6's `bank` only when STRICTLY earlier.)
       const r2 = (await bank(ctx)).recordId as string;
       expect(r2).not.toBe(r1);
-      const before = await checkRows(ctx);
-      await ctx.client.query('SAVEPOINT s1');
-      await expect(check(ctx, { computedAgainstFeeBankDateId: r1 })).rejects.toSatisfy(refusedCheck('bank_date_changed'));
-      await ctx.client.query('ROLLBACK TO SAVEPOINT s1');
-      expect(await checkRows(ctx)).toBe(before);
+      const before = await refusedWritesNothing(ctx, 's1', 'bank_date_changed', () => check(ctx, { computedAgainstFeeBankDateId: r1 }));
       const ok = await check(ctx, { computedAgainstFeeBankDateId: r2 });
+      await expectCheckRecorded(ctx, before); // the control: an accepted check DOES move the rows and the events, so a count that never moves cannot pass
       expect({ source: ok.feeDateSource, id: ok.feeBankDateId }).toEqual({ source: 'recorded', id: r2 });
       const [row] = await ctx.tx.select().from(schema.claimMembershipChecks).where(eq(schema.claimMembershipChecks.checkId, ok.checkId));
       expect({ source: row!.feeDateSource, id: row!.feeBankDateId }).toEqual({ source: 'recorded', id: r2 });
@@ -188,24 +218,18 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
       await enterAppScope(ctx.client, ctx.pid);
       const yesterday = istDateOf(new Date(Date.now() - 86_400_000));
       const r = (await bank(ctx, { bankCreditDate: yesterday })).recordId as string;
-      const before = await checkRows(ctx);
-      await ctx.client.query('SAVEPOINT s2');
-      await expect(check(ctx, { computedAgainstFeeBankDateId: null })).rejects.toSatisfy(refusedCheck('bank_date_changed'));
-      await ctx.client.query('ROLLBACK TO SAVEPOINT s2');
-      expect(await checkRows(ctx)).toBe(before);
+      const before = await refusedWritesNothing(ctx, 's2', 'bank_date_changed', () => check(ctx, { computedAgainstFeeBankDateId: null }));
       const ok = await check(ctx);
+      await expectCheckRecorded(ctx, before);
       expect({ source: ok.feeDateSource, id: ok.feeBankDateId }).toEqual({ source: 'bank', id: r });
     });
 
     it('⭐ N7 — the SAME PERSON (the id differing only in case and whitespace) ⇒ `same_person`, ⛔ row; another actor is accepted', async () => {
       const ctx = await claimAt('verifier_review');
       await bank(ctx);
-      const before = await checkRows(ctx);
-      await ctx.client.query('SAVEPOINT s3');
-      await expect(check(ctx, { actorId: `  ${FO.toUpperCase()} ` })).rejects.toSatisfy(refusedCheck('same_person'));
-      await ctx.client.query('ROLLBACK TO SAVEPOINT s3');
-      expect(await checkRows(ctx)).toBe(before);
+      const before = await refusedWritesNothing(ctx, 's3', 'same_person', () => check(ctx, { actorId: `  ${FO.toUpperCase()} ` }));
       await expect(check(ctx, { actorId: DA2 })).resolves.toMatchObject({ feeDateSource: 'recorded' });
+      await expectCheckRecorded(ctx, before);
     });
   });
 
@@ -213,6 +237,19 @@ describe.skipIf(!hasDatabase)('Story 6.39a — the bank date at the domain', { t
     it('`no_fee_receipt` — the joining payment cannot be identified (⛔ `pending-fee → lock-in` event), ⛔ row', async () => {
       const ctx = await claimAt('verifier_review', 'after_death', { joiningEvent: false });
       await expect(bank(ctx)).rejects.toSatisfy(refusedBank('no_fee_receipt'));
+    });
+
+    it('⭐ the shape defence (K7 / L5) — a blank display name is `missing_display`; an unknown reason, an unreal calendar date and an empty envelope are each `invalid_reason`; a claim that is not in the Pariwar is `not_found`; ⛔ record written by any of them', async () => {
+      const ctx = await claimAt('verifier_review');
+      await expect(bank(ctx, { actorDisplay: '   ' })).rejects.toSatisfy(refusedBank('missing_display'));
+      await expect(bank(ctx, { reasonCode: 'not_a_reason' as never })).rejects.toSatisfy(refusedBank('invalid_reason'));
+      await expect(bank(ctx, { bankCreditDate: '2026-02-30' as never })).rejects.toSatisfy(refusedBank('invalid_reason'));
+      await expect(bank(ctx, { noteCiphertext: '   ' })).rejects.toSatisfy(refusedBank('invalid_reason'));
+      await expect(bank(ctx, { claimCaseId: toClaimId(randomUUID()) })).rejects.toSatisfy(refusedBank('not_found'));
+      expect(await liveId(ctx, 'claim_fee_bank_dates')).toBeNull(); // asserted BEFORE the control below, ⛔ after a rollback
+      // The control: the same call with every field valid is ACCEPTED — so each refusal above was its field's, not the fixture's.
+      await expect(bank(ctx)).resolves.toMatchObject({ reasonCode: 'recorded_late_by_member' });
+      expect(await liveId(ctx, 'claim_fee_bank_dates')).not.toBeNull();
     });
 
     it('`stale` — the live check names ANOTHER payment than the joining one, ⛔ row', async () => {

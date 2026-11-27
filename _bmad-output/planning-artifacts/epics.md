@@ -3766,6 +3766,23 @@ logged, and the address is decrypted only after the claiming commit; a missing c
 lost send); a signed-out admin who follows the link reaches the list after signing in. The system still refuses ⛔ nothing — the email
 is a notification, ⛔ never an approval step.
 
+### Story 6.27e: The Person Sent on a Ground Visit Reads the Instructions Written for Them `[SURFACE]`
+
+> ⚠ **Added 2026-11-27** by author-commit [`2026-11-27-523`](../../.decision-log.md#decision-2026-11-27-523) item 1, building Trustee-ratified
+> [`2026-11-27-521`](../../.decision-log.md#decision-2026-11-27-521) (the 6.27b note, option C). Story 6.27b (`done`) built option A; this story
+> changes it.
+
+As a staff member sent on a ground visit to a claim, I want to read the briefing from the person who scheduled the visit and a Super
+Admin's direction addressed to me, so that I can do what I am asked — while I still cannot see what the neighbours said.
+
+**Acceptance Criteria (in brief):** the visit's briefing and a direction addressed to the visitor are readable by that visitor while their
+own visit is pending (`-521` C); every other staff note stays withheld (6.27b D1 B / V1 A / X1 A); the neighbours' answers stay hidden
+until the visitor's own record is complete (`-310` CF2, unchanged); both writing boxes — the briefing box and the direction box — carry the
+ratified warning word for word: *"The person you are sending has not seen the neighbours' answers. Do not repeat them here."*; the tests
+that pin option A (`ground-inspection.spec.ts`, `correction-closure.spec.ts`) are changed to pin C. Open for create-story (the build's, per
+`-521` "What it does NOT cover"): whether the escalation detail's withholding counts under C; whether a rescheduler's note is "the
+briefing"; whether the warning shows every time.
+
 ### Story 6.28: One Payment per Death — Once a Claim for a Death Is Finally Approved, ⛔ No Other Claim for That Death Can Be, and Every Other Is Closed `[SURFACE]`
 
 > ✅ **Governance done, 2026-10-11.** The row `6-28-one-payment-per-death-second-approval-guard` was created 2026-10-10 by
@@ -8312,6 +8329,13 @@ So that I can work effectively without a desktop or back-office tools.
 
 ### Story 13.4: Attribution Analytics Dashboard `[SURFACE]`
 
+> ⭐ **2026-11-27 — the Panel's report is HOMED here** (author-commit [`2026-11-27-523`](../../.decision-log.md#decision-2026-11-27-523) item 2,
+> building Trustee-ratified [`2026-11-27-522`](../../.decision-log.md#decision-2026-11-27-522) F3 A): the per-member drill-down shows, for each
+> member a worker brought in, the member's name, Pariwar and district, the date of Submit, whether and when the fee was paid, whether the
+> identity check and first contribution are done, and the worker's name and code — ⛔ phone, ID number, document, nominee or health answer;
+> read by `pariwar_admin` and `super_admin`, each read audited. ⚠ The `member.lookup` gate in the criteria below is superseded for this
+> drill-down by F3 A's readers — create-story follows the ruling. The criteria below are kept as written.
+
 As a Pariwar admin or trustee monitoring field-worker performance,
 I want an attribution analytics dashboard showing field-worker pipeline + qualification rates + commission projections,
 So that field-worker effectiveness is visible without exposing per-member PII inappropriately.
@@ -8468,6 +8492,14 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 ---
 
 ### Story 13.9: A Field Worker Starts a Registration; the Person Reviews and Submits It `[SURFACE]`
+
+> ⭐ **2026-11-27 — the Panel ruled the drafts** ([`2026-11-27-516`](../../.decision-log.md#decision-2026-11-27-516) Q1 C widened, Q2 A, Q3 A;
+> [`2026-11-27-522`](../../.decision-log.md#decision-2026-11-27-522) D1 A, D2 A; placed here by author-commit
+> [`2026-11-27-523`](../../.decision-log.md#decision-2026-11-27-523) item 3): ⛔ the worker enters the HEALTH answers — the person gives them on
+> their own phone (the criteria below say otherwise; create-story follows the ruling); ⛔ one-time code at the draft's start; the person's own
+> login code stays; ONE text to the person when a draft is started (naming the worker; deleted in 30 days unless finished) and an in-app
+> "This wasn't me" that deletes it at once and tells the District Admin, information only; the DLT template request is filed AT
+> CREATE-STORY. The criteria below are kept as written.
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Needs Story 13.3 (the worker's own login and app). ⚠ Go-live waits on the Panel: may a field worker collect
 > a person's ID documents, nominees and health answers before the person has agreed to anything; how long an unsubmitted draft is kept;

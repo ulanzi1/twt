@@ -46,6 +46,10 @@ query site.**
 >   WHERE user_id = that id)`. It projects ⛔ no identity column — only the `user_id` it was given. ⛔ No role is required. It runs
 >   cross-tenant on the jobs service pool (the sweep's selector) and on a Pariwar-scoped `twt_app` transaction (the child's claiming
 >   re-check) — the same two placements as Q1.
+>   ⚠ **Correction (2026-11-27, [Decision 2026-11-27-522](../../.decision-log.md#decision-2026-11-27-522) S3 A, Trustee-ratified, DR + KB — the lines
+>   above are kept as written).** The claiming re-check runs in a Pariwar-scoped transaction (`withPariwarScope`) on the BYPASSRLS jobs
+>   service pool, ⛔ under `twt_app` (⛔ `SET LOCAL ROLE`) — as this ADR's 2026-11-26 DB-role correction records. What Q3 does is unchanged;
+>   the jobs login's posture is roster Row 26 (`jobs-db-role`, open).
 > - **The fence widens in the same commit as each new site**, every new allow-list entry citing ADR-0043: the Q3 module joins the
 >   `admin_credentials` reader allow-list and the projection rules (exactly one `SELECT 1 FROM admin_credentials`; aliases unique to
 >   Q3); the child joins the `decryptAdminEmail` caller allow-list; and the fence gains an exact allow-list of

@@ -110,6 +110,10 @@ Load-bearing details:
 - **Operational.** Rides ADR-0040's provisioning (roster Row 24). An email outage, or a stopped sweep, of 3+ IST days loses those notices'
   emails by design; the held run's alarm is the signal; the console keeps every notice. Go-live (Row 51 (c), SENDING) also needs Row 26
   closed with this sweep's steps in its list and Row 24 (b) extended to Q4.
+  ⚠ **Correction (2026-11-27, [Decision 2026-11-27-522](../../.decision-log.md#decision-2026-11-27-522) S2 A, Trustee-ratified, DR + KB — the line
+  above is kept as written; the rule is unchanged).** "3+ IST days" describes the rule loosely: the cut-off is 00:00 IST of (today − 2),
+  so a notice written just before midnight stops being emailed about two days later and one written just after midnight about three; a
+  notice held back by a pause is credited the parked time and can still be sent later. The console keeps every notice.
 - **Migration / pivot.** A further identity read path, a further Q2 caller, or a move to `twt_auth`, is a new ADR.
 
 ## References

@@ -472,6 +472,8 @@ Seen working (attested by screenshot, UI hierarchy, the TalkBack log and the `me
   questions; its readings R1–R4 are NOT ratified and stay open until confirmed), the drafts note by
   [Decision 2026-11-27-516](../../.decision-log.md#decision-2026-11-27-516) (Q1 C widened — no one-time code; Q2 A, Q3 A — DISCHARGED
   as questions). The 3.13 follow-up was ruled earlier (`2026-11-25-502`).
+  **2026-11-27 — `-515` R1–R4 and `-516` R1 / R3 RULED** by [Decision 2026-11-27-522](../../.decision-log.md#decision-2026-11-27-522)
+  (the follow-up note; F1 A, F2 A, F3 A, F4 A, F5 B, D1 A, D2 A) — DISCHARGED as questions; each is now a build input.
 
 ---
 
@@ -15196,6 +15198,9 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
 ## Deferred from: code review of 13-1g-field-worker-move-notices-by-email, chunk 3 (2026-11-12)
 
 - **R4-W1 — two wording imprecisions in `-463`'s Q-2 text and its derivatives.** `.decision-log.md` `-463` (residual (a), the Policy sentence), ADR-0045 "Operational", roster Row 51's operators line. (a) The loss window is not "3+ IST days": the cutoff is 00:00 IST of (today − 2), so a notice created at 23:59 stops being emailed about 2 days later and one created at 00:00 about 3 days later. (b) "An email the system could not send within three days is not sent later" is true of a notice with no row; a row already claimed and then PARKED by a hold is credited the parked time and can be sent later. Both are `-463`'s words (an author-commit), so they are annotated, not rewritten. Owner: BigDev, at the next decision-log touch. Trigger: Row 51 (c)'s go-live review, or the operator runbook.
+  **2026-11-27 — (a) settled for the Panel** by [Decision 2026-11-27-522](../../.decision-log.md#decision-2026-11-27-522) S2 A (Trustee-ratified, DR + KB): the
+  rule stands; the description is corrected by a dated line in ADR-0045 "Operational". `-463`'s own words stay as written (an annotation
+  there, and roster Row 51's operators line, remain owed at the next decision-log touch).
 - **R4-W2 — `-463`'s "Supersedes" paragraph does not name the narrowing of `-461`'s email wording.** `-461` words the superseded and refused emails with `{from}`, `{to}` and `{reason}`; the emails carry none (`-463` item 12 / story AD12: "a NARROWER form"). "Supersedes no RATIFIED text" is true (`-461` is an author-commit); the departure should still be stated as a supersession of `-461`'s wording. Owner: BigDev, the same annotation as R4-W1.
 - **R4-W3 — roster Row 51's legs (e) and (f) have no owner or discharge path in the row's fields.** `docs/launch-gate-inventory/inventory-roster.md` Row 51: owner / support / current_status / cross_story_discharge_path still read "(a)-(d)", and the 2026-11-12 dated line does not name who ratifies ADR-0045 (e) or who is the non-author Hindi reviewer (f) (Row 49 names an owner per leg). The criteria are not edited; the dated line can name them. Owner: BigDev. Trigger: before Row 51 (c)'s go-live.
   - ⭐ 2026-11-27 (`2026-11-27-519`, Trustee-ratified, DR + KB): leg (e) is MET - the Panel ratified ADR-0045, and Row 51's 2026-11-27 dated line names it - so (e)'s half is moot. ⛔ Closed: (f)'s reviewer is still unnamed, and the row's fields still read "(a)-(d)".

@@ -6,6 +6,8 @@
 > ⛔ Member uses the system yet; nothing is live.
 > **2026-11-27 — SENT** to the Panel (BigDev: *"sent"*). ⚠ The channel, the time and the exact text sent are NOT recorded. Awaiting
 > ruling. Every line above is kept as written.
+> **2026-11-27 — RULED** (Trustee-ratified, DR + KB, relayed by BigDev) — [`2026-11-27-522`](../../.decision-log.md#decision-2026-11-27-522), committed
+> ALONE (`14c50434`); the ruling block below. Every line above is kept as written.
 
 ## §0 — the gate
 
@@ -17,6 +19,20 @@ data processor; a fee-free membership's legal footing) — on the counsel list. 
 here is exactly how we understood it — is that right?"*
 
 ---
+
+> ## ✅ RULED — 2026-11-27, Trustee-ratified (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev
+>
+> **Verbatim as relayed:** *"by DR and KB / F1 A, F2 A, F3 A, F4 A, F5 B / D1 A, D2 A / S1 A, S2 A, S3 A"* — recorded as
+> [`2026-11-27-522`](../../.decision-log.md#decision-2026-11-27-522), committed ALONE (`14c50434`).
+>
+> - **F1 A, F2 A, F3 A, F4 A** — each our suggestion.
+> - **F5 — B** (not our suggestion, which was A): the fee may be made optional now; the Board's rulebook change follows.
+> - **D1 A, D2 A** — each our reading / suggestion.
+> - **S1 A, S2 A, S3 A** — each our reading / suggestion; ADR-0043 and ADR-0045 get dated correction lines.
+> - The told lines 1–3: ⛔ objection recorded — and ⛔ that is NOT a ratification. Each option's cost, as put below, is accepted with it.
+>
+> The "awaiting" block just below is kept as written. Everything below is kept **unedited** as the questions **as they were put**
+> ([[feedback_supersede_never_reinterpret]]).
 
 > ## ⏳ AWAITING PANEL RULING
 >

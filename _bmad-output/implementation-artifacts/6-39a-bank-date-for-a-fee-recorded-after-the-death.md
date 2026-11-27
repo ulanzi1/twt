@@ -905,6 +905,9 @@ mutation-checked (the fix reverted ⇒ the leg red).
 - ⚠ **Corrected 2026-11-27 (fix-diff review round 3 — the Acceptance Auditor):** "each fix's leg mutation-checked" (above, Change Log
   1.11 and ledger `2026-11-27i`) OVERSTATED: G4 has ⛔ leg (the freeze's commit timing is not observable in jsdom) and G7 is a comment
   only. The legs of G1, G2, G3, G5 and G6 were mutation-checked; G1's leg's sync point did not wait on a rendered change (round 3 — H3).
+- ⚠ **2026-11-27 (round 4) — G1 stands; round 3's H2 is SUPERSEDED:** the tokens remain the row AS OPENED; round 3 made a token change
+  under the open form ADOPT the new tokens after a line — round 4's J1 replaces that with CLOSING the form (below). ⚠ The G1 leg's
+  "mutation-checked" turned red by timing only (its sync point — the Auditor, round 4).
 
 #### Fix-diff review, round 3 (2026-11-27 — the round-2 fix `abfd2592` only, BigDev: "run round 3")
 
@@ -935,6 +938,34 @@ the open form vs a reload that changes its row. Each re-checked in code.
   ⛔ focus code — G3's leg is red without the effect); Blind 7 (a 429 closing the form — `-512` D2's widening, deferred in round 2); Blind 8
   (⛔ announcement keys on `seq` alone — the notice node is re-keyed and focused).
 - ⚠ ⛔ Observed in a browser: H2 (a reload under an open form needs a focus refetch, which the tool cannot produce — a component leg only).
+- ⚠ **2026-11-27 (round 4) — H2 SUPERSEDED by J1, and its item OVERSTATED round 2:** "every press was refused `stale`" / the code's
+  "refused `stale` for ever" — `stale` is a reload code, so ONE press was refused and the form closed (the cost was the typed fields).
+  H2's adoption relied on a line the next keystroke retires; J1 closes the form instead (round 4, below).
+
+#### Fix-diff review, round 4 (2026-11-27 — the round-3 fix `e2eff5b8` only, BigDev: "run round 4")
+
+The same three fresh-context layers on `e2eff5b8` (2 files) and its records `4fea55f5`. ALL THREE found the same defect in round 3's
+own design (the Blind Hunter rated it HIGH, the others MEDIUM). Each finding re-checked in code.
+
+- [x] [FixReview4][Patch] J1 (Blind 1, Edge 1, Auditor 1) — Round 3's H2 SAID a token change under the open form and then ADOPTED the new
+  tokens — but the line saying it is retired by the officer's next keystroke (`editedFor`): an officer back from the statement tab, typing
+  straight on, could clear it unread, and the next press would supersede another officer's record with ⛔ refusal — G1's harm back. A
+  token change now CLOSES the form with DL11's `stale` line (focused — the form is gone), as a move or a drop does; ⛔ token is ever adopted
+  client-side; a press racing the close still carries the tokens AS OPENED, so the server answers `stale` (DL5 (e) — the Auditor: ⛔ DL
+  requires the refusal, but the server's token check is the property kept). [`FeeBankDatesPage.tsx`; the leg rewritten — red with the form
+  left open]
+- [x] [FixReview4][Patch] J2 (Edge 2) — `busy` could in principle read false between the step-up panel clearing its hold and the retry's
+  `isPending` reaching React (TanStack's notify scheduler), ending the freeze mid-retry. A `sending` flag set by the press and cleared by
+  the write's callbacks closes it. ⚠ The new retry-in-flight leg passes WITHOUT J2 — in jsdom the window did not occur (`isPending` was
+  already visible); J2 is kept as a guard that does not rest on TanStack's timing, ⛔ claimed tested [`FeeBankDatesPage.tsx`; a leg]
+- [x] [FixReview4][Patch] J3 (Auditor 2–4) — records: H2's overstatement and supersession, and a forward pointer from round 2's G1, each
+  a dated line (above); ⛔ earlier text edited
+- [x] [FixReview4][Defer] Edge 3 / Auditor 5 — a reload that lands after a CORRECTABLE refusal replaces its line ("check the reference")
+  with `stale` and closes the form: the officer loses the reason (the next press would say it again) — `deferred-work.md`, round-4 section.
+- Dismissed after checking the code: Blind 2 (a lost write closes the form in the outcome's own batch, before the list unfreezes — ⛔
+  re-send from that form); Blind 3 (a success closes the form in its own batch; the reload lands later, `openFor` already null — the Edge
+  Case Hunter traced the same); Blind 6 (`beforeEach` resets `getFeeBankDates`); Edge 4 (⛔ path puts a null and a new notice in one batch);
+  Edge 5 (a re-open before the officer's own success reload lands: the `stale` line names their own record — intended, and the form closes).
 
 ## Dev Notes
 
@@ -1115,6 +1146,8 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
   `integration-tests` included; `fee-bank-dates.test.tsx` 33.
 - **`ci:local` (2026-11-27, fix-diff review round 3 — the container recreated from scratch again):** 41 of 41 jobs green,
   `integration-tests` included; `fee-bank-dates.test.tsx` 35 (three consecutive runs green).
+- **`ci:local` (2026-11-27, fix-diff review round 4 — the container recreated from scratch again):** 41 of 41 jobs green,
+  `integration-tests` included; `fee-bank-dates.test.tsx` 36 (three consecutive runs green).
 - **Whole suites, live, on the story DB:** domain 564 files / 9040 tests; API 254 / 255 files (3491 tests) — the one red was
   `medical-disclose.spec.ts`'s random-base64 `ckd` collision (known failure #13), 21 / 21 on re-run; admin 116 / 2517; contracts 1836.
 
@@ -1280,3 +1313,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 | 2026-11-27 | v1.10 | Code review fix pass (ledger `2026-11-27h`): D1 / D2 resolved by `2026-11-27-512`; the 33 patch items applied and ticked; the PATCH diff reviewed by three fresh-context layers and the real-browser pass — ten more fixes F1–F10 and five LOW defers (the Review Findings' fix-diff subsection, `deferred-work.md`); Completion Notes AC13 corrected (the undercount) and AC12 dated (the pass RAN — roster Row 58 (d) MET); Debug Log: the browser pass, `ci:local` 41 / 41 on a fresh container. Status stays `review` — `done` waits for the landing. |
 | 2026-11-27 | v1.11 | Fix-diff review round 2 (BigDev: "run adversarial review on patches applied"; ledger `2026-11-27i`): the three layers on the committed fix `76afca9d` and the records `7bbb0e9b` — G1 (HIGH, pre-existing, widened by F1: the tokens read at press time — now the row as opened, and a reloading answer closes the form) and G2–G7 fixed, each leg mutation-checked; two defers (`-512` D2's widening as BigDev's scope question; the CSRF 403 line); records: which tree the browser pass ran on, the two changed legs RE-RUN in the browser, the overtaken label trigger annotated; `ci:local` 41 / 41. Status stays `review`. |
 | 2026-11-27 | v1.12 | Fix-diff review round 3 (BigDev: "run round 3"; ledger `2026-11-27j`): the three layers on `abfd2592` + `0342a561` — ⛔ HIGH; H1 (a move / drop always says DL11's `stale` line), H2 (a token change under an open form is SAID and the new tokens taken — subsumes G1), H3 (the G1 leg's real sync point, a dropped-row leg, `focusManager` reset), H4 (records: round 2's subsection placed below round 1's dismissals; the mutation-check claim corrected by a dated line); three defers (the `stale` line's widening — BigDev's scope question; the cap; `no_fee_receipt`); `ci:local` 41 / 41. Status stays `review`. |
+| 2026-11-27 | v1.13 | Fix-diff review round 4 (BigDev: "run round 4"; ledger `2026-11-27k`): the three layers on `e2eff5b8` + `4fea55f5` — all three found round 3's H2 (adopt the new tokens after a line the next keystroke retires) re-opened G1's harm: J1 closes the form instead, ⛔ token adopted client-side; J2 a `sending` guard for the step-up retry (its leg passes without it — stated); J3 records (H2's overstatement and supersession, a forward pointer from G1 — dated lines); two defers; `ci:local` 41 / 41. Status stays `review`. |

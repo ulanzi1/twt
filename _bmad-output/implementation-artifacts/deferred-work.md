@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the fix-diff review round 4 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **A reload after a CORRECTABLE refusal loses the refusal's reason** — a `reference_mismatch` / `in_future` / 400 line is replaced by
+  DL11's `stale` line when a reload then changes, moves or drops the row, and the form closes: the officer is told the claim changed, ⛔
+  why the press was refused (the next press would say it again). **Trigger:** an officer report, or BigDev's words for a combined line.
+- **The `sending` guard (round 4 J2) has ⛔ leg that fails without it** — the window it closes did not occur in jsdom. **Trigger:** a
+  TanStack upgrade that changes when `isPending` reaches React.
+
 ## Deferred from: the fix-diff review round 3 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 - **DL11's `stale` line now also answers a reload with ⛔ write** — *"This claim changed since you opened it. It has been reloaded — check

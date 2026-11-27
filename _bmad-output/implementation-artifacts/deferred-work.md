@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the fix-diff review round 2 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+- **`-512` D2's line is shown for answers `-512` does not name** — a 429, or a 4xx with ⛔ bank-date code (`http.404`), reads *"The bank
+  date may not have been recorded. The list has been reloaded …"*: `-512` approved it for a write with ⛔ typed answer (a lost response, a
+  5xx). True (nothing is lost by the reload) but WIDER than the decision. A **scope question for BigDev** — approve the widening, or give
+  words for a refused-without-reason answer. **Trigger:** BigDev's next look at the page's words (with the unapproved labels).
+- **A CSRF 403 (`auth.csrf_origin`) reads DL11's "You do not have permission to record bank dates."** — the status-only branch.
+  **Trigger:** the same.
+
 ## Deferred from: the fix-diff review of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 - **A bank-date POST that never answers locks the finance officer's page** — `apiFetch` has ⛔ timeout, and while a write is in flight
@@ -38,11 +47,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **The finance officer's page carries a few control labels ⛔ in DL11's approved list.** The submit and close buttons (*"Record the bank
   date"*, *"Close"*), the row's *"District"* and *"Bank date recorded … by"* lines, and the loading / load-error / generic-refusal lines
   (`apps/admin/src/modules/fee-bank-dates/i18n-en.ts` — the lines ⛔ marked DL11). Written from the approved phrases (the 6.39 control's
-  posture). ⚠ **Amended 2026-11-27 (code review C4):** the list also holds the route's session lines (*"Checking your session…"*,
+  posture). Owner: BigDev. **Trigger:** BigDev reads them (approve, or give words) — before the real-browser pass (roster Row 58 (d)).
+  - **2026-11-27 — amended (code review C4):** the list also holds the route's session lines (*"Checking your session…"*,
   *"Redirecting to sign in…"* — the 6.19d page's, now `checkingSession` / `redirecting` in the same file) and `refused.invalid_reason`,
   which reuses DL11's approved 400 line but is ⛔ a DL11 line of its own. The generic-refusal line is GONE — `2026-11-27-512` D2 replaced
   it with an approved line (`lostWrite`). The page's outcome line joins the approved row part *"reference ending {last4}"* to the approved
-  outcome with " — " (⛔ new words; the composition is listed here). Owner: BigDev. **Trigger:** BigDev reads them (approve, or give words) — before the real-browser pass (roster Row 58 (d)).
+  outcome with " — " (⛔ new words; the composition is listed here).
+  - **2026-11-27 — the trigger was OVERTAKEN (fix-diff review round 2):** the real-browser pass RAN before BigDev read these labels
+    (roster Row 58 (d) MET is the pass, ⛔ an approval of these words). The item stays OPEN; its trigger is now *BigDev reads them —
+    before go-live* (Row 58 is the go-live gate).
 - **AC5's list of allowed edits to 6.39's specs missed one case.** Three assertions in `apps/admin/tests/membership-check.test.tsx` pinned
   today's console note under a blocking RECORDED date — the case `2026-11-27-510` DL11 AMENDED (`-474` item 3). They now pin the amended
   note, the same exact-text check (⛔ loosened). Recorded, ⛔ a new rule. Owner: BigDev. **Trigger:** the story's code review.

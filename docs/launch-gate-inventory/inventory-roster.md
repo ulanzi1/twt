@@ -1338,3 +1338,6 @@ observes these.
     observed in the page; one defect it found (the focus fell to `<body>` after a refusal) was fixed and re-run. ⚠ ⛔ Observed in the
     browser: a reload during a held write (simulated in a component test only) and the 401 path. (a), (b), (c), (e) unchanged — (e)'s
     pass used the test step-up delivery, so it says nothing of production.
+  - **2026-11-27 — leg (d): the pass's two changed legs RE-RUN on the round-2 code** (the fix-diff review round 2 changed what a held
+    write and a lost write do): the focus moves into the step-up panel; a lost write closes the form, focuses `-512` D2's line, and leaves
+    exactly ONE record. (d) stays MET; (a), (b), (c), (e) unchanged.

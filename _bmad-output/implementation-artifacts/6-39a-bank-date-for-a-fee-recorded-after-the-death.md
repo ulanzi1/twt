@@ -864,6 +864,40 @@ Case Hunter and Acceptance Auditor with the tree, read-only), plus the real-brow
   reads as "may not have been recorded" (true-but-loose; `-512` names only a write with ⛔ typed answer); Edge 5 — a server-refused field
   gets ⛔ `aria-invalid`; Blind 10 — the concurrency spec leaves its superuser-seeded members / receipts (a fresh tenant per file) —
   `deferred-work.md`, fix-diff section.
+#### Fix-diff review, round 2 (2026-11-27 — the committed fix `76afca9d`, BigDev: "run adversarial review on patches applied")
+
+The same three fresh-context layers on the committed fix (the Blind Hunter on the diff alone; the Edge Case Hunter and the Acceptance
+Auditor read-only on the tree, the auditor on the records commit `7bbb0e9b` too). Every finding re-checked in code; each fix's leg
+mutation-checked (the fix reverted ⇒ the leg red).
+
+- [x] [FixReview2][Patch] G1 (Edge 1 HIGH, Blind 1) — ⚠ PRE-EXISTING (the dev's form), WIDENED by F1's reload: the form read the
+  currency tokens from the row at PRESS time. The list refetches on window focus — the officer reading the bank statement in another
+  tab is the normal case — so a token followed a record or a check the officer never saw: `stale` became a silent CORRECTION, and a
+  lost write's re-send a duplicate record and event. The tokens are now the row AS OPENED, and every answer that reloads the list (a
+  reload code, a lost write) closes the form, so a re-open takes the fresh ones [`FeeBankDatesPage.tsx`; two legs]
+- [x] [FixReview2][Patch] G2 (Edge 2, Blind 2) — A reload that moved or dropped the open row while the officer typed closed the form with
+  ⛔ word (the comment said "the outcome line stays" — there was none) — it now shows DL11's approved `stale` line, *"This claim changed
+  since you opened it. It has been reloaded — check again."*, the case it names, focused [`FeeBankDatesPage.tsx`; a leg]
+- [x] [FixReview2][Patch] G3 (Edge 3) — While a write was HELD the focus sat on `<body>` (the locked fieldset) — it moves to the step-up
+  panel's first control [`FeeBankDatesPage.tsx`; a leg]
+- [x] [FixReview2][Patch] G4 (Edge 4, Blind 4) — The freeze began two commits after the press (the busy flag went up by an effect) — the
+  form now raises it in the press itself; the cut-list flags are frozen with the rows (Edge 5) [`FeeBankDatesPage.tsx`]
+- [x] [FixReview2][Patch] G5 (Blind 6, Auditor) — The refusal-focus leg could ⛔ fail (it pre-focused the button; jsdom keeps the focus on a
+  disabled control) — it no longer does; the prompt leg edits ANOTHER field (F5's "any field"); new legs for F6 (a recorded check reloads
+  the list), F1's console reload, F9 (⛔ note or reference in the mutation cache while held) [`fee-bank-dates.test.tsx`]
+- [x] [FixReview2][Patch] G6 (Blind 9) — The window-filter leg now asserts the denied claim's OWN live check survives and still blocks, so
+  "not listed" can come only from the filter [`apps/api/tests/integration/claims/fee-bank-date.spec.ts`]
+- [x] [FixReview2][Patch] G7 (Blind 8) — PQ1's comment said "⛔ handed in" while the test hands the computed outcome to the writer —
+  reworded [`packages/domain/tests/integration/claim/fee-bank-date-check.spec.ts`]
+- [x] [FixReview2][Defer] Edge 6 — a CSRF 403 reads DL11's "no permission" line; the Auditor's Edge 4 note — `-512` D2's line for a 429 or
+  an `http.404` WIDENS what `-512` names (a write with ⛔ typed answer) — a scope question for BigDev, ⛔ only a LOW item —
+  `deferred-work.md`, fix-diff sections.
+- Dismissed after checking the code: Blind 3 (a failed reload KEEPS the list and its line — only a 403 re-gates, by design, 6.19d);
+  Blind 5 / Edge 7 (0219 is unmerged; the story container recreated); Blind 7 (the `stale` leg covers close-on-move); Blind 10 / Edge 5's
+  first half (`recordedTruncated` can over-report in the two-statement race — the safe direction); Blind 11 (with ⛔ receipt the read audit
+  and the preview agree); Blind 12 (deferred, Edge 4). F8's de-duplication and `auditReason`'s `stale` stay without a leg (a race between
+  two statements; a stream concurrency error at the API) — stated, ⛔ claimed tested.
+
 - Dismissed after checking the code: Blind 4 / 8 (the preview names only a record it CONSIDERED — `considerableFeeBankDate`, so "not
   earlier" and the read audit's id are exact); Blind 5 (the panel's Cancel is outside the locked fieldset); Blind 7 (PQ1's payment is
   recorded `new Date()` — the computed outcome is the stored one); Blind 11 / Edge 7 (the container was recreated — the composite-FK
@@ -1033,8 +1067,19 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
   lines) and every bank-date / check audit line carry ⛔ planted note, ⛔ typed reference, ⛔ display name, ⛔ bank date — codes and ids only.
   ⚠ NOT observed in the browser: a reload DURING a held write (the tool cannot hide a tab — F3's freeze is proved by its component leg);
   the 401 path (component leg). The launcher and the dev servers removed afterwards.
+  - **Which tree (added in round 2 — the Acceptance Auditor's question):** the pass ran on the working tree with F1–F3 and F5–F10
+    ALREADY applied (Vite served the tree; each leg reloaded the page through the cookie helper); F4 was found by leg (3), fixed, and leg
+    (3) re-run. Round 2's G1–G4 changed what legs (2) and (4) show, so those two were RE-RUN on the round-2 tree (below).
+  - **Round 2 re-run (2026-11-27, the G-fixes in the tree — a fresh launcher, two claims):** **(2′)** a press on an un-stepped-up
+    officer ⇒ the hold, and the focus INSIDE the panel on *"Send the code"* (it was `<body>`); Enter on it sent the code; verified ⇒ the
+    SAME body re-sent ⇒ *"reference ending 1224 — Recorded. …"*, focused, the form closed. **(4′)** the lost write (forwarded, answered
+    502) ⇒ `-512` D2's line (an alert) FOCUSED, the form CLOSED (the typed note gone from the page), the list reloaded with the record
+    the write made — and the database holds exactly ONE record for that claim (one live). The sweep again clean (43 log lines; ⛔ note,
+    reference, bank date, name). The launcher and the dev servers removed afterwards.
 - **`ci:local` (2026-11-27, the code-review fix pass — the story container recreated from scratch, migrated through `0219` as edited;
   `DATABASE_URL` = its port):** 41 of 41 jobs green, `integration-tests` included (11m30s for that job).
+- **`ci:local` (2026-11-27, fix-diff review round 2 — the container recreated from scratch again):** 41 of 41 jobs green,
+  `integration-tests` included; `fee-bank-dates.test.tsx` 33.
 - **Whole suites, live, on the story DB:** domain 564 files / 9040 tests; API 254 / 255 files (3491 tests) — the one red was
   `medical-disclose.spec.ts`'s random-base64 `ckd` collision (known failure #13), 21 / 21 on re-run; admin 116 / 2517; contracts 1836.
 
@@ -1198,3 +1243,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.39a on worktree`, 2026
 | 2026-11-27 | v1.8 | The Panel ruled the note — `2026-11-27-511` (Trustee-ratified, DR + KB: *"Q1 B, Q2 A, Q3 A, Q4 A"*; the 27 November version, `f01b7c24`), every answer the built side: the Panel-questions heading and PQ1–PQ4 marked RULED (the questions kept as put); the Policy-meaning note gains the sentence's appeal clause as recorded in `-511`; ⛔ AC, Task or DL change. |
 | 2026-11-27 | v1.9 | Dev done (`bmad-dev-story 6.39a on worktree`; ledger `2026-11-27g`): Tasks 0.1 and 1–6 ticked; Agent Model, Debug Log (the container, the trigger incident, `ci:local` 40 / 41 with the one contention red), Completion Notes, File List; Status `in-progress → review`. The real-browser pass recorded un-attested; one edit to 6.39's specs beyond AC5's kinds stated, ⛔ hidden. |
 | 2026-11-27 | v1.10 | Code review fix pass (ledger `2026-11-27h`): D1 / D2 resolved by `2026-11-27-512`; the 33 patch items applied and ticked; the PATCH diff reviewed by three fresh-context layers and the real-browser pass — ten more fixes F1–F10 and five LOW defers (the Review Findings' fix-diff subsection, `deferred-work.md`); Completion Notes AC13 corrected (the undercount) and AC12 dated (the pass RAN — roster Row 58 (d) MET); Debug Log: the browser pass, `ci:local` 41 / 41 on a fresh container. Status stays `review` — `done` waits for the landing. |
+| 2026-11-27 | v1.11 | Fix-diff review round 2 (BigDev: "run adversarial review on patches applied"; ledger `2026-11-27i`): the three layers on the committed fix `76afca9d` and the records `7bbb0e9b` — G1 (HIGH, pre-existing, widened by F1: the tokens read at press time — now the row as opened, and a reloading answer closes the form) and G2–G7 fixed, each leg mutation-checked; two defers (`-512` D2's widening as BigDev's scope question; the CSRF 403 line); records: which tree the browser pass ran on, the two changed legs RE-RUN in the browser, the overtaken label trigger annotated; `ci:local` 41 / 41. Status stays `review`. |

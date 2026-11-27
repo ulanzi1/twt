@@ -4,6 +4,50 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review, second pass, of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
+
+Story section: *Review Findings → "Code review, second pass"* (K15–K30). Re-found by this pass and NOT re-listed, because each is already recorded
+below or above: the cached ids not tied to the claim and the supersede-with-no-successor grant (code review, C1); the posting district read in
+series (C2); `claim.membership_checked`'s payload (C3); the two list statements and the POST that never answers (fix-diff review); the
+lost-write / `stale` lines wider than the decisions name, the outcome line's prefix and the page's unapproved labels (rounds 2–3, the dev
+section); the 500 path with no live leg (dev section); and the `pg_trigger_depth() > 1` stand-in for "an FK cascade" (an older section).
+
+- **A live bank-date record that names a payment other than the member's current joining payment leaves the claim on `bank_date_recorded` that
+  no District Admin re-check can clear** — the check stores `fee_bank_date_id = null`, the gate compares the live record's id, so only a NEW
+  finance-officer record clears it; the District Admin's line says "check again" and nothing points at the finance officer. Pinned as fail-closed
+  by a test. Reachable only once a joining payment can change (the corrected-UTR item, "Not addressed by 6.39a"). **Trigger:** the corrected-UTR
+  build, or an officer report of a claim that will not clear.
+- **The writer's error vocabulary has drifted** — `no_fee_receipt` is reused for "the member's row cannot be read" (its approved line is about the
+  joining fee) and `invalid_reason` covers both an unreal date and a blank note. A new refusal reason is a contracts + domain + admin-copy
+  lockstep. **Trigger:** row `3-17` (it changes `fee_receipt_id`) or the next refusal reason.
+- **Admin residuals that need BigDev's words or a UX call** — no visible in-flight line while the POST is pending (the fieldset disables; `aria-busy`
+  is a patch item); the typed reference and note are discarded without a word when the officer opens another row or presses Close; a correction row
+  (it already has a live record) has the same *"Record the bank date"* opener and nothing says that submitting supersedes the record.
+  **Trigger:** BigDev reads the page's labels (the open unapproved-labels item), or an officer report.
+- **Accessibility details with no AC** — the outcome notice is both `role="status"` / `"alert"` and focused (it may be read twice); the empty-list
+  line's `role="status"` is rendered at mount and likely never announced; the held `<section>`'s `aria-labelledby` points at an `<h1>` defined in
+  another component; no `<form>`, so Enter in the reference field does nothing. **Trigger:** the accessibility pass of the staff screens
+  (already named in the fix-diff section).
+- **API / domain test gaps below the ACs** — the captured-log controls cover the 409 `reference_mismatch` and 400 paths but not the 201 path, and the
+  positive control proves only that the request URL is logged; the audit-emit-failure path is untested; `window_closed` is covered at the API for a
+  denied claim only; `note_ciphertext`'s `not.toContain` plaintext check would pass for a base64 of the plaintext; the translator spec's header says
+  more than its legs prove and carries about 100 lines of harness copied from another spec. **Trigger:** a shared-DB cleanup pass, or any change to
+  the log path.
+- **Two connections per POST across a KMS round trip** (as reported by the Blind Hunter; not traced by me) — the record handler encrypts the note before the
+  writer's own scope transaction while the request's outer scope transaction is still held. **Trigger:** API pool saturation, or KMS latency in the
+  alarms.
+- **`fill()` is copied into a second consumer** (`FeeBankDatesPage.tsx`, `MembershipCheckControl.tsx`; `fmt()` was already duplicated) — the second
+  consumer exists, so extraction is allowed by the no-premature-package rule; not required. **Trigger:** the next change to either file.
+- **The row buttons keep the same accessible NAME** (review of the second pass's fix, L11) — K5's `aria-describedby` gives each button its row line as a DESCRIPTION; a screen
+  reader's button list shows names only, so N identical entries remain. A name from `aria-labelledby="<the button> <the row line>"` would tell them apart; it changes what is
+  announced (existing DL11 words, combined) and the tests' role / name queries. **Trigger:** the accessibility pass of the staff screens (already named above).
+- **A display name made only of invisible characters passes the writer's `trim() === ''` check** (review of the L-pass delta, M6; pre-existing, shared by every admin act) — the domain leg for
+  `missing_display` tries `'   '` only. The name is a Super Admin's `setAdminDisplayName`; the visible-character rule K6 gave the note could be applied at that one place.
+  **Trigger:** the display-name set path is next touched, or an unattributed-looking audit row is reported.
+- **`HAS_VISIBLE_CHAR` in the ground-inspection note rule is still a DENY-list** (review of the M-pass delta, N11; another story's code) — `apps/api/src/modules/claims/claims.ground-inspection.routes.ts` and
+  `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`: a lone combining mark, a private-use or an unassigned code point counts as visible — the gap 6.39a's `hasVisibleNoteCharacter` closed with an
+  allow-list. The shared rule would belong in `@twt/contracts` once a second consumer wants it. **Trigger:** the ground-inspection note rule is next touched, or a blank-looking inspection note is reported.
+
 ## Deferred from: the fix-diff review round 4 of 6-39a-bank-date-for-a-fee-recorded-after-the-death.md (2026-11-27)
 
 - **A reload after a CORRECTABLE refusal loses the refusal's reason** — a `reference_mismatch` / `in_future` / 400 line is replaced by
